@@ -1,0 +1,101 @@
+﻿import assert from "node:assert";
+import { calculateDepartureTime } from "../engine/calculateDeparture";
+import type { RecommendationVersionConfig, CityProfileConfig } from "../engine/types";
+
+const v1Config: RecommendationVersionConfig = {
+  base_buffer_minutes: { drive: 8, motorcycle_taxi: 6, public_commute: 15, bicycle: 5, walk: 3 },
+  max_buffer_minutes: { drive: 30, motorcycle_taxi: 25, public_commute: 45, bicycle: 20, walk: 10 },
+  weather_multiplier: { clear: 1.0, rain: 1.2, heavy_rain: 1.4, storm: 1.6 },
+  rush_hour_multiplier: { drive: 1.3, motorcycle_taxi: 1.1, public_commute: 1.4, bicycle: 1.0, walk: 1.0 },
+  confidence_baseline: { drive: 90, motorcycle_taxi: 85, public_commute: 75, bicycle: 90, walk: 95 },
+};
+
+const manila: CityProfileConfig = {
+  cityCode: "PH-MNL",
+  timezone: "Asia/Manila",
+  rushHourConfig: { morning: "06:00-09:00", evening: "17:00-20:00" },
+  weatherSensitivity: 1.2,
+};
+
+const baguio: CityProfileConfig = {
+  cityCode: "PH-BAG",
+  timezone: "Asia/Manila",
+  rushHourConfig: { morning: "06:30-08:30", evening: "16:30-19:00" },
+  weatherSensitivity: 1.5,
+};
+
+let passed = 0;
+let failed = 0;
+
+function check(label: string, actual: unknown, expected: unknown) {
+  try {
+    assert.deepStrictEqual(actual, expected);
+    console.log(`PASS: ${label}`);
+    passed++;
+  } catch {
+    console.error(`FAIL: ${label} -- expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    failed++;
+  }
+}
+
+// --- Scenario 1: Manila, Drive, clear, off-peak ---
+// Guards against: rush-hour false positive, weather multiplier drift, confidence baseline drift.
+const r1 = calculateDepartureTime({
+  originHash: "u1x2y3z",
+  destinationHash: "u1x2y3w",
+  cityCode: "PH-MNL",
+  transportMode: "drive",
+  arrivalTarget: "2026-07-08T09:00:00+08:00",
+  calculationTime: "2026-07-08T04:30:00+08:00",
+  weatherCondition: "clear",
+  rawGoogleEtaSeconds: 1800,
+  dataFreshness: "live",
+  recommendationVersion: v1Config,
+  cityProfile: manila,
+});
+check("Scenario 1: rushHourDetected", r1.recommendationExplanation.rushHourDetected, false);
+check("Scenario 1: confidenceScore", r1.confidenceScore, 90);
+check("Scenario 1: totalBufferMinutes", r1.recommendationExplanation.totalBufferMinutes, 9.6);
+
+// --- Scenario 2: Baguio, Motorcycle Taxi, heavy rain, morning rush ---
+// This is the exact case that caught the timezone bug (server tz +3 vs city tz +8).
+// If this regresses to rushHourDetected:false, the timezone fix has been undone.
+const r2 = calculateDepartureTime({
+  originHash: "abc1111",
+  destinationHash: "abc2222",
+  cityCode: "PH-BAG",
+  transportMode: "motorcycle_taxi",
+  arrivalTarget: "2026-07-08T09:00:00+08:00",
+  calculationTime: "2026-07-08T07:15:00+08:00",
+  weatherCondition: "heavy_rain",
+  rawGoogleEtaSeconds: 2700,
+  dataFreshness: "live",
+  recommendationVersion: v1Config,
+  cityProfile: baguio,
+});
+check("Scenario 2: rushHourDetected (timezone regression guard)", r2.recommendationExplanation.rushHourDetected, true);
+check("Scenario 2: confidenceScore", r2.confidenceScore, 85);
+check("Scenario 2: totalBufferMinutes", r2.recommendationExplanation.totalBufferMinutes, 13.9);
+
+// --- Scenario 3: Manila, Public Commute, storm, cached, near buffer cap ---
+// Guards against: cached-data confidence penalty drift, and the max_buffer_minutes
+// guardrail firing incorrectly on a near-miss (40.3 vs cap of 45).
+const r3 = calculateDepartureTime({
+  originHash: "def3333",
+  destinationHash: "def4444",
+  cityCode: "PH-MNL",
+  transportMode: "public_commute",
+  arrivalTarget: "2026-07-08T09:00:00+08:00",
+  calculationTime: "2026-07-08T07:45:00+08:00",
+  weatherCondition: "storm",
+  rawGoogleEtaSeconds: 3600,
+  dataFreshness: "cached",
+  recommendationVersion: v1Config,
+  cityProfile: manila,
+});
+check("Scenario 3: rushHourDetected", r3.recommendationExplanation.rushHourDetected, true);
+check("Scenario 3: confidenceScore", r3.confidenceScore, 70);
+check("Scenario 3: totalBufferMinutes", r3.recommendationExplanation.totalBufferMinutes, 40.3);
+
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);
