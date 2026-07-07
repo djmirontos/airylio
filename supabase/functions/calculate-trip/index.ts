@@ -5,16 +5,25 @@ import { buildCacheKey, roundToTimeBucket } from "../_shared/geo/cacheKey.ts";
 import { getRouteEta } from "../_shared/google/routesClient.ts";
 import { calculateDepartureTime } from "../_shared/engine/calculateDeparture.ts";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GOOGLE_API_KEY = Deno.env.get("GOOGLE_ROUTES_API_KEY")!;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401 });
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401, headers: corsHeaders });
     }
 
     const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -22,12 +31,10 @@ Deno.serve(async (req) => {
     });
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) {
-      return new Response(JSON.stringify({ error: "Invalid or expired session" }), { status: 401 });
+      return new Response(JSON.stringify({ error: "Invalid or expired session" }), { status: 401, headers: corsHeaders });
     }
     const deviceId = userData.user.id;
 
-    // Ensure a devices row exists for this anonymous user before any
-    // trips/calculation_events insert references it (FK dependency).
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     await admin.from("devices").upsert({ id: deviceId }, { onConflict: "id" });
 
@@ -42,7 +49,7 @@ Deno.serve(async (req) => {
       typeof destLat !== "number" || typeof destLng !== "number" ||
       typeof arrivalTarget !== "string" || typeof transportMode !== "string"
     ) {
-      return new Response(JSON.stringify({ error: "Missing or invalid request fields" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Missing or invalid request fields" }), { status: 400, headers: corsHeaders });
     }
     const originHash = encodeGeohash(originLat, originLng, 7);
     const destinationHash = encodeGeohash(destLat, destLng, 7);
@@ -69,7 +76,7 @@ Deno.serve(async (req) => {
         event_type: "no_route_found",
         metadata: { reason: "origin outside all supported city boundaries" },
       });
-      return new Response(JSON.stringify({ error: "Location not in a supported city" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Location not in a supported city" }), { status: 400, headers: corsHeaders });
     }
 
     const cityProfileRow = cityRows.find((c: any) => c.city_code === cityCode);
@@ -77,7 +84,7 @@ Deno.serve(async (req) => {
     const { data: transportRow, error: transportError } = await admin
       .from("transport_profiles").select("routing_mode").eq("mode_key", transportMode).single();
     if (transportError || !transportRow) {
-      return new Response(JSON.stringify({ error: "Unsupported transport mode" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Unsupported transport mode" }), { status: 400, headers: corsHeaders });
     }
 
     const weatherCondition = "clear"; // V1: hardcoded, per approved decision
@@ -135,7 +142,7 @@ Deno.serve(async (req) => {
         if (!corridorStat) {
           return new Response(JSON.stringify({
             error: "Unable to calculate route and no historical estimate available",
-          }), { status: 502 });
+          }), { status: 502, headers: corsHeaders });
         }
         durationSeconds = Math.round(corridorStat.avg_diff_seconds);
         distanceMeters = 0;
@@ -188,12 +195,10 @@ Deno.serve(async (req) => {
       recommendationExplanation: engineResult.recommendationExplanation,
       dataFreshness,
       distanceMeters,
-    }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {
     console.error("calculate-trip error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error", detail: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Internal server error", detail: err.message }), { status: 500, headers: corsHeaders });
   }
 });
-
-
