@@ -17,6 +17,7 @@ const TRANSPORT_MODES = [
 ];
 
 interface TripResult {
+  tripId: string;
   recommendedLeaveTime: string;
   predictedArrivalTime: string;
   confidenceScore: number;
@@ -60,6 +61,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TripResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -99,6 +102,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setFeedbackSubmitted(false);
 
     try {
       const { error: authError } = await supabase.auth.signInAnonymously();
@@ -128,6 +132,26 @@ export default function App() {
       setError(err.message ?? 'Something went wrong');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function submitFeedback(rating: 'accurate' | 'close' | 'late') {
+    if (!result || feedbackSubmitted || feedbackSubmitting) return;
+    setFeedbackSubmitting(true);
+    try {
+      const userSuccess = rating !== 'late';
+      const { error: feedbackError } = await supabase.from('feedback').insert({
+        trip_id: result.tripId,
+        rating,
+        user_success: userSuccess,
+      });
+      if (feedbackError) throw feedbackError;
+      setFeedbackSubmitted(true);
+    } catch {
+      // Non-critical path: fail silently, user can simply not see confirmation.
+      // Not surfacing an error here to avoid adding friction to an optional action.
+    } finally {
+      setFeedbackSubmitting(false);
     }
   }
 
@@ -273,6 +297,35 @@ export default function App() {
           {result.confidenceReason.map((reason, i) => (
             <Text key={i} style={styles.resultReason}>- {reason}</Text>
           ))}
+
+          <Text style={styles.feedbackPrompt}>How did it go?</Text>
+          {feedbackSubmitted ? (
+            <Text style={styles.feedbackThanks}>✓ Thanks for your feedback!</Text>
+          ) : (
+            <View style={styles.feedbackRow}>
+              <Pressable
+                style={styles.feedbackButton}
+                onPress={() => submitFeedback('accurate')}
+                disabled={feedbackSubmitting}
+              >
+                <Text style={styles.feedbackButtonText}>👍 On Time</Text>
+              </Pressable>
+              <Pressable
+                style={styles.feedbackButton}
+                onPress={() => submitFeedback('close')}
+                disabled={feedbackSubmitting}
+              >
+                <Text style={styles.feedbackButtonText}>👌 Close</Text>
+              </Pressable>
+              <Pressable
+                style={styles.feedbackButton}
+                onPress={() => submitFeedback('late')}
+                disabled={feedbackSubmitting}
+              >
+                <Text style={styles.feedbackButtonText}>👎 Late</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
       </ScrollView>
@@ -315,4 +368,17 @@ const styles = StyleSheet.create({
   resultConfidence: { fontSize: 16, fontWeight: '600', marginTop: 12 },
   resultFreshness: { fontSize: 12, color: '#999', marginTop: 4 },
   resultReason: { fontSize: 13, color: '#555', marginTop: 8 },
+  feedbackPrompt: { fontSize: 14, fontWeight: '600', color: '#333', marginTop: 20, marginBottom: 10 },
+  feedbackRow: { flexDirection: 'row', gap: 8 },
+  feedbackButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  feedbackButtonText: { fontSize: 13, color: '#111' },
+  feedbackThanks: { fontSize: 14, color: '#00805a', fontWeight: '600' },
 });
