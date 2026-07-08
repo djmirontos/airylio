@@ -4,6 +4,7 @@ import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platf
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import GooglePlacesTextInput from 'react-native-google-places-textinput';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './lib/supabase';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
@@ -30,6 +31,15 @@ interface Coords {
   lng: number;
 }
 
+interface RecentDestination {
+  label: string;
+  lat: number;
+  lng: number;
+}
+
+const RECENT_DESTINATIONS_KEY = 'airylio:recentDestinations';
+const MAX_RECENT_DESTINATIONS = 8;
+
 function startOfToday(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -51,6 +61,8 @@ export default function App() {
   const originRef = useRef<any>(null);
 
   const [destCoords, setDestCoords] = useState<Coords | null>(null);
+  const [destLabel, setDestLabel] = useState('');
+  const [recentDestinations, setRecentDestinations] = useState<RecentDestination[]>([]);
 
   const [arrivalDate, setArrivalDate] = useState<Date>(startOfToday());
   const [arrivalTime, setArrivalTime] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
@@ -83,6 +95,28 @@ export default function App() {
     })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(RECENT_DESTINATIONS_KEY);
+        if (stored) setRecentDestinations(JSON.parse(stored));
+      } catch {
+        // Non-critical: recent destinations are a convenience feature, fail silently.
+      }
+    })();
+  }, []);
+
+  async function addRecentDestination(item: RecentDestination) {
+    const deduped = recentDestinations.filter((d) => d.label !== item.label);
+    const updated = [item, ...deduped].slice(0, MAX_RECENT_DESTINATIONS);
+    setRecentDestinations(updated);
+    try {
+      await AsyncStorage.setItem(RECENT_DESTINATIONS_KEY, JSON.stringify(updated));
+    } catch {
+      // Non-critical: local cache write failure shouldn't block the calculation flow.
+    }
+  }
+
   function useCurrentLocation() {
     if (!gpsCoords) return;
     setOriginCoords(gpsCoords);
@@ -105,8 +139,11 @@ export default function App() {
     setFeedbackSubmitted(false);
 
     try {
-      const { error: authError } = await supabase.auth.signInAnonymously();
-      if (authError) throw authError;
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        const { error: authError } = await supabase.auth.signInAnonymously();
+        if (authError) throw authError;
+      }
 
       const { data, error: fnError } = await supabase.functions.invoke('calculate-trip', {
         body: {
@@ -200,25 +237,60 @@ export default function App() {
       />
 
       <Text style={styles.label}>To</Text>
-      <GooglePlacesTextInput
-        apiKey={GOOGLE_PLACES_API_KEY}
-        placeHolderText="Search destination"
-        fetchDetails
-        detailsFields={['location', 'formattedAddress']}
-        includedRegionCodes={['ph']}
-        onPlaceSelect={(place: any) => {
-          if (place.details?.location) {
-            setDestCoords({
-              lat: place.details.location.latitude,
-              lng: place.details.location.longitude,
-            });
-          }
-        }}
-        style={{
-          container: { marginBottom: 8 },
-          input: styles.autocompleteInput,
-        }}
-      />
+      {destLabel ? (
+        <Pressable
+          style={styles.staticField}
+          onPress={() => {
+            setDestCoords(null);
+            setDestLabel('');
+          }}
+        >
+          <Text style={styles.staticFieldText}>{destLabel}</Text>
+        </Pressable>
+      ) : (
+        <>
+          {recentDestinations.length > 0 && (
+            <View style={styles.recentList}>
+              <Text style={styles.recentLabel}>Recent</Text>
+              {recentDestinations.map((item) => (
+                <Pressable
+                  key={item.label}
+                  style={styles.recentItem}
+                  onPress={() => {
+                    setDestCoords({ lat: item.lat, lng: item.lng });
+                    setDestLabel(item.label);
+                  }}
+                >
+                  <Text style={styles.recentItemText}>{item.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+          <GooglePlacesTextInput
+            apiKey={GOOGLE_PLACES_API_KEY}
+            placeHolderText="Search destination"
+            fetchDetails
+            detailsFields={['location', 'formattedAddress']}
+            includedRegionCodes={['ph']}
+            onPlaceSelect={(place: any) => {
+              if (place.details?.location) {
+                const coords = {
+                  lat: place.details.location.latitude,
+                  lng: place.details.location.longitude,
+                };
+                const label = place.details.formattedAddress ?? 'Selected location';
+                setDestCoords(coords);
+                setDestLabel(label);
+                addRecentDestination({ label, lat: coords.lat, lng: coords.lng });
+              }
+            }}
+            style={{
+              container: { marginBottom: 8 },
+              input: styles.autocompleteInput,
+            }}
+          />
+        </>
+      )}
 
       <Text style={styles.label}>Arrive by</Text>
       <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled">
@@ -344,6 +416,10 @@ const styles = StyleSheet.create({
   linkText: { fontSize: 13, color: '#0066ff' },
   staticField: { padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', marginBottom: 8 },
   staticFieldText: { fontSize: 15, color: '#111' },
+  recentList: { marginBottom: 8 },
+  recentLabel: { fontSize: 12, color: '#999', marginBottom: 6 },
+  recentItem: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  recentItemText: { fontSize: 14, color: '#333' },
   autocompleteInput: {
     height: 48,
     borderRadius: 10,
