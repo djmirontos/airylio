@@ -1,6 +1,7 @@
 ﻿import type {
   CalculateDepartureInput,
   CalculateDepartureResult,
+  ExplanationFactor,
 } from './types';
 
 function parseTimeWindow(window: string): { startMinutes: number; endMinutes: number } {
@@ -13,10 +14,6 @@ function parseTimeWindow(window: string): { startMinutes: number; endMinutes: nu
 }
 
 function getLocalMinutesOfDay(date: Date, timeZone: string): number {
-  // Reads the wall-clock hour/minute IN THE CITY'S TIMEZONE, regardless of
-  // what timezone the Node process itself is running in. Fixes a real bug
-  // where Date.getHours()/getMinutes() returned the server's local time
-  // instead of the city's local time.
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hour: '2-digit',
@@ -117,6 +114,41 @@ export function calculateDepartureTime(
   }
   explanationReason.push(`${Math.round(totalBufferMinutes)}-minute safety buffer added`);
 
+  const factors: ExplanationFactor[] = [];
+
+  if (weatherCondition !== 'clear') {
+    const weatherOnlyBuffer = baseBufferMinutes * weatherMultiplierApplied;
+    const weatherMinutesAdded = Math.round(weatherOnlyBuffer - baseBufferMinutes);
+    if (weatherMinutesAdded !== 0) {
+      factors.push({
+        type: 'weather',
+        label: `${weatherCondition.charAt(0).toUpperCase()}${weatherCondition.slice(1).replace('_', ' ')} may add ${weatherMinutesAdded} min`,
+        minutesAdded: weatherMinutesAdded,
+      });
+    }
+  }
+
+  if (rushHourDetected) {
+    const rushOnlyBuffer = baseBufferMinutes * rushHourMultiplier;
+    const rushMinutesAdded = Math.round(rushOnlyBuffer - baseBufferMinutes);
+    if (rushMinutesAdded !== 0) {
+      factors.push({
+        type: 'rush_hour',
+        label: `Rush hour may add ${rushMinutesAdded} min`,
+        minutesAdded: rushMinutesAdded,
+      });
+    }
+  }
+
+  if (bufferWasCapped) {
+    const cappedReduction = Math.round(totalBufferMinutes - uncappedBufferMinutes);
+    factors.push({
+      type: 'buffer_cap',
+      label: `Buffer capped for extreme conditions (${cappedReduction} min)`,
+      minutesAdded: cappedReduction,
+    });
+  }
+
   return {
     recommendedLeaveTime: recommendedLeaveDate.toISOString(),
     predictedArrivalTime: predictedArrivalDate.toISOString(),
@@ -129,6 +161,7 @@ export function calculateDepartureTime(
       totalBufferMinutes: Math.round(totalBufferMinutes * 10) / 10,
       rushHourDetected,
       reason: explanationReason,
+      factors,
     },
   };
 }

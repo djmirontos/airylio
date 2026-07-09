@@ -38,8 +38,6 @@ function check(label: string, actual: unknown, expected: unknown) {
   }
 }
 
-// --- Scenario 1: Manila, Drive, clear, off-peak ---
-// Guards against: rush-hour false positive, weather multiplier drift, confidence baseline drift.
 const r1 = calculateDepartureTime({
   originHash: "u1x2y3z",
   destinationHash: "u1x2y3w",
@@ -56,10 +54,8 @@ const r1 = calculateDepartureTime({
 check("Scenario 1: rushHourDetected", r1.recommendationExplanation.rushHourDetected, false);
 check("Scenario 1: confidenceScore", r1.confidenceScore, 90);
 check("Scenario 1: totalBufferMinutes", r1.recommendationExplanation.totalBufferMinutes, 9.6);
+check("Scenario 1: factors empty (no weather/rush contribution)", r1.recommendationExplanation.factors, []);
 
-// --- Scenario 2: Baguio, Motorcycle Taxi, heavy rain, morning rush ---
-// This is the exact case that caught the timezone bug (server tz +3 vs city tz +8).
-// If this regresses to rushHourDetected:false, the timezone fix has been undone.
 const r2 = calculateDepartureTime({
   originHash: "abc1111",
   destinationHash: "abc2222",
@@ -76,10 +72,11 @@ const r2 = calculateDepartureTime({
 check("Scenario 2: rushHourDetected (timezone regression guard)", r2.recommendationExplanation.rushHourDetected, true);
 check("Scenario 2: confidenceScore", r2.confidenceScore, 85);
 check("Scenario 2: totalBufferMinutes", r2.recommendationExplanation.totalBufferMinutes, 13.9);
+check("Scenario 2: weather factor minutesAdded (hand-calc: 6*2.1-6=6.6→7)", r2.recommendationExplanation.factors[0]?.minutesAdded, 7);
+check("Scenario 2: weather factor type", r2.recommendationExplanation.factors[0]?.type, "weather");
+check("Scenario 2: rush factor minutesAdded (hand-calc: 6*1.1-6=0.6→1)", r2.recommendationExplanation.factors[1]?.minutesAdded, 1);
+check("Scenario 2: rush factor type", r2.recommendationExplanation.factors[1]?.type, "rush_hour");
 
-// --- Scenario 3: Manila, Public Commute, storm, cached, near buffer cap ---
-// Guards against: cached-data confidence penalty drift, and the max_buffer_minutes
-// guardrail firing incorrectly on a near-miss (40.3 vs cap of 45).
 const r3 = calculateDepartureTime({
   originHash: "def3333",
   destinationHash: "def4444",
@@ -96,6 +93,28 @@ const r3 = calculateDepartureTime({
 check("Scenario 3: rushHourDetected", r3.recommendationExplanation.rushHourDetected, true);
 check("Scenario 3: confidenceScore", r3.confidenceScore, 70);
 check("Scenario 3: totalBufferMinutes", r3.recommendationExplanation.totalBufferMinutes, 40.3);
+check("Scenario 3: weather factor minutesAdded (hand-calc: 15*1.92-15=13.8→14)", r3.recommendationExplanation.factors[0]?.minutesAdded, 14);
+check("Scenario 3: rush factor minutesAdded (hand-calc: 15*1.4-15=6)", r3.recommendationExplanation.factors[1]?.minutesAdded, 6);
+
+const tightCapConfig: RecommendationVersionConfig = {
+  ...v1Config,
+  max_buffer_minutes: { ...v1Config.max_buffer_minutes, public_commute: 20 },
+};
+const r4 = calculateDepartureTime({
+  originHash: "cap1111",
+  destinationHash: "cap2222",
+  cityCode: "PH-MNL",
+  transportMode: "public_commute",
+  arrivalTarget: "2026-07-08T09:00:00+08:00",
+  calculationTime: "2026-07-08T07:45:00+08:00",
+  weatherCondition: "storm",
+  rawGoogleEtaSeconds: 3600,
+  dataFreshness: "live",
+  recommendationVersion: tightCapConfig,
+  cityProfile: manila,
+});
+check("Scenario 4: buffer was capped", r4.recommendationExplanation.totalBufferMinutes, 20);
+check("Scenario 4: buffer_cap factor present", r4.recommendationExplanation.factors.some(f => f.type === "buffer_cap"), true);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
