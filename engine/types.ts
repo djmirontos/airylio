@@ -19,12 +19,15 @@ export interface CityProfileConfig {
   weatherSensitivity: number;
 }
 
+export type PlanningMode = 'arrive_by' | 'leave_at';
+
 export interface CalculateDepartureInput {
   originHash: string;
   destinationHash: string;
   cityCode: string;
   transportMode: string;
-  arrivalTarget: string;
+  planningMode: PlanningMode;
+  targetTime: string; // arrival_target if planningMode='arrive_by', departure time if 'leave_at'
   calculationTime: string;
   weatherCondition: WeatherCondition;
   rawGoogleEtaSeconds: number;
@@ -53,6 +56,7 @@ export interface CalculateDepartureResult {
   confidenceReason: string[];
   recommendationExplanation: {
     city: string;
+    planningMode: PlanningMode;
     weatherMultiplierApplied: number;
     baseBufferMinutes: number;
     totalBufferMinutes: number;
