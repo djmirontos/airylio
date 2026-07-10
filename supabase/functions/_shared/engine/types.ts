@@ -19,18 +19,34 @@ export interface CityProfileConfig {
   weatherSensitivity: number;
 }
 
+export type PlanningMode = 'arrive_by' | 'leave_at';
+
 export interface CalculateDepartureInput {
   originHash: string;
   destinationHash: string;
   cityCode: string;
   transportMode: string;
-  arrivalTarget: string;
+  planningMode: PlanningMode;
+  targetTime: string; // arrival_target if planningMode='arrive_by', departure time if 'leave_at'
   calculationTime: string;
   weatherCondition: WeatherCondition;
   rawGoogleEtaSeconds: number;
   dataFreshness: DataFreshness;
   recommendationVersion: RecommendationVersionConfig;
   cityProfile: CityProfileConfig;
+}
+
+// New: per-factor breakdown of the buffer, for richer "why this recommendation"
+// UI (e.g. "Rain added ~8 min"). These are illustrative approximations, not
+// an exact ledger — see calculateDeparture.ts for why they don't sum exactly
+// to totalBufferMinutes (the real formula is multiplicative, this isolates
+// each factor's marginal contribution against the base buffer).
+export type ExplanationFactorType = 'weather' | 'rush_hour' | 'buffer_cap';
+
+export interface ExplanationFactor {
+  type: ExplanationFactorType;
+  label: string;
+  minutesAdded: number;
 }
 
 export interface CalculateDepartureResult {
@@ -40,10 +56,12 @@ export interface CalculateDepartureResult {
   confidenceReason: string[];
   recommendationExplanation: {
     city: string;
+    planningMode: PlanningMode;
     weatherMultiplierApplied: number;
     baseBufferMinutes: number;
     totalBufferMinutes: number;
     rushHourDetected: boolean;
     reason: string[];
+    factors: ExplanationFactor[];
   };
 }

@@ -41,13 +41,15 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const {
       originLat, originLng, destLat, destLng,
-      arrivalTarget, transportMode,
+      targetTime, transportMode,
+      planningMode = "arrive_by", // defensive default for older clients not yet updated
     } = body;
 
     if (
       typeof originLat !== "number" || typeof originLng !== "number" ||
       typeof destLat !== "number" || typeof destLng !== "number" ||
-      typeof arrivalTarget !== "string" || typeof transportMode !== "string"
+      typeof targetTime !== "string" || typeof transportMode !== "string" ||
+      (planningMode !== "arrive_by" && planningMode !== "leave_at")
     ) {
       return new Response(JSON.stringify({ error: "Missing or invalid request fields" }), { status: 400, headers: corsHeaders });
     }
@@ -159,7 +161,7 @@ Deno.serve(async (req) => {
 
     const engineResult = calculateDepartureTime({
       originHash, destinationHash, cityCode, transportMode,
-      arrivalTarget, calculationTime: requestTime.toISOString(),
+      planningMode, targetTime, calculationTime: requestTime.toISOString(),
       weatherCondition, rawGoogleEtaSeconds: durationSeconds, dataFreshness,
       recommendationVersion: versionRow.buffer_config,
       cityProfile: {
@@ -174,7 +176,7 @@ Deno.serve(async (req) => {
       id: calculationId, device_id: deviceId,
       origin_hash: originHash, destination_hash: destinationHash,
       city_code: cityCode, transport_mode: transportMode,
-      arrival_target: arrivalTarget, calculation_timezone: cityProfileRow.timezone,
+      planning_mode: planningMode, target_time: targetTime, calculation_timezone: cityProfileRow.timezone,
       raw_google_eta_seconds: durationSeconds,
       recommended_leave_time: engineResult.recommendedLeaveTime,
       predicted_arrival_time: engineResult.predictedArrivalTime,
