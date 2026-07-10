@@ -3,12 +3,13 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import GooglePlacesTextInput from 'react-native-google-places-textinput';
+import DestinationAutocomplete from './components/DestinationAutocomplete';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import ConfidenceRing from './components/ConfidenceRing';
+import LoadingRecommendation from './components/LoadingRecommendation';
 import { supabase } from './lib/supabase';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
@@ -38,14 +39,11 @@ const TRANSPORT_MODES: {
   { key: 'walk', label: 'Walk', iconSet: 'ion', iconName: 'walk' },
 ];
 
-// Honest staged status text - matches what calculate-trip's Edge Function
-// actually does (cache check, Google Routes call, engine calculation),
-// not invented marketing steps.
-const LOADING_STEPS = [
-  'Checking recent routes...',
-  'Fetching live traffic...',
-  'Calculating your recommendation...',
-];
+interface ExplanationFactor {
+  type: 'weather' | 'rush_hour' | 'buffer_cap';
+  label: string;
+  minutesAdded: number;
+}
 
 interface TripResult {
   tripId: string;
@@ -54,6 +52,9 @@ interface TripResult {
   confidenceScore: number;
   confidenceReason: string[];
   dataFreshness: string;
+  recommendationExplanation?: {
+    factors: ExplanationFactor[];
+  };
 }
 
 interface Coords {
@@ -68,6 +69,7 @@ interface RecentDestination {
 }
 
 const RECENT_DESTINATIONS_KEY = 'airylio:recentDestinations';
+const RECENT_ORIGINS_KEY = 'airylio:recentOrigins';
 const MAX_RECENT_DESTINATIONS = 8;
 
 function startOfToday(): Date {
@@ -111,6 +113,12 @@ function reasonIcon(reason: string): { name: string; color: string } {
   return { name: 'checkmark-circle', color: COLORS.signalGood };
 }
 
+function factorIcon(type: 'weather' | 'rush_hour' | 'buffer_cap'): { name: string; color: string } {
+  if (type === 'weather') return { name: 'rainy', color: '#4A90D9' };
+  if (type === 'rush_hour') return { name: 'car', color: COLORS.accent };
+  return { name: 'time', color: COLORS.signalWarn }; // buffer_cap
+}
+
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good morning.';
@@ -132,13 +140,12 @@ export default function App() {
 
   const [originCoords, setOriginCoords] = useState<Coords | null>(null);
   const [originLabel, setOriginLabel] = useState('Current Location');
-  const originRef = useRef<any>(null);
+  const [originEditing, setOriginEditing] = useState(false);
 
   const [destCoords, setDestCoords] = useState<Coords | null>(null);
   const [destLabel, setDestLabel] = useState('');
-  const [destFocused, setDestFocused] = useState(false);
-  const destBlurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [recentDestinations, setRecentDestinations] = useState<RecentDestination[]>([]);
+  const [recentOrigins, setRecentOrigins] = useState<RecentDestination[]>([]);
 
   const [arrivalDate, setArrivalDate] = useState<Date>(startOfToday());
   const [arrivalTime, setArrivalTime] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
@@ -147,8 +154,6 @@ export default function App() {
 
   const [selectedMode, setSelectedMode] = useState('drive');
   const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
-  const loadingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const [result, setResult] = useState<TripResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -184,6 +189,17 @@ export default function App() {
     })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(RECENT_ORIGINS_KEY);
+        if (stored) setRecentOrigins(JSON.parse(stored));
+      } catch {
+        // Non-critical: recent origins are a convenience feature, fail silently.
+      }
+    })();
+  }, []);
+
   async function addRecentDestination(item: RecentDestination) {
     const deduped = recentDestinations.filter((d) => d.label !== item.label);
     const updated = [item, ...deduped].slice(0, MAX_RECENT_DESTINATIONS);
@@ -195,31 +211,26 @@ export default function App() {
     }
   }
 
+  async function addRecentOrigin(item: RecentDestination) {
+    const deduped = recentOrigins.filter((d) => d.label !== item.label);
+    const updated = [item, ...deduped].slice(0, MAX_RECENT_DESTINATIONS);
+    setRecentOrigins(updated);
+    try {
+      await AsyncStorage.setItem(RECENT_ORIGINS_KEY, JSON.stringify(updated));
+    } catch {
+      // Non-critical: local cache write failure shouldn't block the calculation flow.
+    }
+  }
+
   function useCurrentLocation() {
     if (!gpsCoords) return;
     setOriginCoords(gpsCoords);
     setOriginLabel('Current Location');
-    originRef.current?.clear();
+    setOriginEditing(false);
   }
 
-  function handleDestFocus() {
-    if (destBlurTimeout.current) clearTimeout(destBlurTimeout.current);
-    setDestFocused(true);
-  }
-
-  function handleDestBlur() {
-    // Delay hiding so a tap on a recent-item row registers before the list disappears.
-    destBlurTimeout.current = setTimeout(() => setDestFocused(false), 150);
-  }
-
-  function selectRecentDestination(item: RecentDestination) {
-    if (destBlurTimeout.current) clearTimeout(destBlurTimeout.current);
-    setDestCoords({ lat: item.lat, lng: item.lng });
-    setDestLabel(item.label);
-    setDestFocused(false);
-  }
-
-  const showGpsChip = originLabel === 'Current Location' && !!originCoords;
+  const showGpsChip = originLabel === 'Current Location' && !!originCoords && !originEditing;
+  const showManualChip = originLabel !== 'Current Location' && !!originCoords && !originEditing;
 
   const arrivalDateTime = combineDateAndTime(arrivalDate, arrivalTime);
   const isArrivalInFuture = arrivalDateTime.getTime() > Date.now();
@@ -229,14 +240,11 @@ export default function App() {
     if (!originCoords || !destCoords) return;
 
     setLoading(true);
-    setLoadingStep(0);
     setError(null);
     setResult(null);
     setFeedbackSubmitted(false);
-
-    loadingInterval.current = setInterval(() => {
-      setLoadingStep((prev) => Math.min(prev + 1, LOADING_STEPS.length - 1));
-    }, 700);
+    const loadingStartedAt = Date.now();
+    const MIN_LOADING_MS = 1000;
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -268,7 +276,11 @@ export default function App() {
     } catch (err: any) {
       setError(err.message ?? 'Something went wrong');
     } finally {
-      if (loadingInterval.current) clearInterval(loadingInterval.current);
+      const elapsed = Date.now() - loadingStartedAt;
+      const remaining = MIN_LOADING_MS - elapsed;
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
       setLoading(false);
     }
   }
@@ -318,49 +330,40 @@ export default function App() {
           <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
           <View style={styles.fieldTextCol}>
             <Text style={styles.fieldLabel}>From</Text>
-            {showGpsChip && (
-              <Pressable onPress={() => originRef.current?.focus()}>
+            {showGpsChip ? (
+              <Pressable onPress={() => setOriginEditing(true)}>
                 <Text style={styles.fieldValue}>Your current location</Text>
               </Pressable>
+            ) : showManualChip ? (
+              <Pressable onPress={() => setOriginEditing(true)}>
+                <Text style={styles.fieldValue} numberOfLines={1}>{originLabel}</Text>
+              </Pressable>
+            ) : (
+              <DestinationAutocomplete
+                apiKey={GOOGLE_PLACES_API_KEY}
+                recentDestinations={recentOrigins}
+                placeholder={locationError ?? 'Search origin'}
+                suggestedLabel="Suggested Locations"
+                autoFocus={originEditing}
+                dropdownOffsetLeft={-35}
+                dropdownOffsetRight={gpsCoords ? -44 : -14}
+                colors={{
+                  accent: COLORS.accent,
+                  textPrimary: COLORS.textPrimary,
+                  textSecondary: COLORS.textSecondary,
+                  divider: COLORS.divider,
+                  card: COLORS.card,
+                  signalRisk: COLORS.signalRisk,
+                  ink: COLORS.ink,
+                }}
+                onSelect={(place) => {
+                  setOriginLabel(place.label);
+                  setOriginCoords({ lat: place.lat, lng: place.lng });
+                  setOriginEditing(false);
+                  addRecentOrigin(place);
+                }}
+              />
             )}
-            <GooglePlacesTextInput
-              ref={originRef}
-              apiKey={GOOGLE_PLACES_API_KEY}
-              placeHolderText={locationError ?? 'Search origin'}
-              fetchDetails
-              detailsFields={['location', 'formattedAddress']}
-              includedRegionCodes={['ph']}
-              minCharsToFetch={2}
-              debounceDelay={300}
-              onPlaceSelect={(place: any) => {
-                setOriginLabel(place.details?.formattedAddress ?? 'Selected location');
-                if (place.details?.location) {
-                  setOriginCoords({
-                    lat: place.details.location.latitude,
-                    lng: place.details.location.longitude,
-                  });
-                }
-              }}
-              style={{
-                container: { marginTop: 2, display: showGpsChip ? 'none' : 'flex', borderWidth: 0, backgroundColor: 'transparent', position: 'relative' },
-                inputContainer: { borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 0 },
-                input: styles.inlineInput,
-                suggestionsContainer: [
-                  styles.premiumDropdown,
-                  {
-                    left: -35,
-                    right: gpsCoords && !showGpsChip ? -44 : -14,
-                  },
-                ],
-                suggestionItem: styles.premiumDropdownItem,
-                suggestionText: {
-                  main: styles.premiumDropdownMain,
-                  secondary: styles.premiumDropdownSecondary,
-                },
-                loadingIndicator: { color: COLORS.accent },
-                placeholder: { color: COLORS.textSecondary },
-              }}
-            />
           </View>
           {gpsCoords && !showGpsChip && (
             <Pressable onPress={useCurrentLocation}>
@@ -392,69 +395,27 @@ export default function App() {
             <Ionicons name="location" size={16} color={COLORS.signalRisk} style={styles.fieldPinIcon} />
             <View style={styles.fieldTextCol}>
               <Text style={styles.fieldLabel}>To</Text>
-              <GooglePlacesTextInput
+              <DestinationAutocomplete
                 apiKey={GOOGLE_PLACES_API_KEY}
-                placeHolderText="Search destination"
-                fetchDetails
-                detailsFields={['location', 'formattedAddress']}
-                includedRegionCodes={['ph']}
-                minCharsToFetch={2}
-                debounceDelay={300}
-                onFocus={handleDestFocus}
-                onBlur={handleDestBlur}
-                onPlaceSelect={(place: any) => {
-                  if (place.details?.location) {
-                    const coords = {
-                      lat: place.details.location.latitude,
-                      lng: place.details.location.longitude,
-                    };
-                    const label = place.details.formattedAddress ?? 'Selected location';
-                    setDestCoords(coords);
-                    setDestLabel(label);
-                    setDestFocused(false);
-                    addRecentDestination({ label, lat: coords.lat, lng: coords.lng });
-                  }
+                recentDestinations={recentDestinations}
+                dropdownOffsetLeft={-42}
+                dropdownOffsetRight={-14}
+                colors={{
+                  accent: COLORS.accent,
+                  textPrimary: COLORS.textPrimary,
+                  textSecondary: COLORS.textSecondary,
+                  divider: COLORS.divider,
+                  card: COLORS.card,
+                  signalRisk: COLORS.signalRisk,
+                  ink: COLORS.ink,
                 }}
-                style={{
-                  container: { marginTop: 2, borderWidth: 0, backgroundColor: 'transparent', position: 'relative' },
-                  inputContainer: { borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 0 },
-                  input: styles.inlineInput,
-                  suggestionsContainer: styles.premiumDropdown,
-                  suggestionItem: styles.premiumDropdownItem,
-                  suggestionText: {
-                    main: styles.premiumDropdownMain,
-                    secondary: styles.premiumDropdownSecondary,
-                  },
-                  loadingIndicator: { color: COLORS.accent },
-                  placeholder: { color: COLORS.textSecondary },
+                onSelect={(place) => {
+                  setDestCoords({ lat: place.lat, lng: place.lng });
+                  setDestLabel(place.label);
+                  addRecentDestination(place);
                 }}
               />
             </View>
-          </View>
-        )}
-
-        {destFocused && !destLabel && recentDestinations.length > 0 && (
-          <View style={styles.recentListFloating}>
-            <Text style={styles.recentLabel}>Recent</Text>
-            <ScrollView
-              style={styles.recentScroll}
-              nestedScrollEnabled
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={recentDestinations.length > 3}
-            >
-              {recentDestinations.map((item) => (
-                <Pressable
-                  key={item.label}
-                  style={styles.recentItem}
-                  onPress={() => selectRecentDestination(item)}
-                >
-                  <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.recentItemText} numberOfLines={2} ellipsizeMode="tail">
-                    {item.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
           </View>
         )}
         </View>
@@ -548,25 +509,9 @@ export default function App() {
         </ScrollView>
       </View>
 
-      {/* Loading modal - staged status text matching the real pipeline steps */}
-      <Modal visible={loading} transparent animationType="fade">
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color={COLORS.accent} />
-            <Text style={styles.loadingStepText}>{LOADING_STEPS[loadingStep]}</Text>
-            <View style={styles.loadingDotsRow}>
-              {LOADING_STEPS.map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.loadingDot,
-                    i <= loadingStep && styles.loadingDotActive,
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
-        </View>
+      {/* Loading modal - premium animated recommendation screen */}
+      <Modal visible={loading} animationType="fade">
+        <LoadingRecommendation />
       </Modal>
 
       {/* Result modal - its own full-screen surface, not inline below the form */}
@@ -613,6 +558,22 @@ export default function App() {
                   </View>
                 );
               })}
+
+              {!!result.recommendationExplanation?.factors?.length && (
+                <>
+                  <View style={styles.divider} />
+                  <Text style={styles.whyTitle}>Estimated impact</Text>
+                  {result.recommendationExplanation.factors.map((factor, i) => {
+                    const icon = factorIcon(factor.type);
+                    return (
+                      <View key={i} style={styles.reasonRow}>
+                        <Ionicons name={icon.name as any} size={16} color={icon.color} style={{ marginTop: 1 }} />
+                        <Text style={styles.reasonText}>{factor.label}</Text>
+                      </View>
+                    );
+                  })}
+                </>
+              )}
 
               <View style={styles.divider} />
 
@@ -691,82 +652,6 @@ const styles = StyleSheet.create({
   fieldTextCol: { flex: 1 },
   fieldLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.accent, marginBottom: 2 },
   fieldValue: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.textPrimary },
-  inlineInput: {
-    height: 22,
-    fontSize: 15,
-    fontFamily: 'Inter_500Medium',
-    color: COLORS.textPrimary,
-    padding: 0,
-    margin: 0,
-    borderWidth: 0,
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-    borderLeftWidth: 0,
-    borderRightWidth: 0,
-    borderColor: 'transparent',
-    backgroundColor: 'transparent',
-  },
-  recentList: { paddingVertical: 6 },
-  recentListFloating: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: 8,
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 14,
-    zIndex: 50,
-    elevation: 8,
-    shadowColor: COLORS.ink,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-  },
-  recentScroll: { maxHeight: 150 },
-  premiumDropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: 8,
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    zIndex: 50,
-    elevation: 8,
-    shadowColor: COLORS.ink,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-    maxHeight: 260,
-  },
-  // From's inner text column is narrower than To's (it has both a leading
-  // dot icon and a trailing locate icon reducing its flex width, while To's
-  // search-mode row only has the leading pin icon). Offset accounts for:
-  // fieldRow's own 14px padding + dot(9)+gap(12) on the left = 35,
-  // fieldRow's own 14px padding + gap(12)+icon(18) on the right = 44.
-  // Offset is now computed inline (state-dependent on trailing icon presence),
-  // see the From field's suggestionsContainer style above.
-  premiumDropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderTopWidth: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  premiumDropdownMain: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.textPrimary },
-  premiumDropdownSecondary: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
-  recentLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.textSecondary, marginBottom: 6 },
-  recentItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    paddingVertical: 10,
-    paddingRight: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  recentItemText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textPrimary, flex: 1 },
   sectionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
   arrivalRow: {
     flexDirection: 'row',
@@ -812,32 +697,6 @@ const styles = StyleSheet.create({
   },
   errorTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.signalRisk, marginBottom: 4 },
   errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary },
-
-  // Loading modal
-  loadingOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(18,21,61,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 30,
-  },
-  loadingCard: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    width: '100%',
-  },
-  loadingStepText: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 15,
-    color: COLORS.textPrimary,
-    marginTop: 20,
-    textAlign: 'center',
-  },
-  loadingDotsRow: { flexDirection: 'row', gap: 6, marginTop: 16 },
-  loadingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.divider },
-  loadingDotActive: { backgroundColor: COLORS.accent },
 
   // Result modal (its own full screen)
   resultScreen: { flex: 1, backgroundColor: COLORS.card },
