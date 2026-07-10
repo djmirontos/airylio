@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DestinationAutocomplete from './components/DestinationAutocomplete';
@@ -52,6 +52,7 @@ interface TripResult {
   confidenceScore: number;
   confidenceReason: string[];
   dataFreshness: string;
+  distanceMeters?: number;
   recommendationExplanation?: {
     factors: ExplanationFactor[];
   };
@@ -88,6 +89,20 @@ function confidenceColor(score: number): string {
   if (score >= 85) return COLORS.signalGood;
   if (score >= 70) return COLORS.signalWarn;
   return COLORS.signalRisk;
+}
+
+function formatTravelTime(leaveTime: string, arrivalTime: string): string {
+  const ms = new Date(arrivalTime).getTime() - new Date(leaveTime).getTime();
+  const totalMinutes = Math.round(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) return `${hours} hr ${minutes} min`;
+  return `${minutes} min`;
+}
+
+function formatDistance(meters?: number): string | null {
+  if (meters === undefined) return null;
+  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 function freshnessLabel(freshness: string): { text: string; color: string } {
@@ -156,8 +171,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TripResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -242,7 +255,6 @@ export default function App() {
     setLoading(true);
     setError(null);
     setResult(null);
-    setFeedbackSubmitted(false);
     const loadingStartedAt = Date.now();
     const MIN_LOADING_MS = 1000;
 
@@ -285,25 +297,6 @@ export default function App() {
     }
   }
 
-  async function submitFeedback(rating: 'accurate' | 'close' | 'late') {
-    if (!result || feedbackSubmitted || feedbackSubmitting) return;
-    setFeedbackSubmitting(true);
-    try {
-      const userSuccess = rating !== 'late';
-      const { error: feedbackError } = await supabase.from('feedback').insert({
-        trip_id: result.tripId,
-        rating,
-        user_success: userSuccess,
-      });
-      if (feedbackError) throw feedbackError;
-      setFeedbackSubmitted(true);
-    } catch {
-      // Non-critical path: fail silently, user can simply not see confirmation.
-    } finally {
-      setFeedbackSubmitting(false);
-    }
-  }
-
   if (!fontsLoaded) {
     return (
       <View style={styles.fontLoadingContainer}>
@@ -319,7 +312,11 @@ export default function App() {
     <View style={styles.root}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <Text style={styles.wordmark}>Airylio</Text>
+        <Image source={require('./assets/main_bg.png')} style={styles.headerBgImage} resizeMode="contain" />
+        <View style={styles.logoRow}>
+          <Image source={require('./assets/icon.png')} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.logoText}>Airylio</Text>
+        </View>
         <Text style={styles.greeting}>{getGreeting()}</Text>
         <Text style={styles.greetingSub}>Where are you headed?</Text>
       </View>
@@ -520,9 +517,27 @@ export default function App() {
           <View style={styles.resultScreen}>
             <StatusBar style="light" />
             <View style={styles.resultHero}>
-              <Pressable style={styles.resultCloseButton} onPress={() => setResult(null)}>
-                <Ionicons name="close" size={22} color="#fff" />
+              <Pressable style={styles.resultBackButton} onPress={() => setResult(null)}>
+                <Ionicons name="arrow-back" size={22} color="#fff" />
               </Pressable>
+
+              <View style={styles.tripStack}>
+                <View style={styles.tripStackRow}>
+                  <View style={[styles.tripDot, { backgroundColor: '#fff' }]} />
+                  <Text style={styles.tripText} numberOfLines={2}>{originLabel}</Text>
+                </View>
+                <View style={styles.tripStackLine} />
+                <View style={styles.tripStackRow}>
+                  <Ionicons name="location" size={13} color={COLORS.signalRisk} />
+                  <Text style={styles.tripText} numberOfLines={2}>{destLabel}</Text>
+                </View>
+              </View>
+              <View style={styles.arrivalTargetRow}>
+                <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.arrivalTargetText}>
+                  Target arrival {arrivalDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
 
               <View style={styles.freshnessBadgeRow}>
                 <View style={[styles.freshnessDot, { backgroundColor: freshness.color }]} />
@@ -577,37 +592,27 @@ export default function App() {
 
               <View style={styles.divider} />
 
-              <Text style={styles.feedbackPrompt}>How did it go?</Text>
-              {feedbackSubmitted ? (
-                <View style={styles.feedbackThanksRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={COLORS.signalGood} />
-                  <Text style={styles.feedbackThanks}>Thanks for your feedback!</Text>
-                </View>
-              ) : (
-                <View style={styles.feedbackRow}>
-                  <Pressable
-                    style={styles.feedbackButton}
-                    onPress={() => submitFeedback('accurate')}
-                    disabled={feedbackSubmitting}
-                  >
-                    <Text style={styles.feedbackButtonText}>👍 On Time</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.feedbackButton}
-                    onPress={() => submitFeedback('close')}
-                    disabled={feedbackSubmitting}
-                  >
-                    <Text style={styles.feedbackButtonText}>👌 Close</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.feedbackButton}
-                    onPress={() => submitFeedback('late')}
-                    disabled={feedbackSubmitting}
-                  >
-                    <Text style={styles.feedbackButtonText}>👎 Late</Text>
-                  </Pressable>
+              <Text style={styles.whyTitle}>Trip details</Text>
+              <View style={styles.tripDetailRow}>
+                <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
+                <Text style={styles.tripDetailLabel}>Travel time</Text>
+                <Text style={styles.tripDetailValue}>
+                  {formatTravelTime(result.recommendedLeaveTime, result.predictedArrivalTime)}
+                </Text>
+              </View>
+              {formatDistance(result.distanceMeters) && (
+                <View style={styles.tripDetailRow}>
+                  <Ionicons name="navigate-outline" size={16} color={COLORS.textSecondary} />
+                  <Text style={styles.tripDetailLabel}>Distance</Text>
+                  <Text style={styles.tripDetailValue}>{formatDistance(result.distanceMeters)}</Text>
                 </View>
               )}
+              <View style={styles.tripDetailRow}>
+                <Ionicons name="globe-outline" size={16} color={COLORS.textSecondary} />
+                <Text style={styles.tripDetailLabel}>Data source</Text>
+                <Text style={styles.tripDetailValue}>Google Routes</Text>
+              </View>
+              <Text style={styles.updatedText}>Updated just now</Text>
             </ScrollView>
           </View>
         )}
@@ -620,9 +625,18 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.canvas },
   fontLoadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
-  header: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16 },
-  wordmark: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.accent, letterSpacing: 0.5, marginBottom: 14 },
-  greeting: { fontFamily: 'Poppins_700Bold', fontSize: 26, color: COLORS.textPrimary },
+  header: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16, position: 'relative', overflow: 'hidden' },
+  headerBgImage: {
+    position: 'absolute',
+    top: 58,
+    right: -20,
+    width: 160,
+    height: 130,
+  },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  logo: { width: 44, height: 44, borderRadius: 10 },
+  logoText: { fontFamily: 'Poppins_700Bold', fontSize: 20, color: COLORS.textPrimary },
+  greeting: { fontFamily: 'Poppins_700Bold', fontSize: 21, color: COLORS.textPrimary },
   greetingSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
   card: {
     flex: 1,
@@ -700,10 +714,10 @@ const styles = StyleSheet.create({
 
   // Result modal (its own full screen)
   resultScreen: { flex: 1, backgroundColor: COLORS.card },
-  resultCloseButton: {
+  resultBackButton: {
     position: 'absolute',
     top: 54,
-    right: 20,
+    left: 20,
     zIndex: 2,
     width: 34,
     height: 34,
@@ -714,10 +728,21 @@ const styles = StyleSheet.create({
   },
   resultHero: {
     backgroundColor: COLORS.ink,
-    paddingTop: 64,
+    paddingTop: 100,
     paddingBottom: 28,
     paddingHorizontal: 24,
   },
+  tripStack: { marginBottom: 10 },
+  tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  tripDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
+  tripStackLine: { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
+  tripText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.9)', flex: 1 },
+  arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
+  arrivalTargetText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  tripDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  tripDetailLabel: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
+  tripDetailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary },
+  updatedText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   freshnessBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -741,18 +766,4 @@ const styles = StyleSheet.create({
   whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 12 },
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
-  feedbackPrompt: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 12 },
-  feedbackRow: { flexDirection: 'row', gap: 8 },
-  feedbackButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.divider,
-    backgroundColor: COLORS.canvas,
-    alignItems: 'center',
-  },
-  feedbackButtonText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: COLORS.textPrimary },
-  feedbackThanksRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  feedbackThanks: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.signalGood },
 });
