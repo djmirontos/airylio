@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
       confidenceReason: engineResult.confidenceReason,
       recommendationExplanation: engineResult.recommendationExplanation,
       dataFreshness,
+      weatherCondition,
       distanceMeters,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -218,4 +219,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "Internal server error", detail: err.message }), { status: 500, headers: corsHeaders });
   }
 });
+
+
 

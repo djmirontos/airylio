@@ -29,6 +29,10 @@ const COLORS = {
   divider: '#E7E7F1',
 };
 
+// TEMP: force Philippine Standard Time (UTC+8) for testing
+const PST_OFFSET_MS = (8 * 60 + new Date().getTimezoneOffset()) * 60000;
+function nowPST(): number { return Date.now() + PST_OFFSET_MS; }
+
 type PlanningMode = 'arrive_by' | 'leave_at';
 
 const TRANSPORT_MODES: {
@@ -57,6 +61,7 @@ interface TripResult {
   confidenceReason: string[];
   dataFreshness: string;
   distanceMeters?: number;
+  weatherCondition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
   recommendationExplanation?: {
     planningMode?: PlanningMode;
     factors: ExplanationFactor[];
@@ -79,7 +84,7 @@ const RECENT_ORIGINS_KEY = 'airylio:recentOrigins';
 const MAX_RECENT_DESTINATIONS = 8;
 
 function startOfToday(): Date {
-  const d = new Date();
+  const d = new Date(nowPST());
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -143,8 +148,15 @@ function factorIcon(type: 'weather' | 'rush_hour' | 'buffer_cap'): { name: strin
   return { name: 'time', color: COLORS.signalWarn }; // buffer_cap
 }
 
+function weatherIndicator(condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm'): { icon: string; label: string; color: string } {
+  if (condition === 'storm') return { icon: 'thunderstorm', label: 'Storm', color: '#7B5EA7' };
+  if (condition === 'heavy_rain') return { icon: 'rainy', label: 'Heavy Rain', color: '#4A90D9' };
+  if (condition === 'rain') return { icon: 'rainy-outline', label: 'Rain', color: '#4A90D9' };
+  return { icon: 'sunny', label: 'Clear', color: COLORS.signalGood };
+}
+
 function getGreeting(): string {
-  const hour = new Date().getHours();
+  const hour = new Date(nowPST()).getHours();
   if (hour < 12) return 'Good morning.';
   if (hour < 18) return 'Good afternoon.';
   return 'Good evening.';
@@ -173,7 +185,7 @@ export default function App() {
 
   const [planningMode, setPlanningMode] = useState<PlanningMode>('arrive_by');
   const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
-  const [selectedTime, setSelectedTime] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
+  const [selectedTime, setSelectedTime] = useState<Date>(new Date(nowPST() + 60 * 60 * 1000));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -230,7 +242,7 @@ export default function App() {
       return;
     }
     function tick() {
-      const diffMs = new Date(result.recommendedLeaveTime).getTime() - Date.now();
+      const diffMs = new Date(result.recommendedLeaveTime).getTime() - nowPST();
       const diffMin = Math.round(diffMs / 60000);
       const diffSec = Math.floor(diffMs / 1000);
       if (diffSec <= 0) {
@@ -284,8 +296,9 @@ export default function App() {
   const showManualChip = originLabel !== 'Current Location' && !!originCoords && !originEditing;
 
   const selectedDateTime = combineDateAndTime(selectedDate, selectedTime);
-  const isInFuture = selectedDateTime.getTime() > Date.now();
-  const canCalculate = !!originCoords && !!destCoords && isInFuture && !loading;
+  const LEAVE_AT_GRACE_MS = 2 * 60 * 1000;
+  const isValidDepartureTime = selectedDateTime.getTime() >= nowPST() - LEAVE_AT_GRACE_MS;
+  const canCalculate = !!originCoords && !!destCoords && isValidDepartureTime && !loading;
 
   async function handleCalculate() {
     if (!originCoords || !destCoords) return;
@@ -512,7 +525,7 @@ export default function App() {
               </View>
             </Pressable>
           </View>
-          {!isInFuture && (
+          {!isValidDepartureTime && (
             <Text style={styles.warning}>
               {planningMode === 'arrive_by' ? 'Arrival time must be in the future.' : 'Departure time must be in the future.'}
             </Text>
@@ -636,6 +649,8 @@ export default function App() {
               <View style={styles.freshnessBadgeRow}>
                 <View style={[styles.freshnessDot, { backgroundColor: freshness.color }]} />
                 <Text style={styles.freshnessBadgeInline}>{freshness.text}</Text>
+                <View style={styles.freshnessDivider} />
+                {(() => { const w = weatherIndicator(result.weatherCondition); return (<><Ionicons name={w.icon as any} size={13} color={w.color} /><Text style={styles.freshnessBadgeInline}>{w.label}</Text></>); })()}
               </View>
 
               <View style={styles.heroLayout}>
@@ -896,6 +911,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   freshnessDot: { width: 8, height: 8, borderRadius: 4 },
+  freshnessDivider: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 6 },
   freshnessBadgeInline: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
   heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroTextCol: { flex: 1 },
@@ -916,6 +932,22 @@ const styles = StyleSheet.create({
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
