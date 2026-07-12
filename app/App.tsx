@@ -12,6 +12,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import ConfidenceRing from './components/ConfidenceRing';
 import LoadingRecommendation from './components/LoadingRecommendation';
 import { supabase } from './lib/supabase';
+import LottieView from 'lottie-react-native';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
@@ -155,6 +156,17 @@ function weatherIndicator(condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm')
   return { icon: 'sunny', label: 'Clear', color: COLORS.signalGood };
 }
 
+function getWeatherAnimation(
+  condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm'
+): any {
+  const h = new Date(nowPST()).getHours();
+  if (condition === 'storm' || condition === 'heavy_rain') return require('./assets/lottie/storm.json');
+  if (condition === 'rain') return require('./assets/lottie/rain.json');
+  if (h >= 5 && h < 8) return require('./assets/lottie/sunrise.json');
+  if (h >= 8 && h < 18) return require('./assets/lottie/sunny.json');
+  return require('./assets/lottie/night.json');
+}
+
 function getGreeting(): string {
   const hour = new Date(nowPST()).getHours();
   if (hour < 12) return 'Good morning.';
@@ -194,6 +206,7 @@ export default function App() {
   const [result, setResult] = useState<TripResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [countdownText, setCountdownText] = useState<string | null>(null);
+  const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
   useEffect(() => {
     (async () => {
@@ -235,6 +248,27 @@ export default function App() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!gpsCoords) return;
+    (async () => {
+      try {
+        const res = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${gpsCoords.lat}&longitude=${gpsCoords.lng}&current=weathercode&timezone=auto`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const code = data?.current?.weathercode ?? -1;
+          if (code >= 96) setHeaderWeather('storm');
+          else if (code >= 95) setHeaderWeather('heavy_rain');
+          else if (code >= 80 || (code >= 51 && code <= 67)) setHeaderWeather('rain');
+          else setHeaderWeather('clear');
+        }
+      } catch {
+        // silent fallback to 'clear'
+      }
+    })();
+  }, [gpsCoords]);
 
   useEffect(() => {
     if (!result) {
@@ -370,6 +404,12 @@ export default function App() {
       <StatusBar style="dark" />
       <View style={styles.header}>
         <Image source={require('./assets/main_bg.png')} style={styles.headerBgImage} resizeMode="contain" />
+        <LottieView
+          source={getWeatherAnimation(headerWeather)}
+          autoPlay
+          loop
+          style={styles.headerLottie}
+        />
         <View style={styles.logoRow}>
           <Image source={require('./assets/icon.png')} style={styles.logo} resizeMode="contain" />
           <Text style={styles.logoText}>Airylio</Text>
@@ -755,6 +795,7 @@ const styles = StyleSheet.create({
     width: 160,
     height: 130,
   },
+  headerLottie: { position: 'absolute', top: 60, right: 80, width: 65, height: 65, opacity: 0.65 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   logo: { width: 44, height: 44, borderRadius: 10 },
   logoText: { fontFamily: 'Poppins_700Bold', fontSize: 20, color: COLORS.textPrimary },
@@ -934,6 +975,7 @@ const styles = StyleSheet.create({
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 });
+
 
 
 
