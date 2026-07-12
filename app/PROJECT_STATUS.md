@@ -197,16 +197,22 @@
 
 | Priority | Feature | Status | Notes |
 |---|---|---|---|
-| High | Post-trip feedback (proper timing) | ⏳ | Removed from result screen (premature). Needs local notification at predicted arrival time, or next-session prompt |
-| Medium | Favorites (Home/Work) | ⏳ | Sprint 3 |
-| Medium | Trip history screen | ⏳ | Sprint 3. Bottom nav required |
-| Medium | Push notifications | ⏳ | "Leave now" alert at calculated departure time |
-| Medium | Dark mode | ⏳ | Low complexity once design tokens are solid |
-| Low | Leave Now mode | ⏳ | Shortcut: target = now, instant calculation |
-| Low | Flexible Arrival window | ⏳ | "Arrive between 8:00–8:30" |
-| Low | EAS Build / App Store submission | ⏳ | Requires Expo account + build config |
-| Low | Bottom navigation | ⏳ | Plan / Trips / History / Settings tabs (mocked in reference designs) |
-| Low | Real user testing recruitment | ⏳ | 10–20 PH commuters for real feedback |
+| 1 - High | UI/UX Polish | ⏳ | General polish pass before next sprint |
+| 2 - High | Trip History | ⏳ | Users expect to see past trips. Requires bottom nav |
+| 3 - High | Route Preview (Map) | ⏳ | Show route on map after recommendation. Origin/destination markers, traffic overlay, Open in Google Maps/Waze button |
+| 4 - High | Favorites (Home/Work) | ⏳ | Sprint 3 |
+| 5 - High | Push Notifications | ⏳ | Leave now alert at calculated departure time |
+| 6 - High | Post-trip Feedback | ⏳ | Local notification at predicted arrival time or next-session prompt |
+| 7 - Medium | Bottom Navigation | ⏳ | Plan / Trips / History / Settings tabs |
+| 8 - Medium | Dark Mode | ⏳ | Low complexity once design tokens are solid |
+| 9 - Low | Leave Now shortcut | ⏳ | Target = now, instant calculation |
+| 10 - Low | Flexible Arrival window | ⏳ | Arrive between 8:00-8:30 |
+| 11 - Low | EAS Build / App Store | ⏳ | Requires Expo account + build config |
+| 12 - Low | Real user testing | ⏳ | 10-20 PH commuters for real feedback |
+
+**Before Production:**
+- Remove nowPST() time-forcing mechanism
+- Switch Open-Meteo to WeatherAPI.com
 
 ---
 
@@ -498,6 +504,7 @@ airylio/
 | 8 | Real user testing recruitment | 10–20 PH commuters, Facebook groups / WhatsApp communities |
 | 9 | App Store preparation | EAS Build setup, icons, splash screen, store listing |
 | 10 | Uninstall unused `react-native-google-places-textinput` package | Cleanup |
+
 
 
 
