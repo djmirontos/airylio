@@ -62,7 +62,6 @@
 **Confidence baseline:** per transport mode (drive: 90, motorcycle: 85, commute: 75, walk: 95); penalties for cached (−5) and estimated (−15) freshness
 **Testing performed:** 28 regression assertions (4 arrive_by + 7 leave_at + factors/cap scenarios)
 **Commit:** `ff5c7e6` (engine), `4001aa6` (factors)
-**Notes:** Weather hardcoded to `'clear'` for V1. `factors` array provides per-factor breakdown (approximation — multiplicative cross-terms not decomposable exactly).
 
 ---
 
@@ -199,11 +198,9 @@
 | Priority | Feature | Status | Notes |
 |---|---|---|---|
 | High | Post-trip feedback (proper timing) | ⏳ | Removed from result screen (premature). Needs local notification at predicted arrival time, or next-session prompt |
-| High | Sprint 2 "Trust" features | ⏳ | Countdown timer ("Leave in 42 min"), weather indicators, map preview |
 | Medium | Favorites (Home/Work) | ⏳ | Sprint 3 |
 | Medium | Trip history screen | ⏳ | Sprint 3. Bottom nav required |
 | Medium | Push notifications | ⏳ | "Leave now" alert at calculated departure time |
-| Medium | Live weather API | ⏳ | Weather hardcoded to 'clear' in V1. Replace with real API call |
 | Medium | Dark mode | ⏳ | Low complexity once design tokens are solid |
 | Low | Leave Now mode | ⏳ | Shortcut: target = now, instant calculation |
 | Low | Flexible Arrival window | ⏳ | "Arrive between 8:00–8:30" |
@@ -433,7 +430,6 @@ airylio/
 | `scripts/edge-function.live-test.ts` sends stale `arrivalTarget` field | Low | Old test script, now fails with 400. Replace with `leave-at.live-test.ts` |
 | `app/assets/result_ g.png` has a space in filename | Low | Stale filename, not yet wired to UI |
 | Post-trip feedback timing | Medium | `feedback` table exists but UI prompt removed (premature). No proper trigger yet |
-| Weather hardcoded to `'clear'` | Medium | Engine accepts weather as a parameter but V1 never varies it |
 | Tunnel testing blocked on ship WiFi | Low | Ship content filter blocks `*.exp.direct`. Use mobile data for Expo Go testing |
 | `recentOrigins` empty until user searches | Info | Expected behavior, not a bug. First launch shows no recent origins |
 
@@ -442,6 +438,10 @@ airylio/
 ## 14. Changelog
 
 ### 2026-07-12
+- Completed Sprint 2 Trust features: countdown timer, Open-Meteo weather API integration, weather UI badge, confidence ring sublabel (High/Moderate/Low)
+- Fixed 'Leave At Now' grace period validation (LEAVE_AT_GRACE_MS constant)
+- Added PST time forcing for testing (nowPST() helper)
+- Fixed multiple JSX nesting errors in App.tsx
 - Committed and pushed Sprint 1 UI changes (TimePickerModal, planning mode toggle, white loading screen bg)
 
 ### 2026-07-11
@@ -490,7 +490,6 @@ airylio/
 
 | Priority | Task | Notes |
 |---|---|---|
-| 2 | Sprint 2 "Trust" features | Countdown timer, weather indicator, confidence visualization improvement |
 | 3 | Post-trip feedback — proper timing | Local notification at predicted arrival, or next-session prompt |
 | 4 | Live weather API integration | Replace hardcoded `'clear'` with real weather data |
 | 5 | Favorites (Home/Work shortcuts) | AsyncStorage, pre-populated in destination autocomplete |
@@ -499,6 +498,7 @@ airylio/
 | 8 | Real user testing recruitment | 10–20 PH commuters, Facebook groups / WhatsApp communities |
 | 9 | App Store preparation | EAS Build setup, icons, splash screen, store listing |
 | 10 | Uninstall unused `react-native-google-places-textinput` package | Cleanup |
+
 
 
 
