@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DestinationAutocomplete from './components/DestinationAutocomplete';
+import TimePickerModal from './components/TimePickerModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
@@ -17,6 +18,7 @@ const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 const COLORS = {
   ink: '#12153D',
   accent: '#4C4F9E',
+  accentTint: 'rgba(76,79,158,0.07)',
   signalGood: '#12B886',
   signalWarn: '#F5A623',
   signalRisk: '#E85D51',
@@ -26,6 +28,8 @@ const COLORS = {
   textSecondary: '#6B6F8A',
   divider: '#E7E7F1',
 };
+
+type PlanningMode = 'arrive_by' | 'leave_at';
 
 const TRANSPORT_MODES: {
   key: string;
@@ -54,6 +58,7 @@ interface TripResult {
   dataFreshness: string;
   distanceMeters?: number;
   recommendationExplanation?: {
+    planningMode?: PlanningMode;
     factors: ExplanationFactor[];
   };
 }
@@ -83,6 +88,10 @@ function combineDateAndTime(date: Date, time: Date): Date {
   const combined = new Date(date);
   combined.setHours(time.getHours(), time.getMinutes(), 0, 0);
   return combined;
+}
+
+function formatTime12h(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 function confidenceColor(score: number): string {
@@ -162,8 +171,9 @@ export default function App() {
   const [recentDestinations, setRecentDestinations] = useState<RecentDestination[]>([]);
   const [recentOrigins, setRecentOrigins] = useState<RecentDestination[]>([]);
 
-  const [arrivalDate, setArrivalDate] = useState<Date>(startOfToday());
-  const [arrivalTime, setArrivalTime] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
+  const [planningMode, setPlanningMode] = useState<PlanningMode>('arrive_by');
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
+  const [selectedTime, setSelectedTime] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -245,9 +255,9 @@ export default function App() {
   const showGpsChip = originLabel === 'Current Location' && !!originCoords && !originEditing;
   const showManualChip = originLabel !== 'Current Location' && !!originCoords && !originEditing;
 
-  const arrivalDateTime = combineDateAndTime(arrivalDate, arrivalTime);
-  const isArrivalInFuture = arrivalDateTime.getTime() > Date.now();
-  const canCalculate = !!originCoords && !!destCoords && isArrivalInFuture && !loading;
+  const selectedDateTime = combineDateAndTime(selectedDate, selectedTime);
+  const isInFuture = selectedDateTime.getTime() > Date.now();
+  const canCalculate = !!originCoords && !!destCoords && isInFuture && !loading;
 
   async function handleCalculate() {
     if (!originCoords || !destCoords) return;
@@ -271,7 +281,8 @@ export default function App() {
           originLng: originCoords.lng,
           destLat: destCoords.lat,
           destLng: destCoords.lng,
-          arrivalTarget: arrivalDateTime.toISOString(),
+          planningMode,
+          targetTime: selectedDateTime.toISOString(),
           transportMode: selectedMode,
         },
       });
@@ -306,6 +317,10 @@ export default function App() {
   }
 
   const freshness = result ? freshnessLabel(result.dataFreshness) : null;
+  // Read the mode from the result itself (echoed back by the engine), not the
+  // live toggle state - the toggle can't actually change while the result
+  // modal is open, but this is the more correct source of truth regardless.
+  const resultMode: PlanningMode = result?.recommendationExplanation?.planningMode ?? planningMode;
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -322,6 +337,28 @@ export default function App() {
       </View>
 
       <View style={styles.card}>
+        {/* Planning mode toggle - first-class, not a subtle segmented control */}
+        <View style={styles.modeToggleRow}>
+          <Pressable
+            style={[styles.modeToggleButton, planningMode === 'arrive_by' && styles.modeToggleButtonSelected]}
+            onPress={() => setPlanningMode('arrive_by')}
+          >
+            <Ionicons name="flag" size={15} color={planningMode === 'arrive_by' ? '#fff' : COLORS.textSecondary} />
+            <Text style={[styles.modeToggleText, planningMode === 'arrive_by' && styles.modeToggleTextSelected]}>
+              Arrive By
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.modeToggleButton, planningMode === 'leave_at' && styles.modeToggleButtonSelected]}
+            onPress={() => setPlanningMode('leave_at')}
+          >
+            <Ionicons name="rocket" size={15} color={planningMode === 'leave_at' ? '#fff' : COLORS.textSecondary} />
+            <Text style={[styles.modeToggleText, planningMode === 'leave_at' && styles.modeToggleTextSelected]}>
+              Leave At
+            </Text>
+          </Pressable>
+        </View>
+
         {/* From */}
         <View style={styles.fieldRow}>
           <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
@@ -418,49 +455,71 @@ export default function App() {
         </View>
 
         <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled">
-          <Text style={styles.sectionLabel}>Arrive by</Text>
-          <View style={styles.arrivalRow}>
-            <Pressable style={styles.arrivalHalf} onPress={() => setShowDatePicker(true)}>
-              <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
-              <Text style={styles.arrivalText}>
-                {arrivalDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}
-              </Text>
+          {/* Date & time - the main focal point, styled prominently */}
+          <Text style={styles.dateTimeSectionLabel}>
+            {planningMode === 'arrive_by' ? 'Arrival date & time' : 'Departure date & time'}
+          </Text>
+          <View style={styles.dateTimeCard}>
+            <Pressable style={styles.dateTimeHalf} onPress={() => setShowDatePicker(true)}>
+              <View style={styles.dateTimeIconWrap}>
+                <Ionicons name="calendar" size={18} color="#fff" />
+              </View>
+              <View>
+                <Text style={styles.dateTimeSmallLabel}>Date</Text>
+                <Text style={styles.dateTimeBigValue}>
+                  {selectedDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                </Text>
+              </View>
             </Pressable>
-            <View style={styles.arrivalDivider} />
-            <Pressable style={styles.arrivalHalf} onPress={() => setShowTimePicker(true)}>
-              <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
-              <Text style={styles.arrivalText}>
-                {arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
+            <View style={styles.dateTimeDividerVertical} />
+            <Pressable style={styles.dateTimeHalf} onPress={() => setShowTimePicker(true)}>
+              <View style={styles.dateTimeIconWrap}>
+                <Ionicons name="time" size={18} color="#fff" />
+              </View>
+              <View>
+                <Text style={styles.dateTimeSmallLabel}>Time</Text>
+                <Text style={styles.dateTimeBigValue}>
+                  {selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                </Text>
+              </View>
             </Pressable>
           </View>
-          {!isArrivalInFuture && (
-            <Text style={styles.warning}>Arrival time must be in the future.</Text>
+          {!isInFuture && (
+            <Text style={styles.warning}>
+              {planningMode === 'arrive_by' ? 'Arrival time must be in the future.' : 'Departure time must be in the future.'}
+            </Text>
           )}
 
           {showDatePicker && (
             <DateTimePicker
-              value={arrivalDate}
+              value={selectedDate}
               mode="date"
               minimumDate={startOfToday()}
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={(_, selected) => {
                 setShowDatePicker(Platform.OS === 'ios');
-                if (selected) setArrivalDate(selected);
+                if (selected) setSelectedDate(selected);
               }}
             />
           )}
-          {showTimePicker && (
-            <DateTimePicker
-              value={arrivalTime}
-              mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(_, selected) => {
-                setShowTimePicker(Platform.OS === 'ios');
-                if (selected) setArrivalTime(selected);
-              }}
-            />
-          )}
+          <TimePickerModal
+            visible={showTimePicker}
+            value={selectedTime}
+            colors={{
+              accent: COLORS.accent,
+              ink: COLORS.ink,
+              card: COLORS.card,
+              canvas: COLORS.canvas,
+              textPrimary: COLORS.textPrimary,
+              textSecondary: COLORS.textSecondary,
+              divider: COLORS.divider,
+            }}
+            onConfirm={(selected) => {
+              setSelectedTime(selected);
+              setShowTimePicker(false);
+            }}
+            onCancel={() => setShowTimePicker(false)}
+          />
 
           <Text style={styles.sectionLabel}>Travel mode</Text>
           <View style={styles.transportRow}>
@@ -532,12 +591,19 @@ export default function App() {
                   <Text style={styles.tripText} numberOfLines={2}>{destLabel}</Text>
                 </View>
               </View>
-              <View style={styles.arrivalTargetRow}>
-                <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.arrivalTargetText}>
-                  Target arrival {arrivalDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-              </View>
+
+              {/* Only shown for arrive_by: the deadline is a distinct piece of
+                  info from the computed leave time. For leave_at, the
+                  departure time IS the hero's "Leave at" line already -
+                  showing it again here would be redundant. */}
+              {resultMode === 'arrive_by' && (
+                <View style={styles.arrivalTargetRow}>
+                  <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.arrivalTargetText}>
+                    Target arrival {selectedDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.freshnessBadgeRow}>
                 <View style={[styles.freshnessDot, { backgroundColor: freshness.color }]} />
@@ -546,12 +612,13 @@ export default function App() {
 
               <View style={styles.heroLayout}>
                 <View style={styles.heroTextCol}>
-                  <Text style={styles.resultHeroLabel}>Leave by</Text>
+                  <Text style={styles.resultHeroLabel}>Leave at</Text>
                   <Text style={styles.resultHeroTime}>
-                    {new Date(result.recommendedLeaveTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatTime12h(result.recommendedLeaveTime)}
                   </Text>
                   <Text style={styles.resultArrivalInline}>
-                    Arrive ~{new Date(result.predictedArrivalTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {resultMode === 'arrive_by' ? 'Arrive by ' : 'Est. arrival '}
+                    {formatTime12h(result.predictedArrivalTime)}
                   </Text>
                 </View>
                 <ConfidenceRing
@@ -563,6 +630,13 @@ export default function App() {
             </View>
 
             <ScrollView style={styles.resultBody}>
+              {/* Mode-aware natural-language summary */}
+              <Text style={styles.explanationSentence}>
+                {resultMode === 'arrive_by'
+                  ? `Leave at ${formatTime12h(result.recommendedLeaveTime)} to arrive by ${formatTime12h(result.predictedArrivalTime)}.`
+                  : `If you leave at ${formatTime12h(result.recommendedLeaveTime)}, you'll arrive around ${formatTime12h(result.predictedArrivalTime)}.`}
+              </Text>
+
               <Text style={styles.whyTitle}>Why this recommendation</Text>
               {result.confidenceReason.map((reason, i) => {
                 const icon = reasonIcon(reason);
@@ -651,6 +725,18 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 4,
   },
+  modeToggleRow: {
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: COLORS.canvas,
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 16,
+  },
+  modeToggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
+  modeToggleButtonSelected: { backgroundColor: COLORS.ink },
+  modeToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textSecondary },
+  modeToggleTextSelected: { color: '#fff' },
   scrollArea: { flex: 1 },
   fieldRow: {
     flexDirection: 'row',
@@ -667,14 +753,38 @@ const styles = StyleSheet.create({
   fieldLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.accent, marginBottom: 2 },
   fieldValue: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.textPrimary },
   sectionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
-  arrivalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+
+  // Date & time - deliberately more visually prominent than other sections,
+  // since this is the main focal point of the whole app.
+  dateTimeSectionLabel: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 15,
+    color: COLORS.textPrimary,
+    marginTop: 18,
+    marginBottom: 10,
   },
-  arrivalHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
-  arrivalDivider: { width: 1, height: 20, backgroundColor: COLORS.divider },
-  arrivalText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.textPrimary },
+  dateTimeCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.accentTint,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: COLORS.accent,
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  dateTimeHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 },
+  dateTimeIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateTimeDividerVertical: { width: 1, backgroundColor: COLORS.accent, opacity: 0.25 },
+  dateTimeSmallLabel: { fontFamily: 'Inter_500Medium', fontSize: 11, color: COLORS.textSecondary },
+  dateTimeBigValue: { fontFamily: 'Poppins_700Bold', fontSize: 17, color: COLORS.textPrimary, marginTop: 1 },
+
   warning: { fontFamily: 'Inter_400Regular', color: '#B4680A', fontSize: 13, marginTop: 6, marginBottom: 4 },
   transportRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
   transportPill: {
@@ -762,8 +872,19 @@ const styles = StyleSheet.create({
   resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 40, color: '#fff', marginTop: 2 },
   resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 6 },
   resultBody: { flex: 1, padding: 24 },
+  explanationSentence: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    color: COLORS.textPrimary,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
   divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 16 },
   whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 12 },
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 });
+
+
+
+

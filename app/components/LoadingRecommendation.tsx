@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -125,7 +125,7 @@ export default function LoadingRecommendation() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
@@ -155,14 +155,14 @@ const styles = StyleSheet.create({
     fontSize: 26,
     lineHeight: 33,
     letterSpacing: -0.5,
-    color: '#FFFFFF',
+    color: '#1A1A2E',
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: 'Inter_500Medium',
     fontSize: 13,
     lineHeight: 20,
-    color: '#A7AEC8',
+    color: '#6B6F8A',
     textAlign: 'center',
     marginTop: 14,
     maxWidth: '70%',
@@ -170,14 +170,15 @@ const styles = StyleSheet.create({
   statusDivider: {
     width: 40,
     height: 1,
-    backgroundColor: 'rgba(167, 174, 200, 0.25)',
+    backgroundColor: 'rgba(107, 111, 138, 0.2)',
     marginTop: 22,
     marginBottom: 16,
   },
   statusMessage: {
     fontFamily: 'Inter_500Medium',
     fontSize: 13,
-    color: '#A7AEC8',
+    color: '#6B6F8A',
     textAlign: 'center',
   },
 });
+
