@@ -283,6 +283,7 @@ export default function App() {
     } catch {
       // Non-critical: local cache write failure shouldn't block the calculation flow.
     }
+
   }
 
   function useCurrentLocation() {
@@ -667,12 +668,13 @@ export default function App() {
                     {formatTime12h(result.predictedArrivalTime)}
                   </Text>
                 </View>
-                <ConfidenceRing
-                  progress={result.confidenceScore}
-                  color={confidenceColor(result.confidenceScore)}
-                  label={`${Math.round(result.confidenceScore)}%`}
-                />
-              </View>
+                  <ConfidenceRing
+                    progress={result.confidenceScore}
+                    color={confidenceColor(result.confidenceScore)}
+                    label={`${Math.round(result.confidenceScore)}%`}
+                    sublabel={result.confidenceScore >= 85 ? "High" : result.confidenceScore >= 70 ? "Moderate" : "Low"}
+                  />
+            </View>
             </View>
 
             <ScrollView style={styles.resultBody}>
@@ -932,6 +934,12 @@ const styles = StyleSheet.create({
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 });
+
+
+
+
+
+
 
 
 

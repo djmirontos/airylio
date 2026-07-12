@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { View, Animated, Easing } from 'react-native';
+import { View, Text, Animated, Easing } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -11,6 +11,7 @@ interface ConfidenceRingProps {
   size?: number;
   strokeWidth?: number;
   label?: string;
+  sublabel?: string;
   labelColor?: string;
 }
 
@@ -21,6 +22,7 @@ export default function ConfidenceRing({
   size = 96,
   strokeWidth = 8,
   label,
+  sublabel,
   labelColor = '#fff',
 }: ConfidenceRingProps) {
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -80,6 +82,18 @@ export default function ConfidenceRing({
           {label}
         </Animated.Text>
       )}
+      {sublabel !== undefined && (
+        <Text style={{ fontFamily: "Inter_500Medium", fontSize: size * 0.13, color: labelColor, opacity: 0.8, marginTop: 1 }}>
+          {sublabel}
+        </Text>
+      )}
     </View>
   );
 }
+
+
+
+
+
+
+
