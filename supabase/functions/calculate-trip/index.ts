@@ -1,4 +1,4 @@
-ï»¿import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encodeGeohash } from "../_shared/geo/geohash.ts";
 import { detectCity } from "../_shared/geo/detectCity.ts";
 import { buildCacheKey, roundToTimeBucket } from "../_shared/geo/cacheKey.ts";
@@ -89,7 +89,21 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unsupported transport mode" }), { status: 400, headers: corsHeaders });
     }
 
-    const weatherCondition = "clear"; // V1: hardcoded, per approved decision
+    // Fetch real weather from Open-Meteo (falls back to 'clear' on any failure)
+    let weatherCondition: "clear" | "rain" | "heavy_rain" | "storm" = "clear";
+    try {
+      const weatherRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${originLat}&longitude=${originLng}&current=weathercode&timezone=auto`
+      );
+      if (weatherRes.ok) {
+        const weatherData = await weatherRes.json();
+        const code = weatherData?.current?.weathercode ?? -1;
+        if (code >= 95) weatherCondition = code >= 96 ? "storm" : "heavy_rain";
+        else if (code >= 80 || (code >= 51 && code <= 67)) weatherCondition = "rain";
+      }
+    } catch {
+      // Open-Meteo unavailable — silent fallback to 'clear'
+    }
 
     const requestTime = new Date();
     const cacheKey = buildCacheKey({
@@ -204,3 +218,4 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "Internal server error", detail: err.message }), { status: 500, headers: corsHeaders });
   }
 });
+
