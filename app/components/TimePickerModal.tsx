@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useState, useRef } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -38,23 +38,49 @@ export default function TimePickerModal({ visible, value, onConfirm, onCancel, c
   const [minute, setMinute] = useState(0);
   const [period, setPeriod] = useState<'AM' | 'PM'>('AM');
   const [activeTab, setActiveTab] = useState<'time' | 'now'>('time');
+  const hourScrollRef = useRef<ScrollView>(null);
+  const minuteScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (visible) {
-      const parsed = to12Hour(value);
+      const PST_OFFSET_MS = (8 * 60 + new Date().getTimezoneOffset()) * 60000;
+      const parsed = to12Hour(new Date(Date.now() + PST_OFFSET_MS));
       setHour(parsed.hour);
       setMinute(parsed.minute);
       setPeriod(parsed.period);
       setActiveTab('time');
+
+      setTimeout(() => {
+        const hourIndex = HOURS.indexOf(parsed.hour);
+        const minuteIndex = parsed.minute;
+        if (hourScrollRef.current) {
+          hourScrollRef.current.scrollTo({ y: Math.max(0, (hourIndex - 2) * 42), animated: false });
+        }
+        if (minuteScrollRef.current) {
+          minuteScrollRef.current.scrollTo({ y: Math.max(0, (minuteIndex - 2) * 42), animated: false });
+        }
+      }, 50);
     }
-  }, [visible, value]);
+  }, [visible]);
 
   function handleNow() {
-    const parsed = to12Hour(new Date());
+    const PST_OFFSET_MS = (8 * 60 + new Date().getTimezoneOffset()) * 60000;
+    const parsed = to12Hour(new Date(Date.now() + PST_OFFSET_MS));
     setHour(parsed.hour);
     setMinute(parsed.minute);
     setPeriod(parsed.period);
     setActiveTab('now');
+
+    setTimeout(() => {
+      const hourIndex = HOURS.indexOf(parsed.hour);
+      const minuteIndex = parsed.minute;
+      if (hourScrollRef.current) {
+        hourScrollRef.current.scrollTo({ y: Math.max(0, (hourIndex - 2) * 42), animated: true });
+      }
+      if (minuteScrollRef.current) {
+        minuteScrollRef.current.scrollTo({ y: Math.max(0, (minuteIndex - 2) * 42), animated: true });
+      }
+    }, 50);
   }
 
   function handleDone() {
@@ -99,7 +125,7 @@ export default function TimePickerModal({ visible, value, onConfirm, onCancel, c
           </View>
 
           <View style={styles.wheelRow}>
-            <ScrollView style={[styles.wheelColumn, { backgroundColor: colors.canvas }]} showsVerticalScrollIndicator={false}>
+            <ScrollView ref={hourScrollRef} style={[styles.wheelColumn, { backgroundColor: colors.canvas }]} showsVerticalScrollIndicator={false}>
               {HOURS.map((h) => (
                 <Pressable
                   key={h}
@@ -113,7 +139,7 @@ export default function TimePickerModal({ visible, value, onConfirm, onCancel, c
               ))}
             </ScrollView>
 
-            <ScrollView style={[styles.wheelColumn, { backgroundColor: colors.canvas }]} showsVerticalScrollIndicator={false}>
+            <ScrollView ref={minuteScrollRef} style={[styles.wheelColumn, { backgroundColor: colors.canvas }]} showsVerticalScrollIndicator={false}>
               {MINUTES.map((m) => (
                 <Pressable
                   key={m}

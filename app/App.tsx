@@ -6,8 +6,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import DestinationAutocomplete from './components/DestinationAutocomplete';
 import TimePickerModal from './components/TimePickerModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFonts, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import ConfidenceRing from './components/ConfidenceRing';
 import LoadingRecommendation from './components/LoadingRecommendation';
@@ -175,14 +173,6 @@ function getGreeting(): string {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
-    Poppins_600SemiBold,
-    Poppins_700Bold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-  });
-
   const [gpsCoords, setGpsCoords] = useState<Coords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
 
@@ -384,14 +374,6 @@ export default function App() {
     }
   }
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.fontLoadingContainer}>
-        <ActivityIndicator color={COLORS.accent} />
-      </View>
-    );
-  }
-
   const freshness = result ? freshnessLabel(result.dataFreshness) : null;
   // Read the mode from the result itself (echoed back by the engine), not the
   // live toggle state - the toggle can't actually change while the result
@@ -567,9 +549,7 @@ export default function App() {
             </Pressable>
           </View>
           {!isValidDepartureTime && (
-            <Text style={styles.warning}>
-              {planningMode === 'arrive_by' ? 'Arrival time must be in the future.' : 'Departure time must be in the future.'}
-            </Text>
+            <Text style={styles.warning}>{planningMode === 'arrive_by' ? 'Arrival time must be in the future.' : 'Departure time must be in the future.'}</Text>
           )}
 
           {showDatePicker && (
@@ -603,7 +583,6 @@ export default function App() {
             onCancel={() => setShowTimePicker(false)}
           />
 
-          <Text style={styles.sectionLabel}>Travel mode</Text>
           <View style={styles.transportRow}>
             {TRANSPORT_MODES.map((mode) => {
               const selected = selectedMode === mode.key;
@@ -849,8 +828,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_700Bold',
     fontSize: 15,
     color: COLORS.textPrimary,
-    marginTop: 18,
-    marginBottom: 10,
+    marginTop: 10,
+    marginBottom: 6,
   },
   dateTimeCard: {
     flexDirection: 'row',
@@ -861,7 +840,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     overflow: 'hidden',
   },
-  dateTimeHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 },
+  dateTimeHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10 },
   dateTimeIconWrap: {
     width: 34,
     height: 34,
@@ -894,7 +873,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 12,
   },
   calculateButtonDisabled: { backgroundColor: '#9B9DC2' },
   calculateButtonText: { fontFamily: 'Inter_600SemiBold', color: '#fff', fontSize: 16 },
@@ -975,6 +954,11 @@ const styles = StyleSheet.create({
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 });
+
+
+
+
+
 
 
 
