@@ -18,20 +18,23 @@ export async function requestNotificationPermission(): Promise<boolean> {
 
 export async function scheduleLeaveReminder(
   leaveTime: string,
-  destLabel: string
+  arrivalTime: string,
+  destLabel: string,
+  tripId: string
 ): Promise<string | null> {
   const granted = await requestNotificationPermission();
   if (!granted) return null;
 
-  // Cancel any existing leave reminders
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   const leaveDate = new Date(leaveTime);
+  const arrivalDate = new Date(arrivalTime);
   const now = new Date();
 
   if (leaveDate <= now) return null;
 
-  const id = await Notifications.scheduleNotificationAsync({
+  // Schedule leave reminder
+  const leaveId = await Notifications.scheduleNotificationAsync({
     content: {
       title: '🚗 Time to leave!',
       body: `Your trip to ${destLabel} starts now. Have a safe journey!`,
@@ -43,7 +46,23 @@ export async function scheduleLeaveReminder(
     },
   });
 
-  return id;
+  // Schedule arrival feedback notification (only if arrival is in the future)
+  if (arrivalDate > now) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🏁 Did you arrive on time?',
+        body: `How was your trip to ${destLabel}? Tap to rate it.`,
+        sound: false,
+        data: { tripId, type: 'feedback' },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: arrivalDate,
+      },
+    });
+  }
+
+  return leaveId;
 }
 
 export async function cancelLeaveReminder(): Promise<void> {

@@ -10,11 +10,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import ConfidenceRing from './components/ConfidenceRing';
 import LoadingRecommendation from './components/LoadingRecommendation';
+import FeedbackModal from './components/FeedbackModal';
 import { supabase } from './lib/supabase';
 import LottieView from 'lottie-react-native';
 import { useTripContext, PlanPrefill } from './context/TripContext';
 import { useFavorites } from './hooks/useFavorites';
 import { scheduleLeaveReminder, cancelLeaveReminder } from './hooks/useNotifications';
+import * as Notifications from 'expo-notifications';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
@@ -200,6 +202,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TripResult | null>(null);
   const [reminderSet, setReminderSet] = useState(false);
+  const [feedbackTripId, setFeedbackTripId] = useState<string | null>(null);
+  const [feedbackDestLabel, setFeedbackDestLabel] = useState('');
+  const [showFeedback, setShowFeedback] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
@@ -308,6 +313,18 @@ export default function App() {
     setReminderSet(false);
   }, [result]);
 
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data?.type === 'feedback' && data?.tripId) {
+        setFeedbackTripId(data.tripId as string);
+        setFeedbackDestLabel(destLabel);
+        setShowFeedback(true);
+      }
+    });
+    return () => subscription.remove();
+  }, [destLabel]);
+
   function useCurrentLocation() {
     if (!gpsCoords) return;
     setOriginCoords(gpsCoords);
@@ -317,7 +334,12 @@ export default function App() {
 
   async function handleSetReminder() {
     if (!result) return;
-    const id = await scheduleLeaveReminder(result.recommendedLeaveTime, destLabel);
+    const id = await scheduleLeaveReminder(
+      result.recommendedLeaveTime,
+      result.predictedArrivalTime,
+      destLabel,
+      result.tripId
+    );
     if (id) {
       setReminderSet(true);
     } else {
@@ -798,6 +820,12 @@ export default function App() {
           </View>
         )}
       </Modal>
+      <FeedbackModal
+        visible={showFeedback}
+        tripId={feedbackTripId}
+        destLabel={feedbackDestLabel}
+        onClose={() => setShowFeedback(false)}
+      />
     </View>
     </TouchableWithoutFeedback>
   );
