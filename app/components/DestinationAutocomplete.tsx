@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { FavoritePlace } from '../hooks/useFavorites';
 
 interface RecentDestination {
   label: string;
@@ -39,6 +40,7 @@ interface DestinationAutocompleteProps {
     signalRisk: string;
     ink: string;
   };
+  favorites?: { home: FavoritePlace | null; work: FavoritePlace | null };
 }
 
 const MIN_CHARS_TO_FETCH = 2;
@@ -63,6 +65,7 @@ export default function DestinationAutocomplete({
   suggestedLabel = 'Suggested Destinations',
   autoFocus = false,
   colors,
+  favorites,
 }: DestinationAutocompleteProps) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<TextInput>(null);
@@ -169,7 +172,8 @@ export default function DestinationAutocomplete({
     }, 150);
   }
 
-  const showDropdown = focused && (query.length > 0 || recentDestinations.length > 0);
+  const showFavoritesSection = favorites?.home || favorites?.work;
+  const showDropdown = focused && (query.length > 0 || recentDestinations.length > 0 || showFavoritesSection);
   const showSuggestedSection = query.length >= MIN_CHARS_TO_FETCH && suggestions.length > 0;
   const showRecentSection = recentDestinations.length > 0;
 
@@ -205,6 +209,40 @@ export default function DestinationAutocomplete({
               </View>
             )}
 
+            {showFavoritesSection && (
+              <>
+                <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
+                  Favorites
+                </Text>
+                {favorites?.home && (
+                  <Pressable
+                    style={[styles.row, { borderBottomColor: colors.divider }]}
+                    onPress={() => onSelect({ label: favorites.home!.label, lat: favorites.home!.lat, lng: favorites.home!.lng })}
+                  >
+                    <Ionicons name="home" size={16} color={colors.accent} />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                      <Text style={[styles.rowMain, { color: colors.textPrimary }]} numberOfLines={1}>Home</Text>
+                      <Text style={[styles.rowSecondary, { color: colors.textSecondary }]} numberOfLines={1}>{favorites.home.label}</Text>
+                    </View>
+                  </Pressable>
+                )}
+                {favorites?.work && (
+                  <Pressable
+                    style={[styles.row, { borderBottomColor: colors.divider }]}
+                    onPress={() => onSelect({ label: favorites.work!.label, lat: favorites.work!.lat, lng: favorites.work!.lng })}
+                  >
+                    <Ionicons name="briefcase" size={16} color={colors.accent} />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                      <Text style={[styles.rowMain, { color: colors.textPrimary }]} numberOfLines={1}>Work</Text>
+                      <Text style={[styles.rowSecondary, { color: colors.textSecondary }]} numberOfLines={1}>{favorites.work.label}</Text>
+                    </View>
+                  </Pressable>
+                )}
+              </>
+            )}
+
+            {showFavoritesSection && showSuggestedSection && <View style={styles.sectionGap} />}
+
             {showSuggestedSection && (
               <>
                 <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
@@ -229,7 +267,7 @@ export default function DestinationAutocomplete({
               </>
             )}
 
-            {showSuggestedSection && showRecentSection && <View style={styles.sectionGap} />}
+            {(showSuggestedSection || showFavoritesSection) && showRecentSection && <View style={styles.sectionGap} />}
 
             {showRecentSection && (
               <>

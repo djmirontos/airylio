@@ -1,18 +1,157 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFavorites } from '../hooks/useFavorites';
+import DestinationAutocomplete from '../components/DestinationAutocomplete';
+
+const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
+
+const COLORS = {
+  canvas: '#FAFAFC',
+  card: '#FFFFFF',
+  textPrimary: '#1A1A2E',
+  textSecondary: '#6B6F8A',
+  divider: '#E7E7F1',
+  accent: '#4C4F9E',
+  signalRisk: '#E85D51',
+  ink: '#12153D',
+};
 
 export default function SettingsScreen() {
+  const { favorites, loaded, saveFavorite, clearFavorite } = useFavorites();
+  const [editingFavorite, setEditingFavorite] = useState<'home' | 'work' | null>(null);
+
+  function handlePlaceSelect(type: 'home' | 'work', label: string, lat: number, lng: number) {
+    saveFavorite(type, { label, lat, lng });
+    setEditingFavorite(null);
+  }
+
+  function handleClear(type: 'home' | 'work') {
+    Alert.alert('Clear Favorite', `Remove ${type} from favorites?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => clearFavorite(type),
+      },
+    ]);
+  }
+
+  if (!loaded) {
+    return <View style={styles.container} />;
+  }
+
   return (
-    <View style={styles.container}>
-      <Ionicons name="settings-outline" size={48} color="#9B9DC2" />
-      <Text style={styles.title}>Settings</Text>
-      <Text style={styles.subtitle}>App preferences and favorites coming soon.</Text>
-    </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Settings</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Favorites</Text>
+        <View style={styles.card}>
+          {/* Home Row */}
+          <View style={styles.favoriteRow}>
+            <View style={styles.favoriteLeft}>
+              <Ionicons name="home" size={20} color={COLORS.accent} />
+              <View style={styles.favoriteLabelCol}>
+                <Text style={styles.favoriteLabel}>Home</Text>
+                <Text style={styles.favoriteValue} numberOfLines={1}>
+                  {favorites.home?.label || 'Not set'}
+                </Text>
+              </View>
+            </View>
+            {favorites.home && (
+              <Pressable style={styles.clearButton} onPress={() => handleClear('home')}>
+                <Ionicons name="close" size={18} color={COLORS.signalRisk} />
+              </Pressable>
+            )}
+          </View>
+
+          {editingFavorite === 'home' && (
+            <View style={styles.autocompleteContainer}>
+              <DestinationAutocomplete
+                apiKey={GOOGLE_PLACES_API_KEY}
+                recentDestinations={[]}
+                colors={{ accent: COLORS.accent, textPrimary: COLORS.textPrimary, textSecondary: COLORS.textSecondary, divider: COLORS.divider, card: COLORS.card, signalRisk: COLORS.signalRisk, ink: COLORS.ink }}
+                onSelect={(place) => handlePlaceSelect('home', place.label, place.lat, place.lng)}
+              />
+            </View>
+          )}
+
+          {editingFavorite !== 'home' && (
+            <Pressable
+              style={styles.editButton}
+              onPress={() => setEditingFavorite('home')}
+            >
+              <Text style={styles.editButtonText}>{favorites.home ? 'Edit' : 'Set'}</Text>
+            </Pressable>
+          )}
+
+          <View style={styles.divider} />
+
+          {/* Work Row */}
+          <View style={styles.favoriteRow}>
+            <View style={styles.favoriteLeft}>
+              <Ionicons name="briefcase" size={20} color={COLORS.accent} />
+              <View style={styles.favoriteLabelCol}>
+                <Text style={styles.favoriteLabel}>Work</Text>
+                <Text style={styles.favoriteValue} numberOfLines={1}>
+                  {favorites.work?.label || 'Not set'}
+                </Text>
+              </View>
+            </View>
+            {favorites.work && (
+              <Pressable style={styles.clearButton} onPress={() => handleClear('work')}>
+                <Ionicons name="close" size={18} color={COLORS.signalRisk} />
+              </Pressable>
+            )}
+          </View>
+
+          {editingFavorite === 'work' && (
+            <View style={styles.autocompleteContainer}>
+              <DestinationAutocomplete
+                apiKey={GOOGLE_PLACES_API_KEY}
+                recentDestinations={[]}
+                colors={{ accent: COLORS.accent, textPrimary: COLORS.textPrimary, textSecondary: COLORS.textSecondary, divider: COLORS.divider, card: COLORS.card, signalRisk: COLORS.signalRisk, ink: COLORS.ink }}
+                onSelect={(place) => handlePlaceSelect('work', place.label, place.lat, place.lng)}
+              />
+            </View>
+          )}
+
+          {editingFavorite !== 'work' && (
+            <Pressable
+              style={styles.editButton}
+              onPress={() => setEditingFavorite('work')}
+            >
+              <Text style={styles.editButtonText}>{favorites.work ? 'Edit' : 'Set'}</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFC', alignItems: 'center', justifyContent: 'center', padding: 32 },
-  title: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: '#1A1A2E', marginTop: 16, marginBottom: 8 },
-  subtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: '#6B6F8A', textAlign: 'center', lineHeight: 22 },
+  container: { flex: 1, backgroundColor: COLORS.canvas },
+  content: { paddingBottom: 32 },
+  header: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16 },
+  headerTitle: { fontFamily: 'Poppins_700Bold', fontSize: 24, color: COLORS.textPrimary },
+  section: { paddingHorizontal: 16 },
+  sectionTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textSecondary, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  card: { backgroundColor: COLORS.card, borderRadius: 14, padding: 14, shadowColor: COLORS.ink, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  favoriteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  favoriteLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  favoriteLabelCol: { flex: 1 },
+  favoriteLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginBottom: 2 },
+  favoriteValue: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary },
+  clearButton: { padding: 8, marginRight: -8 },
+  divider: { height: 1, backgroundColor: COLORS.divider },
+  editButton: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, backgroundColor: 'rgba(76,79,158,0.08)', marginTop: 8 },
+  editButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent, textAlign: 'center' },
+  autocompleteContainer: { marginTop: 8, marginBottom: 8 },
 });
+
+
+

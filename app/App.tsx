@@ -13,6 +13,7 @@ import LoadingRecommendation from './components/LoadingRecommendation';
 import { supabase } from './lib/supabase';
 import LottieView from 'lottie-react-native';
 import { useTripContext, PlanPrefill } from './context/TripContext';
+import { useFavorites } from './hooks/useFavorites';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
@@ -201,6 +202,7 @@ export default function App() {
   const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
   const { setCurrentTrip, prefillData, setPrefillData } = useTripContext();
+  const { favorites } = useFavorites();
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -445,6 +447,7 @@ export default function App() {
                 apiKey={GOOGLE_PLACES_API_KEY}
                 recentDestinations={recentOrigins}
                 placeholder={locationError ?? 'Search origin'}
+                favorites={favorites}
                 suggestedLabel="Suggested Locations"
                 autoFocus={originEditing}
                 dropdownOffsetLeft={-35}
@@ -516,12 +519,13 @@ export default function App() {
                   setDestLabel(place.label);
                   addRecentDestination(place);
                 }}
+                favorites={favorites}
               />
             </View>
           </View>
         )}
         </View>
-
+        )}
         <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled">
           {/* Date & time - the main focal point, styled prominently */}
           <Text style={styles.dateTimeSectionLabel}>
@@ -879,6 +883,9 @@ const styles = StyleSheet.create({
   transportPillSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   transportPillText: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: COLORS.textPrimary, textAlign: 'center' },
   transportPillTextSelected: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: '#fff', textAlign: 'center' },
+  favoritesRow: { flexDirection: 'row', gap: 8, marginBottom: 8, marginTop: 4, paddingHorizontal: 4 },
+  favoriteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: 'rgba(76,79,158,0.08)', borderWidth: 1, borderColor: 'rgba(76,79,158,0.2)' },
+  favoriteChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent },
   calculateButton: {
     backgroundColor: COLORS.ink,
     paddingVertical: 16,
@@ -966,6 +973,7 @@ const styles = StyleSheet.create({
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 });
+
 
 
 
