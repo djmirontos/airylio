@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Alert, Modal } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import ResultModal from '../components/ResultModal';
+import { useTripContext } from '../context/TripContext';
 
 const COLORS = {
   canvas: '#FAFAFC',
@@ -79,11 +80,11 @@ function formatDate(isoString: string): string {
 
 export default function HistoryScreen() {
   const navigation = useNavigation();
+  const { setPrefillData } = useTripContext();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<TripResult | null>(null);
-  const [recalculating, setRecalculating] = useState(false);
 
   const fetchTrips = useCallback(async () => {
     try {
@@ -116,39 +117,22 @@ export default function HistoryScreen() {
     fetchTrips();
   }, [fetchTrips]);
 
-  async function handleRecalculate(trip: Trip) {
+  function handleRecalculate(trip: Trip) {
     if (!trip.origin_lat || !trip.origin_lng || !trip.destination_lat || !trip.destination_lng) {
       Alert.alert('Cannot Recalculate', 'This trip was saved before coordinate storage was added. Please use the Plan tab.');
       return;
     }
-    setRecalculating(true);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        await supabase.auth.signInAnonymously();
-      }
-      const targetTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-      const { data, error } = await supabase.functions.invoke('calculate-trip', {
-        body: {
-          originLat: trip.origin_lat,
-          originLng: trip.origin_lng,
-          destLat: trip.destination_lat,
-          destLng: trip.destination_lng,
-          planningMode: trip.planning_mode,
-          targetTime,
-          transportMode: trip.transport_mode,
-          originLabel: trip.origin_label ?? 'Origin',
-          destinationLabel: trip.destination_label ?? 'Destination',
-        },
-      });
-      if (error) throw new Error(error.message);
-      setSelectedTrip(data);
-      fetchTrips();
-    } catch (err: any) {
-      Alert.alert('Recalculate Failed', err.message ?? 'Something went wrong');
-    } finally {
-      setRecalculating(false);
-    }
+    setSelectedTrip(null);
+    setPrefillData({
+      originLabel: trip.origin_label ?? 'Origin',
+      originLat: trip.origin_lat,
+      originLng: trip.origin_lng,
+      destLabel: trip.destination_label ?? 'Destination',
+      destLat: trip.destination_lat,
+      destLng: trip.destination_lng,
+      planningMode: trip.planning_mode as 'arrive_by' | 'leave_at',
+    });
+    navigation.navigate('Plan');
   }
 
   const handleTripPress = (trip: Trip) => {
@@ -242,18 +226,10 @@ export default function HistoryScreen() {
         onRecalculate={selectedTrip ? () => {
           const trip = trips.find(t => t.id === selectedTrip.tripId);
           if (trip) {
-            setSelectedTrip(null);
             handleRecalculate(trip);
           }
         } : undefined}
       />
-
-      <Modal visible={recalculating} transparent animationType="fade">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color="#4C4F9E" />
-          <Text style={{ color: '#fff', marginTop: 12, fontFamily: 'Inter_500Medium', fontSize: 14 }}>Recalculating...</Text>
-        </View>
-      </Modal>
     </View>
   );
 }

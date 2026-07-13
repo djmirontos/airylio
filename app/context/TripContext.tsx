@@ -27,29 +27,48 @@ export interface TripMeta {
   planningMode: 'arrive_by' | 'leave_at';
 }
 
+export interface PlanPrefill {
+  originLabel: string;
+  originLat: number;
+  originLng: number;
+  destLabel: string;
+  destLat: number;
+  destLng: number;
+  planningMode: 'arrive_by' | 'leave_at';
+}
+
 interface TripContextValue {
   currentTrip: TripResult | null;
   currentMeta: TripMeta | null;
   setCurrentTrip: (trip: TripResult | null, meta: TripMeta | null) => void;
+  prefillData: PlanPrefill | null;
+  setPrefillData: (data: PlanPrefill | null) => void;
 }
 
 const TripContext = createContext<TripContextValue>({
   currentTrip: null,
   currentMeta: null,
   setCurrentTrip: () => {},
+  prefillData: null,
+  setPrefillData: () => {},
 });
 
 export function TripProvider({ children }: { children: ReactNode }) {
   const [currentTrip, setTrip] = useState<TripResult | null>(null);
   const [currentMeta, setMeta] = useState<TripMeta | null>(null);
+  const [prefillData, setPrefill] = useState<PlanPrefill | null>(null);
 
   function setCurrentTrip(trip: TripResult | null, meta: TripMeta | null) {
     setTrip(trip);
     setMeta(meta);
   }
 
+  function setPrefillData(data: PlanPrefill | null) {
+    setPrefill(data);
+  }
+
   return (
-    <TripContext.Provider value={{ currentTrip, currentMeta, setCurrentTrip }}>
+    <TripContext.Provider value={{ currentTrip, currentMeta, setCurrentTrip, prefillData, setPrefillData }}>
       {children}
     </TripContext.Provider>
   );

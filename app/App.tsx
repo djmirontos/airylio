@@ -12,7 +12,7 @@ import ConfidenceRing from './components/ConfidenceRing';
 import LoadingRecommendation from './components/LoadingRecommendation';
 import { supabase } from './lib/supabase';
 import LottieView from 'lottie-react-native';
-import { useTripContext } from './context/TripContext';
+import { useTripContext, PlanPrefill } from './context/TripContext';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
@@ -200,7 +200,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
-  const { setCurrentTrip } = useTripContext();
+  const { setCurrentTrip, prefillData, setPrefillData } = useTripContext();
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -287,6 +287,18 @@ export default function App() {
     }
 
   }
+
+  useEffect(() => {
+    if (!prefillData) return;
+    setOriginLabel(prefillData.originLabel);
+    setOriginCoords({ lat: prefillData.originLat, lng: prefillData.originLng });
+    setDestLabel(prefillData.destLabel);
+    setDestCoords({ lat: prefillData.destLat, lng: prefillData.destLng });
+    setPlanningMode(prefillData.planningMode);
+    setOriginEditing(false);
+    setTimeout(() => setShowTimePicker(true), 300);
+    setPrefillData(null);
+  }, [prefillData]);
 
   function useCurrentLocation() {
     if (!gpsCoords) return;
