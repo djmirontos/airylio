@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Image, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DestinationAutocomplete from './components/DestinationAutocomplete';
@@ -14,6 +14,7 @@ import { supabase } from './lib/supabase';
 import LottieView from 'lottie-react-native';
 import { useTripContext, PlanPrefill } from './context/TripContext';
 import { useFavorites } from './hooks/useFavorites';
+import { scheduleLeaveReminder, cancelLeaveReminder } from './hooks/useNotifications';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
@@ -198,6 +199,7 @@ export default function App() {
   const [selectedMode, setSelectedMode] = useState('drive');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TripResult | null>(null);
+  const [reminderSet, setReminderSet] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
@@ -302,11 +304,25 @@ export default function App() {
     setPrefillData(null);
   }, [prefillData]);
 
+  useEffect(() => {
+    setReminderSet(false);
+  }, [result]);
+
   function useCurrentLocation() {
     if (!gpsCoords) return;
     setOriginCoords(gpsCoords);
     setOriginLabel('Current Location');
     setOriginEditing(false);
+  }
+
+  async function handleSetReminder() {
+    if (!result) return;
+    const id = await scheduleLeaveReminder(result.recommendedLeaveTime, destLabel);
+    if (id) {
+      setReminderSet(true);
+    } else {
+      Alert.alert('Permission Required', 'Please enable notifications in your device settings to use this feature.');
+    }
   }
 
   const showGpsChip = originLabel === 'Current Location' && !!originCoords && !originEditing;
@@ -768,6 +784,15 @@ export default function App() {
                   <Text style={styles.viewRouteButtonText}>View Route on Map</Text>
                 </Pressable>
               )}
+              <Pressable
+                style={[styles.remindButton, reminderSet && styles.remindButtonActive]}
+                onPress={reminderSet ? undefined : handleSetReminder}
+              >
+                <Ionicons name={reminderSet ? 'checkmark-circle' : 'notifications-outline'} size={16} color={reminderSet ? COLORS.signalGood : COLORS.accent} />
+                <Text style={[styles.remindButtonText, reminderSet && styles.remindButtonTextActive]}>
+                  {reminderSet ? 'Reminder set ✓' : 'Remind me when it\'s time to leave'}
+                </Text>
+              </Pressable>
               <Text style={styles.updatedText}>Updated just now</Text>
             </ScrollView>
           </View>
@@ -972,6 +997,10 @@ const styles = StyleSheet.create({
   whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 8 },
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
+  remindButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginTop: 8, marginBottom: 4 },
+  remindButtonActive: { borderColor: COLORS.signalGood, backgroundColor: 'rgba(18,184,134,0.08)' },
+  remindButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
+  remindButtonTextActive: { color: COLORS.signalGood },
 });
 
 
