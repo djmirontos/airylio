@@ -322,6 +322,10 @@ export default function App() {
           planningMode,
           targetTime: selectedDateTime.toISOString(),
           transportMode: selectedMode,
+          transportMode: selectedMode,
+          originLabel,
+          destinationLabel: destLabel,
+          destinationLabel: destLabel,
         },
       });
 
@@ -923,6 +927,7 @@ const styles = StyleSheet.create({
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 });
+
 
 
 

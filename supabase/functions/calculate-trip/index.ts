@@ -43,8 +43,9 @@ Deno.serve(async (req) => {
       originLat, originLng, destLat, destLng,
       targetTime, transportMode,
       planningMode = "arrive_by", // defensive default for older clients not yet updated
+      originLabel = "Unknown origin",
+      destinationLabel = "Unknown destination",
     } = body;
-
     if (
       typeof originLat !== "number" || typeof originLng !== "number" ||
       typeof destLat !== "number" || typeof destLng !== "number" ||
@@ -190,6 +191,7 @@ Deno.serve(async (req) => {
       id: calculationId, device_id: deviceId,
       origin_hash: originHash, destination_hash: destinationHash,
       city_code: cityCode, transport_mode: transportMode,
+      origin_label: originLabel, destination_label: destinationLabel,
       planning_mode: planningMode, target_time: targetTime, calculation_timezone: cityProfileRow.timezone,
       raw_google_eta_seconds: durationSeconds,
       recommended_leave_time: engineResult.recommendedLeaveTime,
@@ -219,6 +221,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "Internal server error", detail: err.message }), { status: 500, headers: corsHeaders });
   }
 });
+
 
 
 

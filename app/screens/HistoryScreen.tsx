@@ -32,6 +32,8 @@ interface Trip {
   confidence_score: number;
   planning_mode: string;
   created_at: string;
+  origin_label?: string;
+  destination_label?: string;
 }
 
 interface TripResult {
@@ -82,7 +84,7 @@ export default function HistoryScreen() {
       setLoading(true);
       const { data, error } = await supabase
         .from('trips')
-        .select('id, transport_mode, recommended_leave_time, predicted_arrival_time, confidence_score, confidence_reason, recommendation_explanation, planning_mode, target_time, data_freshness, weather_condition, created_at')
+        .select('id, transport_mode, recommended_leave_time, predicted_arrival_time, confidence_score, confidence_reason, recommendation_explanation, planning_mode, target_time, data_freshness, weather_condition, origin_label, destination_label, created_at')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -144,7 +146,7 @@ export default function HistoryScreen() {
         </View>
 
         <View style={styles.tripCardBody}>
-          <Text style={styles.tripCardRoute}>Origin → Destination</Text>
+          <Text style={styles.tripCardRoute} numberOfLines={1}>{item.origin_label ?? 'Origin'} {'->'} {item.destination_label ?? 'Destination'}</Text>
           <Text style={styles.tripCardTimes}>Leave {leaveTime} · Arrive {arriveTime}</Text>
           <Text style={styles.tripCardDate}>{date}</Text>
         </View>
@@ -187,8 +189,8 @@ export default function HistoryScreen() {
 
       <ResultModal
         result={selectedTrip}
-        originLabel="Saved trip"
-        destLabel="Saved trip"
+        originLabel={selectedTrip ? (trips.find(t => t.id === selectedTrip.tripId)?.origin_label ?? 'Origin') : 'Origin'}
+        destLabel={selectedTrip ? (trips.find(t => t.id === selectedTrip.tripId)?.destination_label ?? 'Destination') : 'Destination'}
         selectedDateTime={new Date()}
         planningMode={selectedTrip?.recommendationExplanation?.planningMode ?? 'arrive_by'}
         onClose={() => setSelectedTrip(null)}
@@ -234,6 +236,9 @@ const styles = StyleSheet.create({
   confidenceBadge: { width: 48, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   confidenceBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#fff' },
 });
+
+
+
 
 
 
