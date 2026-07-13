@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Alert } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Alert, Modal } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import ResultModal from '../components/ResultModal';
@@ -34,6 +34,10 @@ interface Trip {
   created_at: string;
   origin_label?: string;
   destination_label?: string;
+  origin_lat?: number;
+  origin_lng?: number;
+  destination_lat?: number;
+  destination_lng?: number;
 }
 
 interface TripResult {
@@ -74,17 +78,19 @@ function formatDate(isoString: string): string {
 }
 
 export default function HistoryScreen() {
+  const navigation = useNavigation();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<TripResult | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
 
   const fetchTrips = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('trips')
-        .select('id, transport_mode, recommended_leave_time, predicted_arrival_time, confidence_score, confidence_reason, recommendation_explanation, planning_mode, target_time, data_freshness, weather_condition, origin_label, destination_label, created_at')
+        .select('id, transport_mode, recommended_leave_time, predicted_arrival_time, confidence_score, confidence_reason, recommendation_explanation, planning_mode, target_time, data_freshness, weather_condition, origin_label, destination_label, origin_lat, origin_lng, destination_lat, destination_lng, created_at')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -109,6 +115,41 @@ export default function HistoryScreen() {
     setRefreshing(true);
     fetchTrips();
   }, [fetchTrips]);
+
+  async function handleRecalculate(trip: Trip) {
+    if (!trip.origin_lat || !trip.origin_lng || !trip.destination_lat || !trip.destination_lng) {
+      Alert.alert('Cannot Recalculate', 'This trip was saved before coordinate storage was added. Please use the Plan tab.');
+      return;
+    }
+    setRecalculating(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        await supabase.auth.signInAnonymously();
+      }
+      const targetTime = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase.functions.invoke('calculate-trip', {
+        body: {
+          originLat: trip.origin_lat,
+          originLng: trip.origin_lng,
+          destLat: trip.destination_lat,
+          destLng: trip.destination_lng,
+          planningMode: trip.planning_mode,
+          targetTime,
+          transportMode: trip.transport_mode,
+          originLabel: trip.origin_label ?? 'Origin',
+          destinationLabel: trip.destination_label ?? 'Destination',
+        },
+      });
+      if (error) throw new Error(error.message);
+      setSelectedTrip(data);
+      fetchTrips();
+    } catch (err: any) {
+      Alert.alert('Recalculate Failed', err.message ?? 'Something went wrong');
+    } finally {
+      setRecalculating(false);
+    }
+  }
 
   const handleTripPress = (trip: Trip) => {
     const result: TripResult = {
@@ -181,7 +222,7 @@ export default function HistoryScreen() {
           renderItem={renderTripCard}
           keyExtractor={(item) => item.id}
           ListEmptyComponent={renderEmpty}
-          contentContainerStyle={trips.length === 0 ? styles.emptyListContainer : { paddingTop: 8, paddingBottom: 20 }}
+          contentContainerStyle={trips.length === 0 ? styles.emptyListContainer : { paddingTop: 4, paddingBottom: 16 }}
           scrollEnabled={trips.length > 0}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent} />}
         />
@@ -194,14 +235,32 @@ export default function HistoryScreen() {
         selectedDateTime={new Date()}
         planningMode={selectedTrip?.recommendationExplanation?.planningMode ?? 'arrive_by'}
         onClose={() => setSelectedTrip(null)}
+        onViewRoute={() => {
+          setSelectedTrip(null);
+          navigation.navigate('Map');
+        }}
+        onRecalculate={selectedTrip ? () => {
+          const trip = trips.find(t => t.id === selectedTrip.tripId);
+          if (trip) {
+            setSelectedTrip(null);
+            handleRecalculate(trip);
+          }
+        } : undefined}
       />
+
+      <Modal visible={recalculating} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color="#4C4F9E" />
+          <Text style={{ color: '#fff', marginTop: 12, fontFamily: 'Inter_500Medium', fontSize: 14 }}>Recalculating...</Text>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.canvas },
-  header: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16, backgroundColor: COLORS.canvas },
+  header: { paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: COLORS.canvas },
   headerTitle: { fontFamily: 'Poppins_700Bold', fontSize: 24, color: '#1A1A2E' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyListContainer: { flexGrow: 1, justifyContent: 'center' },
@@ -212,15 +271,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.card,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
+    marginHorizontal: 14,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
   },
-  tripCardLeft: { marginRight: 12 },
+  tripCardLeft: { marginRight: 10 },
   transportBadge: {
     width: 44,
     height: 44,
@@ -230,8 +289,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tripCardBody: { flex: 1 },
-  tripCardRoute: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginBottom: 4 },
-  tripCardTimes: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 },
+  tripCardRoute: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginBottom: 3 },
+  tripCardTimes: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.textSecondary, marginBottom: 1 },
   tripCardDate: { fontFamily: 'Inter_400Regular', fontSize: 11, color: COLORS.textSecondary },
   confidenceBadge: { width: 48, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   confidenceBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#fff' },

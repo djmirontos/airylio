@@ -32,6 +32,7 @@ interface TripResult {
   dataFreshness: string;
   distanceMeters?: number;
   weatherCondition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
+  encodedPolyline?: string;
   recommendationExplanation?: {
     planningMode?: PlanningMode;
     factors: ExplanationFactor[];
@@ -46,6 +47,7 @@ interface ResultModalProps {
   planningMode: PlanningMode;
   onClose: () => void;
   onRecalculate?: () => void;
+  onViewRoute?: () => void;
 }
 
 function formatTime12h(iso: string): string {
@@ -116,6 +118,7 @@ export default function ResultModal({
   planningMode,
   onClose,
   onRecalculate,
+  onViewRoute,
 }: ResultModalProps) {
   const [countdownText, setCountdownText] = useState<string | null>(null);
 
@@ -226,15 +229,18 @@ export default function ResultModal({
             {(result.confidenceReason?.length ?? 0) > 0 && (
               <>
                 <Text style={styles.whyTitle}>Why this recommendation</Text>
-                {result.confidenceReason.map((reason, i) => {
-                  const icon = reasonIcon(reason);
-                  return (
-                    <View key={i} style={styles.reasonRow}>
-                      <Ionicons name={icon.name as any} size={16} color={icon.color} style={{ marginTop: 1 }} />
-                      <Text style={styles.reasonText}>{reason}</Text>
-                    </View>
-                  );
-                })}
+                {(() => {
+                  const cleanReason = (r: string) => r.replace('heavy_rain', 'Heavy Rain').replace('_rain', ' Rain');
+                  return result.confidenceReason.map((reason, i) => {
+                    const icon = reasonIcon(reason);
+                    return (
+                      <View key={i} style={styles.reasonRow}>
+                        <Ionicons name={icon.name as any} size={16} color={icon.color} style={{ marginTop: 1 }} />
+                        <Text style={styles.reasonText}>{cleanReason(reason)}</Text>
+                      </View>
+                    );
+                  });
+                })()}
               </>
             )}
 
@@ -277,6 +283,13 @@ export default function ResultModal({
               <Text style={styles.tripDetailValue}>Google Routes</Text>
             </View>
 
+            {onViewRoute && result?.encodedPolyline && (
+              <Pressable style={styles.viewRouteButton} onPress={onViewRoute}>
+                <Ionicons name="map" size={16} color="#fff" />
+                <Text style={styles.viewRouteButtonText}>View Route on Map</Text>
+              </Pressable>
+            )}
+
             {onRecalculate && (
               <Pressable style={styles.recalculateButton} onPress={onRecalculate}>
                 <Ionicons name="refresh" size={16} color="#fff" />
@@ -296,7 +309,7 @@ const styles = StyleSheet.create({
   resultScreen: { flex: 1, backgroundColor: COLORS.textPrimary },
   resultBackButton: {
     position: 'absolute',
-    top: 54,
+    top: 32,
     left: 20,
     zIndex: 2,
     width: 34,
@@ -308,16 +321,16 @@ const styles = StyleSheet.create({
   },
   resultHero: {
     backgroundColor: COLORS.ink,
-    paddingTop: 100,
-    paddingBottom: 28,
-    paddingHorizontal: 24,
+    paddingTop: 70,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
   },
-  tripStack: { marginBottom: 10 },
+  tripStack: { marginBottom: 6 },
   tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   tripDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
-  tripStackLine: { width: 1, height: 12, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
+  tripStackLine: { width: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
   tripText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.9)', flex: 1 },
-  arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
+  arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   arrivalTargetText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
   freshnessBadgeRow: {
     flexDirection: 'row',
@@ -328,7 +341,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
     alignSelf: 'flex-start',
-    marginBottom: 18,
+    marginBottom: 10,
   },
   freshnessDot: { width: 8, height: 8, borderRadius: 4 },
   freshnessBadgeInline: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
@@ -336,27 +349,30 @@ const styles = StyleSheet.create({
   heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroTextCol: { flex: 1 },
   resultHeroLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.7)' },
-  resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 40, color: '#fff', marginTop: 2 },
+  resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 34, color: '#fff', marginTop: 2 },
   countdownText: { fontFamily: 'Poppins_700Bold', fontSize: 22, color: '#fff', marginTop: 8, marginBottom: 2 },
-  resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 6 },
-  resultBody: { flex: 1, padding: 24 },
+  resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
+  resultBody: { flex: 1, padding: 16 },
   explanationSentence: {
     fontFamily: 'Inter_500Medium',
     fontSize: 14,
     color: COLORS.textPrimary,
-    marginBottom: 20,
+    marginBottom: 12,
     lineHeight: 20,
   },
-  divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 16 },
-  whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 12 },
-  reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
+  divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 10 },
+  whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 8 },
+  reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
-  tripDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  tripDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   tripDetailLabel: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
   tripDetailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary },
+  viewRouteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#12B886', paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 4 },
+  viewRouteButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
   recalculateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 8 },
   recalculateButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
   updatedText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
 });
+
 
 

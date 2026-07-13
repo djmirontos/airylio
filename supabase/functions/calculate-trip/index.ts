@@ -113,15 +113,16 @@ Deno.serve(async (req) => {
 
     let durationSeconds: number;
     let distanceMeters: number;
+    let encodedPolyline: string | undefined;
     let dataFreshness: "live" | "cached" | "estimated";
     const calculationId = crypto.randomUUID();
 
     const { data: cacheHit } = await admin
       .from("route_cache").select("*").eq("cache_key", cacheKey)
       .gt("expires_at", new Date().toISOString()).maybeSingle();
-
     if (cacheHit) {
       durationSeconds = parseInt(String(cacheHit.google_response.routes[0].duration).replace("s", ""), 10);
+      encodedPolyline = cacheHit.google_response.routes[0].polyline?.encodedPolyline;
       distanceMeters = cacheHit.google_response.routes[0].distanceMeters;
       dataFreshness = "cached";
       await admin.from("calculation_events").insert({
@@ -142,6 +143,7 @@ Deno.serve(async (req) => {
       if (routeResult.success) {
         durationSeconds = routeResult.durationSeconds;
         distanceMeters = routeResult.distanceMeters;
+        encodedPolyline = routeResult.encodedPolyline;
         dataFreshness = "live";
 
         await admin.from("route_cache").insert({
@@ -192,6 +194,7 @@ Deno.serve(async (req) => {
       origin_hash: originHash, destination_hash: destinationHash,
       city_code: cityCode, transport_mode: transportMode,
       origin_label: originLabel, destination_label: destinationLabel,
+      origin_lat: originLat, origin_lng: originLng, destination_lat: destLat, destination_lng: destLng,
       planning_mode: planningMode, target_time: targetTime, calculation_timezone: cityProfileRow.timezone,
       raw_google_eta_seconds: durationSeconds,
       recommended_leave_time: engineResult.recommendedLeaveTime,
@@ -201,6 +204,7 @@ Deno.serve(async (req) => {
       recommendation_explanation: engineResult.recommendationExplanation,
       weather_condition: weatherCondition, data_freshness: dataFreshness,
       recommendation_version_id: versionRow.id,
+      encoded_polyline: encodedPolyline,
     }).select().single();
     if (tripError) throw tripError;
 
@@ -214,6 +218,7 @@ Deno.serve(async (req) => {
       dataFreshness,
       weatherCondition,
       distanceMeters,
+      encodedPolyline,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {

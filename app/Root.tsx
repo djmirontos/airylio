@@ -3,6 +3,7 @@ import { useFonts, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fon
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { ActivityIndicator, View } from 'react-native';
 import AppNavigator from './navigation/AppNavigator';
+import { TripProvider } from './context/TripContext';
 
 // Suppress non-critical RN text rendering warnings in dev mode
 const originalWarn = console.error.bind(console.error);
@@ -30,7 +31,9 @@ export default function Root() {
 
   return (
     <NavigationContainer>
-      <AppNavigator />
+      <TripProvider>
+        <AppNavigator />
+      </TripProvider>
     </NavigationContainer>
   );
 }

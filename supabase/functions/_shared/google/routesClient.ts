@@ -1,8 +1,9 @@
-﻿export type RouteApiResult =
+export type RouteApiResult =
   | {
       success: true;
       durationSeconds: number;
       distanceMeters: number;
+      encodedPolyline?: string;
       rawResponse: unknown;
     }
   | {
@@ -38,7 +39,7 @@ export async function getRouteEta(
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
       },
       body: JSON.stringify({
         origin: { location: { latLng: { latitude: originLat, longitude: originLng } } },
@@ -83,11 +84,12 @@ export async function getRouteEta(
     }
 
     const durationSeconds = parseInt(durationStr.replace("s", ""), 10);
-
+    const encodedPolyline: string | undefined = route.polyline?.encodedPolyline;
     return {
       success: true,
       durationSeconds,
       distanceMeters,
+      encodedPolyline,
       rawResponse: data,
     };
   } catch (err: any) {
@@ -106,3 +108,5 @@ export async function getRouteEta(
     };
   }
 }
+
+
