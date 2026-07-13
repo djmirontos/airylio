@@ -195,7 +195,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TripResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [countdownText, setCountdownText] = useState<string | null>(null);
   const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
   useEffect(() => {
@@ -259,33 +258,6 @@ export default function App() {
       }
     })();
   }, [gpsCoords]);
-
-  useEffect(() => {
-    if (!result) {
-      setCountdownText(null);
-      return;
-    }
-    function tick() {
-      const diffMs = new Date(result.recommendedLeaveTime).getTime() - nowPST();
-      const diffMin = Math.round(diffMs / 60000);
-      const diffSec = Math.floor(diffMs / 1000);
-      if (diffSec <= 0) {
-        const overdue = Math.round(-diffMs / 60000);
-        setCountdownText(overdue < 1 ? 'Leave now' : `Overdue by ${overdue} min`);
-      } else if (diffMin < 1) {
-        setCountdownText('Leave now');
-      } else if (diffMin < 60) {
-        setCountdownText(`Leave in ${diffMin} min`);
-      } else {
-        const h = Math.floor(diffMin / 60);
-        const m = diffMin % 60;
-        setCountdownText(`Leave in ${h}h ${m}m`);
-      }
-    }
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, [result]);
 
   async function addRecentDestination(item: RecentDestination) {
     const deduped = recentDestinations.filter((d) => d.label !== item.label);
@@ -679,8 +651,6 @@ export default function App() {
                   <Text style={styles.resultHeroTime}>
                     {formatTime12h(result.recommendedLeaveTime)}
                   </Text>
-                {countdownText && (
-                  <Text style={styles.countdownText}>{countdownText}</Text>
                 )}
                   <Text style={styles.resultArrivalInline}>
                     {resultMode === 'arrive_by' ? 'Arrive by ' : 'Est. arrival '}
@@ -854,7 +824,7 @@ const styles = StyleSheet.create({
   dateTimeBigValue: { fontFamily: 'Poppins_700Bold', fontSize: 17, color: COLORS.textPrimary, marginTop: 1 },
 
   warning: { fontFamily: 'Inter_400Regular', color: '#B4680A', fontSize: 13, marginTop: 6, marginBottom: 4 },
-  transportRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  transportRow: { flexDirection: 'row', gap: 8, marginBottom: 4, marginTop: 12 },
   transportPill: {
     flex: 1,
     alignItems: 'center',
@@ -939,7 +909,6 @@ const styles = StyleSheet.create({
   heroTextCol: { flex: 1 },
   resultHeroLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.7)' },
   resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 40, color: '#fff', marginTop: 2 },
-  countdownText: { fontFamily: 'Poppins_700Bold', fontSize: 22, color: '#fff', marginTop: 8, marginBottom: 2 },
   resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 6 },
   resultBody: { flex: 1, padding: 24 },
   explanationSentence: {
@@ -954,6 +923,7 @@ const styles = StyleSheet.create({
   reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12, gap: 10 },
   reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
 });
+
 
 
 

@@ -41,7 +41,8 @@ export default function AppNavigator() {
             Map: 'map',
             Settings: 'settings',
           };
-          return <Ionicons name={icons[route.name] as any} size={size} color={color} />;
+          const iconName = icons[route.name] ?? 'help-circle';
+          return <Ionicons name={iconName as any} size={size} color={color} />;
         },
       })}
     >
@@ -52,3 +53,4 @@ export default function AppNavigator() {
     </Tab.Navigator>
   );
 }
+

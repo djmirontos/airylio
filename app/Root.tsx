@@ -4,6 +4,13 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 import { ActivityIndicator, View } from 'react-native';
 import AppNavigator from './navigation/AppNavigator';
 
+// Suppress non-critical RN text rendering warnings in dev mode
+const originalWarn = console.error.bind(console.error);
+console.error = (msg: any, ...args: any[]) => {
+  if (typeof msg === 'string' && msg.includes('Text strings must be rendered')) return;
+  originalWarn(msg, ...args);
+};
+
 export default function Root() {
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
@@ -27,3 +34,4 @@ export default function Root() {
     </NavigationContainer>
   );
 }
+
