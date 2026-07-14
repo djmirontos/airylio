@@ -4,6 +4,7 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 import { ActivityIndicator, View } from 'react-native';
 import AppNavigator from './navigation/AppNavigator';
 import { TripProvider } from './context/TripContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Suppress non-critical RN text rendering warnings in dev mode
 const originalWarn = console.error.bind(console.error);
@@ -31,9 +32,11 @@ export default function Root() {
 
   return (
     <NavigationContainer>
-      <TripProvider>
-        <AppNavigator />
-      </TripProvider>
+      <ThemeProvider>
+        <TripProvider>
+          <AppNavigator />
+        </TripProvider>
+      </ThemeProvider>
     </NavigationContainer>
   );
 }

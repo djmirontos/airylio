@@ -1,22 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import ResultModal from '../components/ResultModal';
 import { useTripContext } from '../context/TripContext';
-
-const COLORS = {
-  canvas: '#FAFAFC',
-  card: '#FFFFFF',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#6B6F8A',
-  divider: '#E7E7F1',
-  accent: '#4C4F9E',
-  signalGood: '#12B886',
-  signalWarn: '#F5A623',
-  signalRisk: '#E85D51',
-};
 
 const TRANSPORT_MODES: Record<string, { label: string; icon: string }> = {
   drive: { label: 'Drive', icon: 'car' },
@@ -56,12 +45,6 @@ interface TripResult {
   };
 }
 
-function confidenceColor(score: number): string {
-  if (score >= 85) return COLORS.signalGood;
-  if (score >= 70) return COLORS.signalWarn;
-  return COLORS.signalRisk;
-}
-
 function formatTime12h(isoString: string): string {
   const date = new Date(isoString);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -79,12 +62,19 @@ function formatDate(isoString: string): string {
 }
 
 export default function HistoryScreen() {
+  const { colors: COLORS } = useTheme();
   const navigation = useNavigation();
   const { setPrefillData } = useTripContext();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<TripResult | null>(null);
+
+  const confidenceColor = (score: number): string => {
+    if (score >= 85) return COLORS.signalGood;
+    if (score >= 70) return COLORS.signalWarn;
+    return COLORS.signalRisk;
+  };
 
   const fetchTrips = useCallback(async () => {
     try {
@@ -172,7 +162,7 @@ export default function HistoryScreen() {
 
         <View style={styles.tripCardBody}>
           <Text style={styles.tripCardRoute} numberOfLines={1}>{item.origin_label ?? 'Origin'} {'->'} {item.destination_label ?? 'Destination'}</Text>
-          <Text style={styles.tripCardTimes}>Leave {leaveTime} · Arrive {arriveTime}</Text>
+          <Text style={styles.tripCardTimes}>Leave {leaveTime} Â· Arrive {arriveTime}</Text>
           <Text style={styles.tripCardDate}>{date}</Text>
         </View>
 
@@ -190,6 +180,44 @@ export default function HistoryScreen() {
       <Text style={styles.emptySubtitle}>Your past trips will appear here after you calculate a route from the Plan tab.</Text>
     </View>
   );
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.canvas },
+    header: { paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: COLORS.canvas },
+    headerTitle: { fontFamily: 'Poppins_700Bold', fontSize: 24, color: COLORS.textPrimary },
+    loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    emptyListContainer: { flexGrow: 1, justifyContent: 'center' },
+    emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+    emptyTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
+    emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
+    tripCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: COLORS.card,
+      marginHorizontal: 14,
+      marginBottom: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.divider,
+    },
+    tripCardLeft: { marginRight: 10 },
+    transportBadge: {
+      width: 44,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: COLORS.accentTint,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tripCardBody: { flex: 1 },
+    tripCardRoute: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginBottom: 3 },
+    tripCardTimes: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.textSecondary, marginBottom: 1 },
+    tripCardDate: { fontFamily: 'Inter_400Regular', fontSize: 11, color: COLORS.textSecondary },
+    confidenceBadge: { width: 48, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+    confidenceBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#fff' },
+  }), [COLORS]);
 
   return (
     <View style={styles.container}>
@@ -233,51 +261,3 @@ export default function HistoryScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.canvas },
-  header: { paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: COLORS.canvas },
-  headerTitle: { fontFamily: 'Poppins_700Bold', fontSize: 24, color: '#1A1A2E' },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyListContainer: { flexGrow: 1, justifyContent: 'center' },
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
-  emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
-  tripCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    marginHorizontal: 14,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  tripCardLeft: { marginRight: 10 },
-  transportBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: `${COLORS.accent}0f`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tripCardBody: { flex: 1 },
-  tripCardRoute: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginBottom: 3 },
-  tripCardTimes: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.textSecondary, marginBottom: 1 },
-  tripCardDate: { fontFamily: 'Inter_400Regular', fontSize: 11, color: COLORS.textSecondary },
-  confidenceBadge: { width: 48, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
-  confidenceBadgeText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#fff' },
-});
-
-
-
-
-
-
-
-
-
-

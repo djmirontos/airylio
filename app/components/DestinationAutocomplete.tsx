@@ -209,88 +209,86 @@ export default function DestinationAutocomplete({
               </View>
             )}
 
-            {showFavoritesSection && (
+            {!query ? (
               <>
-                <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
-                  Favorites
-                </Text>
-                {favorites?.home && (
-                  <Pressable
-                    style={[styles.row, { borderBottomColor: colors.divider }]}
-                    onPress={() => onSelect({ label: favorites.home!.label, lat: favorites.home!.lat, lng: favorites.home!.lng })}
-                  >
-                    <Ionicons name="home" size={16} color={colors.accent} />
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={[styles.rowMain, { color: colors.textPrimary }]} numberOfLines={1}>Home</Text>
-                      <Text style={[styles.rowSecondary, { color: colors.textSecondary }]} numberOfLines={1}>{favorites.home.label}</Text>
-                    </View>
-                  </Pressable>
-                )}
-                {favorites?.work && (
-                  <Pressable
-                    style={[styles.row, { borderBottomColor: colors.divider }]}
-                    onPress={() => onSelect({ label: favorites.work!.label, lat: favorites.work!.lat, lng: favorites.work!.lng })}
-                  >
-                    <Ionicons name="briefcase" size={16} color={colors.accent} />
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                      <Text style={[styles.rowMain, { color: colors.textPrimary }]} numberOfLines={1}>Work</Text>
-                      <Text style={[styles.rowSecondary, { color: colors.textSecondary }]} numberOfLines={1}>{favorites.work.label}</Text>
-                    </View>
-                  </Pressable>
-                )}
-              </>
-            )}
-
-            {showFavoritesSection && showSuggestedSection && <View style={styles.sectionGap} />}
-
-            {showSuggestedSection && (
-              <>
-                <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
-                  {suggestedLabel}
-                </Text>
-                {suggestions.map((item) => (
-                  <Pressable
-                    key={item.placeId}
-                    style={[styles.row, { borderBottomColor: colors.divider }]}
-                    onPress={() => handleSelectSuggestion(item)}
-                  >
-                    <Text style={[styles.rowMain, { color: colors.textPrimary }]} numberOfLines={1}>
-                      {item.mainText}
+                {showFavoritesSection && (
+                  <>
+                    <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
+                      Favorites
                     </Text>
-                    {!!item.secondaryText && (
-                      <Text style={[styles.rowSecondary, { color: colors.textSecondary }]} numberOfLines={1}>
-                        {item.secondaryText}
-                      </Text>
-                    )}
-                  </Pressable>
-                ))}
-              </>
-            )}
-
-            {(showSuggestedSection || showFavoritesSection) && showRecentSection && <View style={styles.sectionGap} />}
-
-            {showRecentSection && (
-              <>
-                <Text style={[styles.sectionHeaderMuted, { color: colors.textSecondary }]}>
-                  Recent
-                </Text>
-                {recentDestinations.map((item) => (
-                  <Pressable
-                    key={item.label}
-                    style={[styles.row, { borderBottomColor: colors.divider }]}
-                    onPress={() => handleSelectRecent(item)}
-                  >
-                    <View style={styles.recentRowInner}>
-                      <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                      <Text
-                        style={[styles.rowMainMuted, { color: colors.textSecondary }]}
-                        numberOfLines={2}
+                    {favorites?.home && (
+                      <Pressable
+                        style={[styles.favoriteShortcut, { borderBottomColor: colors.divider }]}
+                        onPress={() => onSelect({ label: favorites.home!.label, lat: favorites.home!.lat, lng: favorites.home!.lng })}
                       >
-                        {item.label}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
+                        <Ionicons name="home" size={16} color={colors.accent} />
+                        <Text style={[styles.favoriteShortcutText, { color: colors.textPrimary }]}>Home</Text>
+                      </Pressable>
+                    )}
+                    {favorites?.work && (
+                      <Pressable
+                        style={[styles.favoriteShortcut, { borderBottomColor: colors.divider }]}
+                        onPress={() => onSelect({ label: favorites.work!.label, lat: favorites.work!.lat, lng: favorites.work!.lng })}
+                      >
+                        <Ionicons name="briefcase" size={16} color={colors.accent} />
+                        <Text style={[styles.favoriteShortcutText, { color: colors.textPrimary }]}>Work</Text>
+                      </Pressable>
+                    )}
+                  </>
+                )}
+
+                {showFavoritesSection && showRecentSection && <View style={styles.sectionGap} />}
+
+                {showRecentSection && (
+                  <>
+                    <Text style={[styles.sectionHeaderMuted, { color: colors.textSecondary }]}>
+                      Recent
+                    </Text>
+                    {recentDestinations.map((item) => (
+                      <Pressable
+                        key={item.label}
+                        style={[styles.row, { borderBottomColor: colors.divider }]}
+                        onPress={() => handleSelectRecent(item)}
+                      >
+                        <View style={styles.recentRowInner}>
+                          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                          <Text
+                            style={[styles.rowMainMuted, { color: colors.textSecondary }]}
+                            numberOfLines={2}
+                          >
+                            {item.label}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {showSuggestedSection && (
+                  <>
+                    <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
+                      {suggestedLabel}
+                    </Text>
+                    {suggestions.map((item) => (
+                      <Pressable
+                        key={item.placeId}
+                        style={[styles.row, { borderBottomColor: colors.divider }]}
+                        onPress={() => handleSelectSuggestion(item)}
+                      >
+                        <Text style={[styles.rowMain, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {item.mainText}
+                        </Text>
+                        {!!item.secondaryText && (
+                          <Text style={[styles.rowSecondary, { color: colors.textSecondary }]} numberOfLines={1}>
+                            {item.secondaryText}
+                          </Text>
+                        )}
+                      </Pressable>
+                    ))}
+                  </>
+                )}
               </>
             )}
           </ScrollView>
@@ -314,10 +312,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 8,
+    marginBottom: 64,
     borderRadius: 16,
-    maxHeight: 320,
-    zIndex: 50,
-    elevation: 8,
+    maxHeight: 280,
+    zIndex: 9999,
+    elevation: 9999,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
     shadowRadius: 20,
@@ -348,4 +347,6 @@ const styles = StyleSheet.create({
   rowSecondary: { fontFamily: 'Inter_400Regular', fontSize: 13, marginTop: 2 },
   rowMainMuted: { fontFamily: 'Inter_400Regular', fontSize: 13, flex: 1 },
   recentRowInner: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  favoriteShortcut: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderBottomWidth: 1 },
+  favoriteShortcutText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
 });

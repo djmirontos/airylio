@@ -1,5 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import { Keyboard } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import PlanScreen from '../App';
 import HistoryScreen from '../screens/HistoryScreen';
 import MapScreen from '../screens/MapScreen';
@@ -7,22 +10,23 @@ import SettingsScreen from '../screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
 
-const COLORS = {
-  accent: '#4C4F9E',
-  ink: '#12153D',
-  textSecondary: '#6B6F8A',
-  card: '#FFFFFF',
-  divider: '#E7E7F1',
-};
-
 export default function AppNavigator() {
+  const { colors: COLORS } = useTheme();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: COLORS.accent,
         tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: {
+        tabBarStyle: keyboardVisible ? { display: 'none' } : {
           backgroundColor: COLORS.card,
           borderTopColor: COLORS.divider,
           borderTopWidth: 1,

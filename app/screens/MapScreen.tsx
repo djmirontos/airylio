@@ -1,20 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Linking, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { decode } from '@mapbox/polyline';
+import { useTheme } from '../context/ThemeContext';
 import { useTripContext } from '../context/TripContext';
-
-const COLORS = {
-  canvas: '#FAFAFC',
-  card: '#FFFFFF',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#6B6F8A',
-  divider: '#E7E7F1',
-  accent: '#4C4F9E',
-  signalGood: '#12B886',
-  signalRisk: '#E85D51',
-};
 
 interface RouteCoord {
   latitude: number;
@@ -40,6 +30,7 @@ function formatDistance(meters?: number): string | null {
 }
 
 export default function MapScreen() {
+  const { colors: COLORS } = useTheme();
   const { currentTrip, currentMeta } = useTripContext();
   const [decodedRoute, setDecodedRoute] = useState<RouteCoord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,6 +84,28 @@ export default function MapScreen() {
     const url = `https://waze.com/ul?ll=${currentMeta.destLat},${currentMeta.destLng}&navigate=yes`;
     Linking.openURL(url);
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.canvas },
+    map: { flex: 1 },
+    loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
+    emptyTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
+    emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22, maxWidth: 280 },
+    infoCard: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.card, padding: 16 },
+    timeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+    timeLabel: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textPrimary },
+    timeValue: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, marginTop: 4 },
+    divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 12 },
+    detailsRow: { flexDirection: 'row', gap: 16, marginBottom: 12 },
+    detailItem: { flex: 1 },
+    detailLabel: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textPrimary },
+    detailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginTop: 4 },
+    buttonRow: { flexDirection: 'row', gap: 12 },
+    navButton: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
+    navButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#fff', marginLeft: 6 },
+    wazeButton: {},
+  }), [COLORS]);
 
   return (
     <View style={styles.container}>
@@ -188,59 +201,3 @@ export default function MapScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.canvas },
-  map: { flex: 1 },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
-  emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
-  infoCard: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.card,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 28,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: COLORS.textPrimary,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  timeLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.textSecondary },
-  timeValue: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, marginTop: 4 },
-  divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 12 },
-  detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  detailItem: { flex: 1, alignItems: 'center' },
-  detailLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: COLORS.textSecondary },
-  detailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginTop: 4 },
-  buttonRow: { flexDirection: 'row', gap: 10 },
-  navButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: COLORS.accent,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  wazeButton: { backgroundColor: '#1FB3EB' },
-  navButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: '#fff' },
-});

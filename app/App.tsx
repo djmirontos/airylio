@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Image, Alert } from 'react-native';
@@ -17,22 +17,9 @@ import { useTripContext, PlanPrefill } from './context/TripContext';
 import { useFavorites } from './hooks/useFavorites';
 import { scheduleLeaveReminder, cancelLeaveReminder } from './hooks/useNotifications';
 import * as Notifications from 'expo-notifications';
+import { useTheme } from './context/ThemeContext';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
-
-const COLORS = {
-  ink: '#12153D',
-  accent: '#4C4F9E',
-  accentTint: 'rgba(76,79,158,0.07)',
-  signalGood: '#12B886',
-  signalWarn: '#F5A623',
-  signalRisk: '#E85D51',
-  canvas: '#FAFAFC',
-  card: '#FFFFFF',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#6B6F8A',
-  divider: '#E7E7F1',
-};
 
 // TEMP: force Philippine Standard Time (UTC+8) for testing
 const PST_OFFSET_MS = (8 * 60 + new Date().getTimezoneOffset()) * 60000;
@@ -105,12 +92,6 @@ function formatTime12h(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-function confidenceColor(score: number): string {
-  if (score >= 85) return COLORS.signalGood;
-  if (score >= 70) return COLORS.signalWarn;
-  return COLORS.signalRisk;
-}
-
 function formatTravelTime(leaveTime: string, arrivalTime: string): string {
   const ms = new Date(arrivalTime).getTime() - new Date(leaveTime).getTime();
   const totalMinutes = Math.round(ms / 60000);
@@ -123,42 +104,6 @@ function formatTravelTime(leaveTime: string, arrivalTime: string): string {
 function formatDistance(meters?: number): string | null {
   if (meters === undefined) return null;
   return `${(meters / 1000).toFixed(1)} km`;
-}
-
-function freshnessLabel(freshness: string): { text: string; color: string } {
-  if (freshness === 'live') return { text: 'Live traffic', color: COLORS.signalGood };
-  if (freshness === 'cached') return { text: 'Recent data', color: COLORS.signalWarn };
-  return { text: 'Estimated', color: COLORS.textSecondary };
-}
-
-function reasonIcon(reason: string): { name: string; color: string } {
-  const lower = reason.toLowerCase();
-  if (lower.includes('rain') || lower.includes('storm') || lower.includes('weather')) {
-    return { name: 'rainy', color: '#4A90D9' };
-  }
-  if (lower.includes('rush') || lower.includes('traffic') || lower.includes('congestion')) {
-    return { name: 'car', color: COLORS.accent };
-  }
-  if (lower.includes('cached') || lower.includes('historical') || lower.includes('estimate')) {
-    return { name: 'stats-chart', color: COLORS.textSecondary };
-  }
-  if (lower.includes('buffer') || lower.includes('minute')) {
-    return { name: 'time', color: COLORS.signalWarn };
-  }
-  return { name: 'checkmark-circle', color: COLORS.signalGood };
-}
-
-function factorIcon(type: 'weather' | 'rush_hour' | 'buffer_cap'): { name: string; color: string } {
-  if (type === 'weather') return { name: 'rainy', color: '#4A90D9' };
-  if (type === 'rush_hour') return { name: 'car', color: COLORS.accent };
-  return { name: 'time', color: COLORS.signalWarn }; // buffer_cap
-}
-
-function weatherIndicator(condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm'): { icon: string; label: string; color: string } {
-  if (condition === 'storm') return { icon: 'thunderstorm', label: 'Storm', color: '#7B5EA7' };
-  if (condition === 'heavy_rain') return { icon: 'rainy', label: 'Heavy Rain', color: '#4A90D9' };
-  if (condition === 'rain') return { icon: 'rainy-outline', label: 'Rain', color: '#4A90D9' };
-  return { icon: 'sunny', label: 'Clear', color: COLORS.signalGood };
 }
 
 function getWeatherAnimation(
@@ -210,7 +155,50 @@ export default function App() {
 
   const { setCurrentTrip, prefillData, setPrefillData } = useTripContext();
   const { favorites } = useFavorites();
+  const { colors: COLORS, isDark } = useTheme();
   const navigation = useNavigation();
+
+  const confidenceColor = (score: number): string => {
+    if (score >= 85) return COLORS.signalGood;
+    if (score >= 70) return COLORS.signalWarn;
+    return COLORS.signalRisk;
+  };
+
+  const freshnessLabel = (freshness: string): { text: string; color: string } => {
+    if (freshness === 'live') return { text: 'Live traffic', color: COLORS.signalGood };
+    if (freshness === 'cached') return { text: 'Recent data', color: COLORS.signalWarn };
+    return { text: 'Estimated', color: COLORS.textSecondary };
+  };
+
+  const reasonIcon = (reason: string): { name: string; color: string } => {
+    const lower = reason.toLowerCase();
+    if (lower.includes('rain') || lower.includes('storm') || lower.includes('weather')) {
+      return { name: 'rainy', color: '#4A90D9' };
+    }
+    if (lower.includes('rush') || lower.includes('traffic') || lower.includes('congestion')) {
+      return { name: 'car', color: COLORS.accent };
+    }
+    if (lower.includes('cached') || lower.includes('historical') || lower.includes('estimate')) {
+      return { name: 'stats-chart', color: COLORS.textSecondary };
+    }
+    if (lower.includes('buffer') || lower.includes('minute')) {
+      return { name: 'time', color: COLORS.signalWarn };
+    }
+    return { name: 'checkmark-circle', color: COLORS.signalGood };
+  };
+
+  const factorIcon = (type: 'weather' | 'rush_hour' | 'buffer_cap'): { name: string; color: string } => {
+    if (type === 'weather') return { name: 'rainy', color: '#4A90D9' };
+    if (type === 'rush_hour') return { name: 'car', color: COLORS.accent };
+    return { name: 'time', color: COLORS.signalWarn }; // buffer_cap
+  };
+
+  const weatherIndicator = (condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm'): { icon: string; label: string; color: string } => {
+    if (condition === 'storm') return { icon: 'thunderstorm', label: 'Storm', color: '#7B5EA7' };
+    if (condition === 'heavy_rain') return { icon: 'rainy', label: 'Heavy Rain', color: '#4A90D9' };
+    if (condition === 'rain') return { icon: 'rainy-outline', label: 'Rain', color: '#4A90D9' };
+    return { icon: 'sunny', label: 'Clear', color: COLORS.signalGood };
+  };
 
   useEffect(() => {
     (async () => {
@@ -424,10 +412,94 @@ export default function App() {
   // modal is open, but this is the more correct source of truth regardless.
   const resultMode: PlanningMode = result?.recommendationExplanation?.planningMode ?? planningMode;
 
+  const styles = useMemo(() => StyleSheet.create({
+    root: { flex: 1, backgroundColor: COLORS.canvas },
+    fontLoadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
+    header: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16, position: 'relative', overflow: 'hidden' },
+    headerBgImage: { position: 'absolute', top: 58, right: -20, width: 160, height: 130 },
+    headerLottie: { position: 'absolute', top: 60, right: 80, width: 65, height: 65, opacity: 0.65 },
+    logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+    logo: { width: 44, height: 44, borderRadius: 10 },
+    logoText: { fontFamily: 'Poppins_700Bold', fontSize: 20, color: COLORS.textPrimary },
+    greeting: { fontFamily: 'Poppins_700Bold', fontSize: 21, color: COLORS.textPrimary },
+    greetingSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
+    card: { flex: 1, backgroundColor: COLORS.card, marginHorizontal: 16, marginBottom: 16, borderRadius: 24, padding: 20, shadowColor: COLORS.ink, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 4 },
+    modeToggleRow: { flexDirection: 'row', gap: 6, backgroundColor: COLORS.accentTint, borderRadius: 16, padding: 4, marginBottom: 16 },
+    modeToggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
+    modeToggleButtonSelected: { backgroundColor: COLORS.accent },
+    modeToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textSecondary },
+    modeToggleTextSelected: { color: '#fff' },
+    scrollArea: { flex: 1 },
+    fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.canvas, borderRadius: 14, padding: 14, marginBottom: 10, gap: 12 },
+    fieldDot: { width: 9, height: 9, borderRadius: 5 },
+    fieldPinIcon: {},
+    fieldTextCol: { flex: 1 },
+    fieldLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.accent, marginBottom: 2 },
+    fieldValue: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.textPrimary },
+    sectionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
+    dateTimeSectionLabel: { fontFamily: 'Poppins_700Bold', fontSize: 15, color: COLORS.textPrimary, marginTop: 10, marginBottom: 6 },
+    dateTimeCard: { flexDirection: 'row', backgroundColor: COLORS.accentTint, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginBottom: 4, overflow: 'hidden' },
+    dateTimeHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10 },
+    dateTimeIconWrap: { width: 34, height: 34, borderRadius: 10, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
+    dateTimeDividerVertical: { width: 1, backgroundColor: COLORS.accent, opacity: 0.25 },
+    dateTimeSmallLabel: { fontFamily: 'Inter_500Medium', fontSize: 11, color: COLORS.textSecondary },
+    dateTimeBigValue: { fontFamily: 'Poppins_700Bold', fontSize: 17, color: COLORS.textPrimary, marginTop: 1 },
+    warning: { fontFamily: 'Inter_400Regular', color: '#B4680A', fontSize: 13, marginTop: 6, marginBottom: 4 },
+    transportRow: { flexDirection: 'row', gap: 8, marginBottom: 4, marginTop: 12 },
+    transportPill: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: COLORS.divider, backgroundColor: COLORS.card },
+    transportPillSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent, borderWidth: 1 },
+    transportPillText: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: COLORS.textPrimary, textAlign: 'center' },
+    transportPillTextSelected: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: '#fff', textAlign: 'center' },
+    favoritesRow: { flexDirection: 'row', gap: 8, marginBottom: 8, marginTop: 4, paddingHorizontal: 4 },
+    favoriteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: COLORS.accentTint, borderWidth: 1, borderColor: 'rgba(76,79,158,0.2)' },
+    favoriteChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent },
+    calculateButton: { backgroundColor: COLORS.accent, paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginTop: 12 },
+    calculateButtonDisabled: { backgroundColor: '#9B9DC2' },
+    calculateButtonText: { fontFamily: 'Inter_600SemiBold', color: '#fff', fontSize: 16 },
+    errorBox: { marginTop: 20, padding: 16, borderRadius: 16, backgroundColor: '#FDECEA', borderWidth: 1, borderColor: '#F4C6C0', flexDirection: 'row', alignItems: 'flex-start' },
+    errorTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.signalRisk, marginBottom: 4 },
+    errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary },
+    resultScreen: { flex: 1, backgroundColor: COLORS.card },
+    resultBackButton: { position: 'absolute', top: 32, left: 20, zIndex: 2, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+    resultHero: { backgroundColor: '#0D1021', paddingTop: 70, paddingBottom: 16, paddingHorizontal: 20 },
+    tripStack: { marginBottom: 6 },
+    tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    tripDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
+    tripStackLine: { width: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
+    tripText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.95)', flex: 1 },
+    arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+    arrivalTargetText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.85)' },
+    tripDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+    tripDetailLabel: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
+    tripDetailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary },
+    viewRouteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.signalGood, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 4 },
+    viewRouteButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
+    updatedText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+    freshnessBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, alignSelf: 'flex-start', marginBottom: 10 },
+    freshnessDot: { width: 8, height: 8, borderRadius: 4 },
+    freshnessDivider: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 6 },
+    freshnessBadgeInline: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
+    heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    heroTextCol: { flex: 1 },
+    resultHeroLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.85)' },
+    resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 34, color: '#fff', marginTop: 2 },
+    resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 3 },
+    resultBody: { flex: 1, padding: 16 },
+    explanationSentence: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.textPrimary, marginBottom: 12, lineHeight: 20 },
+    divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 10 },
+    whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 8 },
+    reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
+    reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
+    remindButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginTop: 8, marginBottom: 4 },
+    remindButtonActive: { borderColor: COLORS.signalGood, backgroundColor: 'rgba(18,184,134,0.08)' },
+    remindButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
+    remindButtonTextActive: { color: COLORS.signalGood },
+  }), [COLORS]);
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <View style={styles.root}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <View style={styles.header}>
         <Image source={require('./assets/main_bg.png')} style={styles.headerBgImage} resizeMode="contain" />
         <LottieView
@@ -812,7 +884,7 @@ export default function App() {
               >
                 <Ionicons name={reminderSet ? 'checkmark-circle' : 'notifications-outline'} size={16} color={reminderSet ? COLORS.signalGood : COLORS.accent} />
                 <Text style={[styles.remindButtonText, reminderSet && styles.remindButtonTextActive]}>
-                  {reminderSet ? 'Reminder set ✓' : 'Remind me when it\'s time to leave'}
+                  {reminderSet ? 'Reminder set' : 'Remind me when it\'s time to leave'}
                 </Text>
               </Pressable>
               <Text style={styles.updatedText}>Updated just now</Text>
@@ -830,244 +902,3 @@ export default function App() {
     </TouchableWithoutFeedback>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  fontLoadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
-  header: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16, position: 'relative', overflow: 'hidden' },
-  headerBgImage: {
-    position: 'absolute',
-    top: 58,
-    right: -20,
-    width: 160,
-    height: 130,
-  },
-  headerLottie: { position: 'absolute', top: 60, right: 80, width: 65, height: 65, opacity: 0.65 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  logo: { width: 44, height: 44, borderRadius: 10 },
-  logoText: { fontFamily: 'Poppins_700Bold', fontSize: 20, color: COLORS.textPrimary },
-  greeting: { fontFamily: 'Poppins_700Bold', fontSize: 21, color: COLORS.textPrimary },
-  greetingSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
-  card: {
-    flex: 1,
-    backgroundColor: COLORS.card,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: COLORS.ink,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 4,
-  },
-  modeToggleRow: {
-    flexDirection: 'row',
-    gap: 6,
-    backgroundColor: COLORS.canvas,
-    borderRadius: 16,
-    padding: 4,
-    marginBottom: 16,
-  },
-  modeToggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
-  modeToggleButtonSelected: { backgroundColor: COLORS.ink },
-  modeToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textSecondary },
-  modeToggleTextSelected: { color: '#fff' },
-  scrollArea: { flex: 1 },
-  fieldRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.canvas,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    gap: 12,
-  },
-  fieldDot: { width: 9, height: 9, borderRadius: 5 },
-  fieldPinIcon: {},
-  fieldTextCol: { flex: 1 },
-  fieldLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.accent, marginBottom: 2 },
-  fieldValue: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.textPrimary },
-  sectionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
-
-  // Date & time - deliberately more visually prominent than other sections,
-  // since this is the main focal point of the whole app.
-  dateTimeSectionLabel: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 15,
-    color: COLORS.textPrimary,
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  dateTimeCard: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.accentTint,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.accent,
-    marginBottom: 4,
-    overflow: 'hidden',
-  },
-  dateTimeHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10 },
-  dateTimeIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: COLORS.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dateTimeDividerVertical: { width: 1, backgroundColor: COLORS.accent, opacity: 0.25 },
-  dateTimeSmallLabel: { fontFamily: 'Inter_500Medium', fontSize: 11, color: COLORS.textSecondary },
-  dateTimeBigValue: { fontFamily: 'Poppins_700Bold', fontSize: 17, color: COLORS.textPrimary, marginTop: 1 },
-
-  warning: { fontFamily: 'Inter_400Regular', color: '#B4680A', fontSize: 13, marginTop: 6, marginBottom: 4 },
-  transportRow: { flexDirection: 'row', gap: 8, marginBottom: 4, marginTop: 12 },
-  transportPill: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.divider,
-    backgroundColor: COLORS.card,
-  },
-  transportPillSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  transportPillText: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: COLORS.textPrimary, textAlign: 'center' },
-  transportPillTextSelected: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: '#fff', textAlign: 'center' },
-  favoritesRow: { flexDirection: 'row', gap: 8, marginBottom: 8, marginTop: 4, paddingHorizontal: 4 },
-  favoriteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: 'rgba(76,79,158,0.08)', borderWidth: 1, borderColor: 'rgba(76,79,158,0.2)' },
-  favoriteChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent },
-  calculateButton: {
-    backgroundColor: COLORS.ink,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  calculateButtonDisabled: { backgroundColor: '#9B9DC2' },
-  calculateButtonText: { fontFamily: 'Inter_600SemiBold', color: '#fff', fontSize: 16 },
-  errorBox: {
-    marginTop: 20,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#FDECEA',
-    borderWidth: 1,
-    borderColor: '#F4C6C0',
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  errorTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.signalRisk, marginBottom: 4 },
-  errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary },
-
-  // Result modal (its own full screen)
-  resultScreen: { flex: 1, backgroundColor: COLORS.card },
-  resultBackButton: {
-    position: 'absolute',
-    top: 32,
-    left: 20,
-    zIndex: 2,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  resultHero: {
-    backgroundColor: COLORS.ink,
-    paddingTop: 70,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-  },
-  tripStack: { marginBottom: 6 },
-  tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  tripDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
-  tripStackLine: { width: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
-  tripText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.9)', flex: 1 },
-  arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  arrivalTargetText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
-  tripDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  tripDetailLabel: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
-  tripDetailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary },
-  viewRouteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.signalGood, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 4 },
-  viewRouteButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
-  updatedText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  freshnessBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    marginBottom: 10,
-  },
-  freshnessDot: { width: 8, height: 8, borderRadius: 4 },
-  freshnessDivider: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 6 },
-  freshnessBadgeInline: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
-  heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroTextCol: { flex: 1 },
-  resultHeroLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.7)' },
-  resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 34, color: '#fff', marginTop: 2 },
-  resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
-  resultBody: { flex: 1, padding: 16 },
-  explanationSentence: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 10 },
-  whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 8 },
-  reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
-  reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
-  remindButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginTop: 8, marginBottom: 4 },
-  remindButtonActive: { borderColor: COLORS.signalGood, backgroundColor: 'rgba(18,184,134,0.08)' },
-  remindButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
-  remindButtonTextActive: { color: COLORS.signalGood },
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,6 +1,7 @@
-﻿import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState, useMemo } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 const STATUS_MESSAGES = [
   'Checking live traffic...',
@@ -62,31 +63,8 @@ function BreathingGlow({
   );
 }
 
-function RotatingStatusMessage() {
-  const [index, setIndex] = useState(0);
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % STATUS_MESSAGES.length);
-      opacity.setValue(0);
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }, MESSAGE_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <Animated.Text style={[styles.statusMessage, { opacity }]}>
-      {STATUS_MESSAGES[index]}
-    </Animated.Text>
-  );
-}
-
 export default function LoadingRecommendation() {
+  const { colors: COLORS } = useTheme();
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -97,10 +75,92 @@ export default function LoadingRecommendation() {
     }).start();
   }, []);
 
+  const styles = useMemo(() => StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: COLORS.canvas,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 32,
+    },
+    animationArea: {
+      width: 220,
+      height: 220,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 40,
+    },
+    coreCircle: {
+      width: 84,
+      height: 84,
+      borderRadius: 42,
+      backgroundColor: COLORS.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#8B5CF6',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.5,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+    title: {
+      fontFamily: 'Poppins_700Bold',
+      fontSize: 26,
+      lineHeight: 33,
+      letterSpacing: -0.5,
+      color: COLORS.textPrimary,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontFamily: 'Inter_500Medium',
+      fontSize: 13,
+      lineHeight: 20,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+      marginTop: 14,
+      maxWidth: '70%',
+    },
+    statusDivider: {
+      width: 40,
+      height: 1,
+      backgroundColor: 'rgba(107, 111, 138, 0.2)',
+      marginTop: 22,
+      marginBottom: 16,
+    },
+    statusMessage: {
+      fontFamily: 'Inter_500Medium',
+      fontSize: 13,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+    },
+  }), [COLORS]);
+
+  function RotatingStatusMessage() {
+    const [index, setIndex] = useState(0);
+    const opacity = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setIndex((prev) => (prev + 1) % STATUS_MESSAGES.length);
+        opacity.setValue(0);
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }, MESSAGE_INTERVAL_MS);
+      return () => clearInterval(interval);
+    }, []);
+
+    return (
+      <Animated.Text style={[styles.statusMessage, { opacity }]}>
+        {STATUS_MESSAGES[index]}
+      </Animated.Text>
+    );
+  }
+
   return (
     <Animated.View style={[styles.root, { opacity: fadeIn }]}>
-      {/* Concentric glow, car sits exactly in the center - Apple/HomePod style,
-          not a floating icon above the circles */}
       <View style={styles.animationArea}>
         <BreathingGlow delay={0} size={220} opacity={0.05} color="#6D5EF8" />
         <BreathingGlow delay={300} size={150} opacity={0.10} color="#6D5EF8" />
@@ -121,64 +181,3 @@ export default function LoadingRecommendation() {
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  animationArea: {
-    width: 220,
-    height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 40,
-  },
-  coreCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: '#6D5EF8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  title: {
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 26,
-    lineHeight: 33,
-    letterSpacing: -0.5,
-    color: '#1A1A2E',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#6B6F8A',
-    textAlign: 'center',
-    marginTop: 14,
-    maxWidth: '70%',
-  },
-  statusDivider: {
-    width: 40,
-    height: 1,
-    backgroundColor: 'rgba(107, 111, 138, 0.2)',
-    marginTop: 22,
-    marginBottom: 16,
-  },
-  statusMessage: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    color: '#6B6F8A',
-    textAlign: 'center',
-  },
-});
-
