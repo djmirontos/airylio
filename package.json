@@ -11,7 +11,9 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.0"
+    "@mapbox/polyline": "^1.2.1",
+    "@supabase/supabase-js": "^2.110.0",
+    "react-native-maps": "^1.29.0"
   },
   "devDependencies": {
     "supabase": "^2.109.1",
