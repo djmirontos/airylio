@@ -43,8 +43,7 @@ export default function TimePickerModal({ visible, value, onConfirm, onCancel, c
 
   useEffect(() => {
     if (visible) {
-      const PST_OFFSET_MS = (8 * 60 + new Date().getTimezoneOffset()) * 60000;
-      const parsed = to12Hour(new Date(Date.now() + PST_OFFSET_MS));
+      const parsed = to12Hour(new Date());
       setHour(parsed.hour);
       setMinute(parsed.minute);
       setPeriod(parsed.period);
@@ -64,8 +63,7 @@ export default function TimePickerModal({ visible, value, onConfirm, onCancel, c
   }, [visible]);
 
   function handleNow() {
-    const PST_OFFSET_MS = (8 * 60 + new Date().getTimezoneOffset()) * 60000;
-    const parsed = to12Hour(new Date(Date.now() + PST_OFFSET_MS));
+    const parsed = to12Hour(new Date());
     setHour(parsed.hour);
     setMinute(parsed.minute);
     setPeriod(parsed.period);

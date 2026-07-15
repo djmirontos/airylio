@@ -119,6 +119,22 @@ function formatDistance(meters?: number): string | null {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+function sanitizeError(message: string): string {
+  if (message.includes('no historical estimate available')) {
+    return "This route isn't available for the selected transport mode yet. Try a different mode.";
+  }
+  if (message.includes('Location not in a supported city')) {
+    return "This location isn't supported yet. Please try a location within the Philippines.";
+  }
+  if (message.includes('Internal server error') || message.includes('500')) {
+    return "Something went wrong on our end. Please try again.";
+  }
+  if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
+    return "Connection error. Please check your internet and try again.";
+  }
+  return "Unable to calculate route. Please try again.";
+}
+
 export default function App() {
   const [gpsCoords, setGpsCoords] = useState<Coords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -363,9 +379,7 @@ export default function App() {
           planningMode,
           targetTime: selectedDateTime.toISOString(),
           transportMode: selectedMode,
-          transportMode: selectedMode,
           originLabel,
-          destinationLabel: destLabel,
           destinationLabel: destLabel,
         },
       });
@@ -373,10 +387,7 @@ export default function App() {
       if (fnError) {
         const bodyText = await fnError.context?.text?.();
         const message = bodyText || fnError.message;
-        if (message.includes('no historical estimate available')) {
-          throw new Error("This route isn't available for the selected transport mode yet. Try a different mode.");
-        }
-        throw new Error(message);
+        throw new Error(sanitizeError(message));
       }
       setResult(data);
       setCurrentTrip(data, {
@@ -390,7 +401,7 @@ export default function App() {
         planningMode,
       });
     } catch (err: any) {
-      setError(err.message ?? 'Something went wrong');
+      setError(sanitizeError(err.message ?? 'Something went wrong'));
     } finally {
       const elapsed = Date.now() - loadingStartedAt;
       const remaining = MIN_LOADING_MS - elapsed;
@@ -791,7 +802,6 @@ export default function App() {
                   <Text style={styles.resultHeroTime}>
                     {formatTime12h(result.recommendedLeaveTime)}
                   </Text>
-                )}
                   <Text style={styles.resultArrivalInline}>
                     {resultMode === 'arrive_by' ? 'Arrive by ' : 'Est. arrival '}
                     {formatTime12h(result.predictedArrivalTime)}

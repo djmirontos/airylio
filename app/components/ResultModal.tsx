@@ -124,11 +124,7 @@ export default function ResultModal({
       return;
     }
     function tick() {
-      const nowPST = () => {
-        const PST_OFFSET_MS = (8 * 60 + new Date().getTimezoneOffset()) * 60000;
-        return Date.now() + PST_OFFSET_MS;
-      };
-      const diffMs = new Date(result.recommendedLeaveTime).getTime() - nowPST();
+      const diffMs = new Date(result.recommendedLeaveTime).getTime() - Date.now();
       const diffMin = Math.round(diffMs / 60000);
       const diffSec = Math.floor(diffMs / 1000);
       if (diffSec <= 0) {
