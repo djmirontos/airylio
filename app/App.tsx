@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Image, Alert } from 'react-native';
@@ -21,9 +21,6 @@ import { useTheme } from './context/ThemeContext';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
-// TEMP: force Philippine Standard Time (UTC+8) for testing
-const PST_OFFSET_MS = (8 * 60 + new Date().getTimezoneOffset()) * 60000;
-function nowPST(): number { return Date.now() + PST_OFFSET_MS; }
 
 type PlanningMode = 'arrive_by' | 'leave_at';
 
@@ -76,8 +73,24 @@ const RECENT_DESTINATIONS_KEY = 'airylio:recentDestinations';
 const RECENT_ORIGINS_KEY = 'airylio:recentOrigins';
 const MAX_RECENT_DESTINATIONS = 8;
 
+function getWeatherAnimation(condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm'): any {
+  const h = new Date().getHours();
+  if (condition === 'storm' || condition === 'heavy_rain') return require('./assets/lottie/storm.json');
+  if (condition === 'rain') return require('./assets/lottie/rain.json');
+  if (h >= 5 && h < 8) return require('./assets/lottie/sunrise.json');
+  if (h >= 8 && h < 18) return require('./assets/lottie/sunny.json');
+  return require('./assets/lottie/night.json');
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning.';
+  if (hour < 18) return 'Good afternoon.';
+  return 'Good evening.';
+}
+
 function startOfToday(): Date {
-  const d = new Date(nowPST());
+  const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -106,24 +119,6 @@ function formatDistance(meters?: number): string | null {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-function getWeatherAnimation(
-  condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm'
-): any {
-  const h = new Date(nowPST()).getHours();
-  if (condition === 'storm' || condition === 'heavy_rain') return require('./assets/lottie/storm.json');
-  if (condition === 'rain') return require('./assets/lottie/rain.json');
-  if (h >= 5 && h < 8) return require('./assets/lottie/sunrise.json');
-  if (h >= 8 && h < 18) return require('./assets/lottie/sunny.json');
-  return require('./assets/lottie/night.json');
-}
-
-function getGreeting(): string {
-  const hour = new Date(nowPST()).getHours();
-  if (hour < 12) return 'Good morning.';
-  if (hour < 18) return 'Good afternoon.';
-  return 'Good evening.';
-}
-
 export default function App() {
   const [gpsCoords, setGpsCoords] = useState<Coords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -139,7 +134,7 @@ export default function App() {
 
   const [planningMode, setPlanningMode] = useState<PlanningMode>('arrive_by');
   const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
-  const [selectedTime, setSelectedTime] = useState<Date>(new Date(nowPST() + 60 * 60 * 1000));
+  const [selectedTime, setSelectedTime] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -338,9 +333,9 @@ export default function App() {
   const showGpsChip = originLabel === 'Current Location' && !!originCoords && !originEditing;
   const showManualChip = originLabel !== 'Current Location' && !!originCoords && !originEditing;
 
-  const selectedDateTime = combineDateAndTime(selectedDate, selectedTime);
   const LEAVE_AT_GRACE_MS = 2 * 60 * 1000;
-  const isValidDepartureTime = selectedDateTime.getTime() >= nowPST() - LEAVE_AT_GRACE_MS;
+  const selectedDateTime = combineDateAndTime(selectedDate, selectedTime);
+  const isValidDepartureTime = selectedDateTime.getTime() >= Date.now() - LEAVE_AT_GRACE_MS;
   const canCalculate = !!originCoords && !!destCoords && isValidDepartureTime && !loading;
 
   async function handleCalculate() {
@@ -635,7 +630,6 @@ export default function App() {
           </View>
         )}
         </View>
-        )}
         <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled">
           {/* Date & time - the main focal point, styled prominently */}
           <Text style={styles.dateTimeSectionLabel}>
@@ -902,3 +896,4 @@ export default function App() {
     </TouchableWithoutFeedback>
   );
 }
+
