@@ -28,7 +28,12 @@
       </div>
 
       <div class="nav-right">
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">🌙</button>
+        <div class="theme-switch-wrapper">
+          <label class="theme-switch">
+            <input type="checkbox" id="theme-toggle-checkbox">
+            <label for="theme-toggle-checkbox" data-on="Dark" data-off="Light" class="theme-switch-inner"></label>
+          </label>
+        </div>
         <a href="#" class="badge-link" target="_blank" rel="noopener" aria-label="Get Airylio on Google Play">
           <svg class="google-play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M3,20.5V3.5C3,2.58 3.9,1.7 4.97,1.7C5.6,1.7 6.23,1.95 6.74,2.45L17.38,11.97L6.74,21.5C6.23,22.05 5.6,22.3 4.97,22.3C3.9,22.3 3,21.42 3,20.5Z"/>

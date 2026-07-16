@@ -157,18 +157,91 @@ body {
   margin-left: auto;
 }
 
-.theme-toggle {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  opacity: 0.7;
-  transition: var(--transition);
-  padding: 0.5rem;
+.theme-switch-wrapper {
+  display: inline-flex;
+  align-items: center;
 }
 
-.theme-toggle:hover {
-  opacity: 1;
+.theme-switch {
+  display: inline-block;
+  margin: 0;
+  position: relative;
+}
+
+.theme-switch > label.theme-switch-inner {
+  margin: 0;
+  width: 120px;
+  height: 32px;
+  background: #E0E0E0;
+  border-radius: 26px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s ease;
+  display: block;
+  cursor: pointer;
+}
+
+.theme-switch > label.theme-switch-inner:before {
+  content: attr(data-on);
+  position: absolute;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  top: 8px;
+  right: 16px;
+  color: #666;
+}
+
+.theme-switch > label.theme-switch-inner:after {
+  content: attr(data-off);
+  width: 60px;
+  height: 26px;
+  background: #fff;
+  border-radius: 26px;
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0px 0px 6px -2px rgba(0, 0, 0, 0.3);
+  padding: 5px 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  color: #333;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.theme-switch input[type="checkbox"] {
+  cursor: pointer;
+  width: 120px;
+  height: 32px;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+}
+
+.theme-switch input[type="checkbox"]:checked + label.theme-switch-inner {
+  background: #1a1d35;
+  color: #fff;
+}
+
+.theme-switch input[type="checkbox"]:checked + label.theme-switch-inner:after {
+  content: attr(data-on);
+  left: 57px;
+  background: var(--primary);
+  color: #fff;
+  box-shadow: none;
+}
+
+.theme-switch input[type="checkbox"]:checked + label.theme-switch-inner:before {
+  content: attr(data-off);
+  right: auto;
+  left: 16px;
+  color: var(--text-secondary);
 }
 
 .badge-link {

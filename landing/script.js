@@ -1,34 +1,25 @@
 // Theme Toggle
-const themeToggle = document.getElementById('themeToggle');
-const html = document.documentElement;
-const THEME_KEY = 'airylio-theme';
+const themeCheckbox = document.getElementById('theme-toggle-checkbox');
 
-function initializeTheme() {
-  const savedTheme = localStorage.getItem(THEME_KEY);
-
-  if (savedTheme) {
-    setTheme(savedTheme);
-  } else {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setTheme(prefersDark ? 'dark' : 'light');
-  }
+// Load saved theme
+const savedTheme = localStorage.getItem('airylio-theme') || 'light';
+if (savedTheme === 'dark') {
+  document.documentElement.classList.add('dark');
+  if (themeCheckbox) themeCheckbox.checked = true;
 }
 
-function setTheme(theme) {
-  if (theme === 'dark') {
-    html.classList.add('dark');
-    themeToggle.textContent = '☀️';
-  } else {
-    html.classList.remove('dark');
-    themeToggle.textContent = '🌙';
-  }
-  localStorage.setItem(THEME_KEY, theme);
+// Toggle handler
+if (themeCheckbox) {
+  themeCheckbox.addEventListener('change', function() {
+    if (this.checked) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('airylio-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('airylio-theme', 'light');
+    }
+  });
 }
-
-themeToggle.addEventListener('click', () => {
-  const isDark = html.classList.contains('dark');
-  setTheme(isDark ? 'light' : 'dark');
-});
 
 // Mobile Menu Toggle
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -153,5 +144,3 @@ function calculateDemo() {
   }, 500);
 }
 
-// Initialize
-initializeTheme();
