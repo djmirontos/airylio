@@ -4,31 +4,11 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import ConfidenceRing from './ConfidenceRing';
+import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
+import { TripResult, ExplanationFactor } from '../types/supabase';
 
 type PlanningMode = 'arrive_by' | 'leave_at';
 type ColorScheme = ReturnType<typeof import('../context/ThemeContext').useTheme>['colors'];
-
-interface ExplanationFactor {
-  type: 'weather' | 'rush_hour' | 'buffer_cap';
-  label: string;
-  minutesAdded: number;
-}
-
-interface TripResult {
-  tripId: string;
-  recommendedLeaveTime: string;
-  predictedArrivalTime: string;
-  confidenceScore: number;
-  confidenceReason: string[];
-  dataFreshness: string;
-  distanceMeters?: number;
-  weatherCondition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
-  encodedPolyline?: string;
-  recommendationExplanation?: {
-    planningMode?: PlanningMode;
-    factors: ExplanationFactor[];
-  };
-}
 
 interface ResultModalProps {
   result: TripResult | null;
@@ -73,8 +53,8 @@ export default function ResultModal({
   const [countdownText, setCountdownText] = useState<string | null>(null);
 
   function confidenceColor(score: number): string {
-    if (score >= 85) return COLORS.signalGood;
-    if (score >= 70) return COLORS.signalWarn;
+    if (score >= CONFIDENCE_HIGH) return COLORS.signalGood;
+    if (score >= CONFIDENCE_MODERATE) return COLORS.signalWarn;
     return COLORS.signalRisk;
   }
 
@@ -242,7 +222,7 @@ export default function ResultModal({
                 progress={result.confidenceScore}
                 color={confidenceColor(result.confidenceScore)}
                 label={`${Math.round(result.confidenceScore)}%`}
-                sublabel={result.confidenceScore >= 85 ? "High" : result.confidenceScore >= 70 ? "Moderate" : "Low"}
+                sublabel={result.confidenceScore >= CONFIDENCE_HIGH ? "High" : result.confidenceScore >= CONFIDENCE_MODERATE ? "Moderate" : "Low"}
               />
             </View>
           </View>

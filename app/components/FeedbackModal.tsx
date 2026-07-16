@@ -1,7 +1,7 @@
 ﻿import { View, Text, Pressable, Modal, StyleSheet, ActivityIndicator } from 'react-native';
 import { useState, useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { supabase } from '../lib/supabase';
+import { submitFeedback } from '../services/tripService';
 
 interface FeedbackModalProps {
   visible: boolean;
@@ -21,11 +21,7 @@ export default function FeedbackModal({ visible, tripId, destLabel, onClose }: F
     if (!tripId || submitting) return;
     setSubmitting(true);
     try {
-      await supabase.from('feedback').insert({
-        trip_id: tripId,
-        rating,
-        user_success: rating !== 'late',
-      });
+      await submitFeedback(tripId, rating);
       setSubmitted(true);
       setTimeout(onClose, 1500);
     } catch {

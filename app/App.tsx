@@ -18,6 +18,10 @@ import { useFavorites } from './hooks/useFavorites';
 import { scheduleLeaveReminder, cancelLeaveReminder } from './hooks/useNotifications';
 import * as Notifications from 'expo-notifications';
 import { useTheme } from './context/ThemeContext';
+import { MIN_LOADING_MS, LEAVE_AT_GRACE_MS, DEFAULT_TIME_OFFSET_MS, MAX_RECENT_DESTINATIONS, RECENT_DESTINATIONS_KEY, RECENT_ORIGINS_KEY } from './constants/config';
+import { sanitizeError } from './utils/errors';
+import { TripResult, ExplanationFactor } from './types/supabase';
+import { calculateTrip } from './services/tripService';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
@@ -36,28 +40,6 @@ const TRANSPORT_MODES: {
   { key: 'walk', label: 'Walk', iconSet: 'ion', iconName: 'walk' },
 ];
 
-interface ExplanationFactor {
-  type: 'weather' | 'rush_hour' | 'buffer_cap';
-  label: string;
-  minutesAdded: number;
-}
-
-interface TripResult {
-  tripId: string;
-  recommendedLeaveTime: string;
-  predictedArrivalTime: string;
-  confidenceScore: number;
-  confidenceReason: string[];
-  dataFreshness: string;
-  distanceMeters?: number;
-  weatherCondition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
-  encodedPolyline?: string;
-  recommendationExplanation?: {
-    planningMode?: PlanningMode;
-    factors: ExplanationFactor[];
-  };
-}
-
 interface Coords {
   lat: number;
   lng: number;
@@ -68,10 +50,6 @@ interface RecentDestination {
   lat: number;
   lng: number;
 }
-
-const RECENT_DESTINATIONS_KEY = 'airylio:recentDestinations';
-const RECENT_ORIGINS_KEY = 'airylio:recentOrigins';
-const MAX_RECENT_DESTINATIONS = 8;
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -110,22 +88,6 @@ function formatDistance(meters?: number): string | null {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-function sanitizeError(message: string): string {
-  if (message.includes('no historical estimate available')) {
-    return "This route isn't available for the selected transport mode yet. Try a different mode.";
-  }
-  if (message.includes('Location not in a supported city')) {
-    return "This location isn't supported yet. Please try a location within the Philippines.";
-  }
-  if (message.includes('Internal server error') || message.includes('500')) {
-    return "Something went wrong on our end. Please try again.";
-  }
-  if (message.includes('network') || message.includes('fetch') || message.includes('timeout')) {
-    return "Connection error. Please check your internet and try again.";
-  }
-  return "Unable to calculate route. Please try again.";
-}
-
 export default function App() {
   const [gpsCoords, setGpsCoords] = useState<Coords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -141,7 +103,7 @@ export default function App() {
 
   const [planningMode, setPlanningMode] = useState<PlanningMode>('arrive_by');
   const [selectedDate, setSelectedDate] = useState<Date>(startOfToday());
-  const [selectedTime, setSelectedTime] = useState<Date>(new Date(Date.now() + 60 * 60 * 1000));
+  const [selectedTime, setSelectedTime] = useState<Date>(new Date(Date.now() + DEFAULT_TIME_OFFSET_MS));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -340,7 +302,6 @@ export default function App() {
   const showGpsChip = originLabel === 'Current Location' && !!originCoords && !originEditing;
   const showManualChip = originLabel !== 'Current Location' && !!originCoords && !originEditing;
 
-  const LEAVE_AT_GRACE_MS = 2 * 60 * 1000;
   const selectedDateTime = combineDateAndTime(selectedDate, selectedTime);
   const isValidDepartureTime = selectedDateTime.getTime() >= Date.now() - LEAVE_AT_GRACE_MS;
   const canCalculate = !!originCoords && !!destCoords && isValidDepartureTime && !loading;
@@ -352,34 +313,20 @@ export default function App() {
     setError(null);
     setResult(null);
     const loadingStartedAt = Date.now();
-    const MIN_LOADING_MS = 1000;
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        const { error: authError } = await supabase.auth.signInAnonymously();
-        if (authError) throw authError;
-      }
-
-      const { data, error: fnError } = await supabase.functions.invoke('calculate-trip', {
-        body: {
-          originLat: originCoords.lat,
-          originLng: originCoords.lng,
-          destLat: destCoords.lat,
-          destLng: destCoords.lng,
-          planningMode,
-          targetTime: selectedDateTime.toISOString(),
-          transportMode: selectedMode,
-          originLabel,
-          destinationLabel: destLabel,
-        },
+      const data = await calculateTrip({
+        originLat: originCoords.lat,
+        originLng: originCoords.lng,
+        destLat: destCoords.lat,
+        destLng: destCoords.lng,
+        planningMode,
+        targetTime: selectedDateTime.toISOString(),
+        transportMode: selectedMode,
+        originLabel,
+        destinationLabel: destLabel,
       });
 
-      if (fnError) {
-        const bodyText = await fnError.context?.text?.();
-        const message = bodyText || fnError.message;
-        throw new Error(sanitizeError(message));
-      }
       setResult(data);
       setCurrentTrip(data, {
         originLabel,

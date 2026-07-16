@@ -6,6 +6,9 @@ import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import ResultModal from '../components/ResultModal';
 import { useTripContext } from '../context/TripContext';
+import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
+import { TripResult } from '../types/supabase';
+import { fetchTripHistory } from '../services/tripService';
 
 const TRANSPORT_MODES: Record<string, { label: string; icon: string }> = {
   drive: { label: 'Drive', icon: 'car' },
@@ -28,21 +31,6 @@ interface Trip {
   origin_lng?: number;
   destination_lat?: number;
   destination_lng?: number;
-}
-
-interface TripResult {
-  tripId: string;
-  recommendedLeaveTime: string;
-  predictedArrivalTime: string;
-  confidenceScore: number;
-  confidenceReason: string[];
-  dataFreshness: string;
-  distanceMeters?: number;
-  weatherCondition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
-  recommendationExplanation?: {
-    planningMode?: 'arrive_by' | 'leave_at';
-    factors: any[];
-  };
 }
 
 function formatTime12h(isoString: string): string {
@@ -71,22 +59,16 @@ export default function HistoryScreen() {
   const [selectedTrip, setSelectedTrip] = useState<TripResult | null>(null);
 
   const confidenceColor = (score: number): string => {
-    if (score >= 85) return COLORS.signalGood;
-    if (score >= 70) return COLORS.signalWarn;
+    if (score >= CONFIDENCE_HIGH) return COLORS.signalGood;
+    if (score >= CONFIDENCE_MODERATE) return COLORS.signalWarn;
     return COLORS.signalRisk;
   };
 
   const fetchTrips = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('trips')
-        .select('id, transport_mode, recommended_leave_time, predicted_arrival_time, confidence_score, confidence_reason, recommendation_explanation, planning_mode, target_time, data_freshness, weather_condition, origin_label, destination_label, origin_lat, origin_lng, destination_lat, destination_lng, created_at')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      setTrips(data || []);
+      const data = await fetchTripHistory();
+      setTrips(data);
     } catch (err: any) {
       Alert.alert('Error', 'Failed to load trip history');
       console.error(err);

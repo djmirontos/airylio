@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritePlace } from '../hooks/useFavorites';
+import { BOTTOM_NAV_HEIGHT, DROPDOWN_MAX_HEIGHT } from '../constants/config';
 
 interface RecentDestination {
   label: string;
@@ -312,9 +313,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 8,
-    marginBottom: 64,
+    marginBottom: BOTTOM_NAV_HEIGHT,
     borderRadius: 16,
-    maxHeight: 280,
+    maxHeight: DROPDOWN_MAX_HEIGHT,
     zIndex: 9999,
     elevation: 9999,
     shadowOffset: { width: 0, height: 8 },
