@@ -1,0 +1,19 @@
+{
+  "name": "airylio-landing",
+  "version": "1.0.0",
+  "description": "Professional landing page for Airylio - Philippine commuter trip planning app",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'Static site, no build needed'"
+  },
+  "keywords": [
+    "airylio",
+    "commute",
+    "philippines",
+    "traffic",
+    "route",
+    "navigation"
+  ],
+  "author": "Airyl Tech",
+  "license": "PROPRIETARY"
+}

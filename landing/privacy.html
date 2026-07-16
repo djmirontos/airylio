@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Airylio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .policy-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem;
+    }
+
+    .policy-header {
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .policy-header h1 {
+      margin-bottom: 0.5rem;
+    }
+
+    .policy-date {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .policy-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .policy-section h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .policy-section h3 {
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .policy-section p,
+    .policy-section li {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+    }
+
+    .policy-section ul {
+      margin-left: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .policy-section ul li {
+      margin-bottom: 0.5rem;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .back-link:hover {
+      color: var(--primary-light);
+    }
+
+    .contact-info {
+      background-color: var(--card);
+      padding: 2rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-top: 2rem;
+    }
+
+    .contact-info p {
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-brand">
+        <span class="brand-icon">✈</span>
+        <span class="brand-text">Airylio</span>
+      </a>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+        <span class="theme-icon">🌙</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="policy-container">
+    <a href="index.html" class="back-link">← Back to Home</a>
+
+    <div class="policy-header">
+      <h1>Privacy Policy</h1>
+      <p class="policy-date">Effective Date: July 2026</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Introduction</h2>
+      <p>Airylio ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application (the "App").</p>
+      <p>Please read this Privacy Policy carefully. If you do not agree with our policies and practices, please do not use our App.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>What Data We Collect</h2>
+      <p>We collect and process the following types of information:</p>
+      <h3>Location Data</h3>
+      <ul>
+        <li>Your current location (when calculating routes)</li>
+        <li>Destination addresses you search for</li>
+        <li>Route coordinates for map display</li>
+      </ul>
+      <h3>Device Information</h3>
+      <ul>
+        <li>Anonymous device identifier (not personally identifiable)</li>
+        <li>Device type and operating system</li>
+        <li>App version and usage statistics</li>
+      </ul>
+      <h3>Trip Data</h3>
+      <ul>
+        <li>Origin and destination locations</li>
+        <li>Departure and arrival times</li>
+        <li>Transport mode used</li>
+        <li>Trip accuracy feedback (when you provide it)</li>
+      </ul>
+      <h3>Optional User Data</h3>
+      <ul>
+        <li>Favorite locations you save (Home, Work)</li>
+        <li>Notification preferences</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>How We Use Your Data</h2>
+      <p>We use the collected information for the following purposes:</p>
+      <ul>
+        <li><strong>Route Calculation:</strong> To calculate accurate departure times and route recommendations</li>
+        <li><strong>Improving Recommendations:</strong> To refine our algorithms and provide better accuracy over time</li>
+        <li><strong>Weather Integration:</strong> To factor weather conditions into departure time calculations</li>
+        <li><strong>Analytics:</strong> To understand app usage patterns and improve user experience</li>
+        <li><strong>Push Notifications:</strong> To send you departure reminders and app updates</li>
+        <li><strong>Legal Compliance:</strong> To comply with applicable laws and regulations</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>Third-Party Services</h2>
+      <p>Airylio integrates with the following third-party services:</p>
+      <h3>Google Routes API</h3>
+      <ul>
+        <li>Used for real-time traffic data and route calculation</li>
+        <li>Location data is sent to Google for processing</li>
+        <li>Subject to Google's Privacy Policy</li>
+      </ul>
+      <h3>Open-Meteo Weather API</h3>
+      <ul>
+        <li>Used for real-time weather data</li>
+        <li>Location coordinates sent for weather retrieval</li>
+        <li>Subject to Open-Meteo's Privacy Policy</li>
+      </ul>
+      <h3>Supabase</h3>
+      <ul>
+        <li>Used for data storage and authentication</li>
+        <li>Provides anonymous authentication service</li>
+        <li>Subject to Supabase's Privacy Policy</li>
+      </ul>
+      <h3>Firebase Cloud Messaging</h3>
+      <ul>
+        <li>Used for push notifications</li>
+        <li>Subject to Google Firebase's Privacy Policy</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>Data Retention Policy</h2>
+      <p>We retain your data as follows:</p>
+      <ul>
+        <li><strong>Trip Data:</strong> Kept for 1 year or until deleted by user</li>
+        <li><strong>Favorite Locations:</strong> Kept until removed by user</li>
+        <li><strong>Device Identifier:</strong> Kept for 30 days of inactivity</li>
+        <li><strong>Cached Route Data:</strong> Kept for 10 minutes for performance optimization</li>
+        <li><strong>Feedback Data:</strong> Kept indefinitely for algorithm improvement (anonymized)</li>
+      </ul>
+      <p>You can delete your data anytime by clearing app storage or uninstalling the application.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Data Security</h2>
+      <p>We implement appropriate technical and organizational measures to protect your data against unauthorized access, alteration, disclosure, or destruction. This includes:</p>
+      <ul>
+        <li>Encrypted data transmission (HTTPS/TLS)</li>
+        <li>Encrypted data storage</li>
+        <li>Regular security audits</li>
+        <li>Limited access to personal data</li>
+      </ul>
+    </div>
+
+    <div class="policy-section">
+      <h2>Your Rights</h2>
+      <p>Depending on your location, you may have the right to:</p>
+      <ul>
+        <li>Access your personal data</li>
+        <li>Correct inaccurate data</li>
+        <li>Delete your data</li>
+        <li>Opt-out of data processing</li>
+        <li>Data portability</li>
+      </ul>
+      <p>To exercise these rights, please contact us at the email address below.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Children's Privacy</h2>
+      <p>Airylio is not directed to individuals under the age of 13. We do not knowingly collect personal information from children under 13. If we become aware of such collection, we will delete such information and terminate the child's use of the App.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Changes to This Privacy Policy</h2>
+      <p>We may update this Privacy Policy periodically to reflect changes in our practices, technology, legal requirements, or other factors. We will notify you of any material changes by updating the "Effective Date" at the top of this policy. Your continued use of the App after such changes constitutes your acceptance of the updated Privacy Policy.</p>
+    </div>
+
+    <div class="policy-section">
+      <h2>Contact Us</h2>
+      <p>If you have questions about this Privacy Policy or our privacy practices, please contact us at:</p>
+      <div class="contact-info">
+        <p><strong>Email:</strong> support@airylio.com</p>
+        <p><strong>Company:</strong> Airyl Tech</p>
+        <p><strong>Service:</strong> Airylio</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
