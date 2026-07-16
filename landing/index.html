@@ -29,14 +29,10 @@
       </div>
 
       <div class="nav-right">
-        <div class="theme-switch-wrapper">
-          <i data-lucide="sun" class="theme-icon theme-icon-sun"></i>
-          <label class="theme-switch">
-            <input type="checkbox" id="theme-toggle-checkbox">
-            <label for="theme-toggle-checkbox" data-on="Dark" data-off="Light" class="theme-switch-inner"></label>
-          </label>
-          <i data-lucide="moon" class="theme-icon theme-icon-moon"></i>
-        </div>
+        <button class="theme-toggle-btn" id="theme-toggle" aria-label="Toggle theme">
+          <i data-lucide="sun" class="theme-toggle-icon" id="theme-icon-sun"></i>
+          <i data-lucide="moon" class="theme-toggle-icon" id="theme-icon-moon" style="display:none"></i>
+        </button>
       </div>
 
       <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Toggle menu">☰</button>
