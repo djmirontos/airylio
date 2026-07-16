@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Airylio",
-    "slug": "airylio",
+    "slug": "app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -45,6 +45,7 @@
       "eas": {
         "projectId": "14a3f360-b7af-4ea0-ae71-b0053f8490b0"
       }
-    }
+    },
+    "owner": "daryljm"
   }
 }
