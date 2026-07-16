@@ -160,6 +160,32 @@ body {
 .theme-switch-wrapper {
   display: inline-flex;
   align-items: center;
+  gap: 0;
+}
+
+.theme-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.theme-icon-sun {
+  color: #f5a623;
+  margin-right: 8px;
+}
+
+.theme-icon-moon {
+  color: #8B90B8;
+  margin-left: 8px;
+}
+
+.dark .theme-icon-sun {
+  color: #666;
+}
+
+.dark .theme-icon-moon {
+  color: #7B7FD4;
 }
 
 .theme-switch {

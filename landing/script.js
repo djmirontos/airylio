@@ -144,3 +144,6 @@ function calculateDemo() {
   }, 500);
 }
 
+// Initialize Lucide Icons
+lucide.createIcons();
+
