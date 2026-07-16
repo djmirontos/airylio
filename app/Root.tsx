@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import AppNavigator from './navigation/AppNavigator';
 import { TripProvider } from './context/TripContext';
 import { ThemeProvider } from './context/ThemeContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Suppress non-critical RN text rendering warnings in dev mode
 const originalWarn = console.error.bind(console.error);
@@ -31,13 +32,15 @@ export default function Root() {
   }
 
   return (
-    <NavigationContainer>
-      <ThemeProvider>
-        <TripProvider>
-          <AppNavigator />
-        </TripProvider>
-      </ThemeProvider>
-    </NavigationContainer>
+    <ErrorBoundary>
+      <NavigationContainer>
+        <ThemeProvider>
+          <TripProvider>
+            <AppNavigator />
+          </TripProvider>
+        </ThemeProvider>
+      </NavigationContainer>
+    </ErrorBoundary>
   );
 }
 

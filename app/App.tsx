@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Image, Alert } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DestinationAutocomplete from './components/DestinationAutocomplete';
@@ -11,8 +11,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import ConfidenceRing from './components/ConfidenceRing';
 import LoadingRecommendation from './components/LoadingRecommendation';
 import FeedbackModal from './components/FeedbackModal';
+import PlanHeader from './components/PlanHeader';
 import { supabase } from './lib/supabase';
-import LottieView from 'lottie-react-native';
 import { useTripContext, PlanPrefill } from './context/TripContext';
 import { useFavorites } from './hooks/useFavorites';
 import { scheduleLeaveReminder, cancelLeaveReminder } from './hooks/useNotifications';
@@ -72,15 +72,6 @@ interface RecentDestination {
 const RECENT_DESTINATIONS_KEY = 'airylio:recentDestinations';
 const RECENT_ORIGINS_KEY = 'airylio:recentOrigins';
 const MAX_RECENT_DESTINATIONS = 8;
-
-function getWeatherAnimation(condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm'): any {
-  const h = new Date().getHours();
-  if (condition === 'storm' || condition === 'heavy_rain') return require('./assets/lottie/storm.json');
-  if (condition === 'rain') return require('./assets/lottie/rain.json');
-  if (h >= 5 && h < 8) return require('./assets/lottie/sunrise.json');
-  if (h >= 8 && h < 18) return require('./assets/lottie/sunny.json');
-  return require('./assets/lottie/night.json');
-}
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -421,14 +412,6 @@ export default function App() {
   const styles = useMemo(() => StyleSheet.create({
     root: { flex: 1, backgroundColor: COLORS.canvas },
     fontLoadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
-    header: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16, position: 'relative', overflow: 'hidden' },
-    headerBgImage: { position: 'absolute', top: 58, right: -20, width: 160, height: 130 },
-    headerLottie: { position: 'absolute', top: 60, right: 80, width: 65, height: 65, opacity: 0.65 },
-    logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-    logo: { width: 44, height: 44, borderRadius: 10 },
-    logoText: { fontFamily: 'Poppins_700Bold', fontSize: 20, color: COLORS.textPrimary },
-    greeting: { fontFamily: 'Poppins_700Bold', fontSize: 21, color: COLORS.textPrimary },
-    greetingSub: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
     card: { flex: 1, backgroundColor: COLORS.card, marginHorizontal: 16, marginBottom: 16, borderRadius: 24, padding: 20, shadowColor: COLORS.ink, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 4 },
     modeToggleRow: { flexDirection: 'row', gap: 6, backgroundColor: COLORS.accentTint, borderRadius: 16, padding: 4, marginBottom: 16 },
     modeToggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
@@ -506,21 +489,7 @@ export default function App() {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <View style={styles.root}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <View style={styles.header}>
-        <Image source={require('./assets/main_bg.png')} style={styles.headerBgImage} resizeMode="contain" />
-        <LottieView
-          source={getWeatherAnimation(headerWeather)}
-          autoPlay
-          loop
-          style={styles.headerLottie}
-        />
-        <View style={styles.logoRow}>
-          <Image source={require('./assets/icon.png')} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.logoText}>Airylio</Text>
-        </View>
-        <Text style={styles.greeting}>{getGreeting()}</Text>
-        <Text style={styles.greetingSub}>Where are you headed?</Text>
-      </View>
+      <PlanHeader greeting={getGreeting()} headerWeather={headerWeather} isDark={isDark} colors={COLORS} />
 
       <View style={styles.card}>
         {/* Planning mode toggle - first-class, not a subtle segmented control */}

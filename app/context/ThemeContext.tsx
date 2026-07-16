@@ -61,10 +61,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  function toggleTheme() {
+  async function toggleTheme() {
     const next = !isDark;
     setIsDark(next);
-    AsyncStorage.setItem(THEME_KEY, String(next));
+    try {
+      await AsyncStorage.setItem(THEME_KEY, String(next));
+    } catch (err) {
+      console.error('Failed to save theme preference', err);
+    }
   }
 
   return (
