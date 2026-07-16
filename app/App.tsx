@@ -20,7 +20,7 @@ import * as Notifications from 'expo-notifications';
 import { useTheme } from './context/ThemeContext';
 import { MIN_LOADING_MS, LEAVE_AT_GRACE_MS, DEFAULT_TIME_OFFSET_MS, MAX_RECENT_DESTINATIONS, RECENT_DESTINATIONS_KEY, RECENT_ORIGINS_KEY } from './constants/config';
 import { sanitizeError } from './utils/errors';
-import { TripResult, ExplanationFactor } from './types/supabase';
+import { TripResult } from './types/supabase';
 import { calculateTrip } from './services/tripService';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
@@ -361,7 +361,7 @@ export default function App() {
     fontLoadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
     card: { flex: 1, backgroundColor: COLORS.card, marginHorizontal: 16, marginBottom: 16, borderRadius: 24, padding: 20, shadowColor: COLORS.ink, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 4 },
     modeToggleRow: { flexDirection: 'row', gap: 6, backgroundColor: COLORS.accentTint, borderRadius: 16, padding: 4, marginBottom: 16 },
-    modeToggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
+    modeToggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, minHeight: 44, minWidth: 44 },
     modeToggleButtonSelected: { backgroundColor: COLORS.accent },
     modeToggleText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textSecondary },
     modeToggleTextSelected: { color: '#fff' },
@@ -382,21 +382,21 @@ export default function App() {
     dateTimeBigValue: { fontFamily: 'Poppins_700Bold', fontSize: 17, color: COLORS.textPrimary, marginTop: 1 },
     warning: { fontFamily: 'Inter_400Regular', color: '#B4680A', fontSize: 13, marginTop: 6, marginBottom: 4 },
     transportRow: { flexDirection: 'row', gap: 8, marginBottom: 4, marginTop: 12 },
-    transportPill: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: COLORS.divider, backgroundColor: COLORS.card },
+    transportPill: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: COLORS.divider, backgroundColor: COLORS.card, minHeight: 44, minWidth: 44 },
     transportPillSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent, borderWidth: 1 },
     transportPillText: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: COLORS.textPrimary, textAlign: 'center' },
     transportPillTextSelected: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: '#fff', textAlign: 'center' },
     favoritesRow: { flexDirection: 'row', gap: 8, marginBottom: 8, marginTop: 4, paddingHorizontal: 4 },
     favoriteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: COLORS.accentTint, borderWidth: 1, borderColor: 'rgba(76,79,158,0.2)' },
     favoriteChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent },
-    calculateButton: { backgroundColor: COLORS.accent, paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginTop: 12 },
+    calculateButton: { backgroundColor: COLORS.accent, paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginTop: 12, minHeight: 44 },
     calculateButtonDisabled: { backgroundColor: '#9B9DC2' },
     calculateButtonText: { fontFamily: 'Inter_600SemiBold', color: '#fff', fontSize: 16 },
     errorBox: { marginTop: 20, padding: 16, borderRadius: 16, backgroundColor: '#FDECEA', borderWidth: 1, borderColor: '#F4C6C0', flexDirection: 'row', alignItems: 'flex-start' },
     errorTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.signalRisk, marginBottom: 4 },
     errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary },
     resultScreen: { flex: 1, backgroundColor: COLORS.card },
-    resultBackButton: { position: 'absolute', top: 32, left: 20, zIndex: 2, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+    resultBackButton: { position: 'absolute', top: 32, left: 20, zIndex: 2, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
     resultHero: { backgroundColor: '#0D1021', paddingTop: 70, paddingBottom: 16, paddingHorizontal: 20 },
     tripStack: { marginBottom: 6 },
     tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
@@ -444,6 +444,8 @@ export default function App() {
           <Pressable
             style={[styles.modeToggleButton, planningMode === 'arrive_by' && styles.modeToggleButtonSelected]}
             onPress={() => setPlanningMode('arrive_by')}
+            accessibilityLabel="Arrive By mode"
+            accessibilityRole="button"
           >
             <Ionicons name="flag" size={15} color={planningMode === 'arrive_by' ? '#fff' : COLORS.textSecondary} />
             <Text style={[styles.modeToggleText, planningMode === 'arrive_by' && styles.modeToggleTextSelected]}>
@@ -453,6 +455,8 @@ export default function App() {
           <Pressable
             style={[styles.modeToggleButton, planningMode === 'leave_at' && styles.modeToggleButtonSelected]}
             onPress={() => setPlanningMode('leave_at')}
+            accessibilityLabel="Leave At mode"
+            accessibilityRole="button"
           >
             <Ionicons name="rocket" size={15} color={planningMode === 'leave_at' ? '#fff' : COLORS.textSecondary} />
             <Text style={[styles.modeToggleText, planningMode === 'leave_at' && styles.modeToggleTextSelected]}>
@@ -563,7 +567,7 @@ export default function App() {
             {planningMode === 'arrive_by' ? 'Arrival date & time' : 'Departure date & time'}
           </Text>
           <View style={styles.dateTimeCard}>
-            <Pressable style={styles.dateTimeHalf} onPress={() => setShowDatePicker(true)}>
+            <Pressable style={styles.dateTimeHalf} onPress={() => setShowDatePicker(true)} accessibilityLabel="Select date" accessibilityRole="button">
               <View style={styles.dateTimeIconWrap}>
                 <Ionicons name="calendar" size={18} color="#fff" />
               </View>
@@ -575,7 +579,7 @@ export default function App() {
               </View>
             </Pressable>
             <View style={styles.dateTimeDividerVertical} />
-            <Pressable style={styles.dateTimeHalf} onPress={() => setShowTimePicker(true)}>
+            <Pressable style={styles.dateTimeHalf} onPress={() => setShowTimePicker(true)} accessibilityLabel="Select time" accessibilityRole="button">
               <View style={styles.dateTimeIconWrap}>
                 <Ionicons name="time" size={18} color="#fff" />
               </View>
@@ -631,6 +635,8 @@ export default function App() {
                   key={mode.key}
                   style={[styles.transportPill, selected && styles.transportPillSelected]}
                   onPress={() => setSelectedMode(mode.key)}
+                  accessibilityLabel={`${mode.label} transport mode`}
+                  accessibilityRole="button"
                 >
                   <IconComponent
                     name={mode.iconName as any}
@@ -649,6 +655,8 @@ export default function App() {
             style={[styles.calculateButton, !canCalculate && styles.calculateButtonDisabled]}
             onPress={handleCalculate}
             disabled={!canCalculate}
+            accessibilityLabel="Get recommendation"
+            accessibilityRole="button"
           >
             <Text style={styles.calculateButtonText}>Get recommendation</Text>
           </Pressable>
@@ -676,7 +684,7 @@ export default function App() {
           <View style={styles.resultScreen}>
             <StatusBar style="light" />
             <View style={styles.resultHero}>
-              <Pressable style={styles.resultBackButton} onPress={() => setResult(null)}>
+              <Pressable style={styles.resultBackButton} onPress={() => setResult(null)} accessibilityLabel="Go back" accessibilityRole="button">
                 <Ionicons name="arrow-back" size={22} color="#fff" />
               </Pressable>
 
@@ -793,7 +801,7 @@ export default function App() {
                 <Text style={styles.tripDetailValue}>Google Routes</Text>
               </View>
               {result?.encodedPolyline && (
-                <Pressable style={styles.viewRouteButton} onPress={() => { setResult(null); navigation.navigate('Map'); }}>
+                <Pressable style={styles.viewRouteButton} onPress={() => { setResult(null); navigation.navigate('Map'); }} accessibilityLabel="View route on map" accessibilityRole="button">
                   <Ionicons name="map" size={16} color="#fff" />
                   <Text style={styles.viewRouteButtonText}>View Route on Map</Text>
                 </Pressable>
@@ -801,6 +809,8 @@ export default function App() {
               <Pressable
                 style={[styles.remindButton, reminderSet && styles.remindButtonActive]}
                 onPress={reminderSet ? undefined : handleSetReminder}
+                accessibilityLabel="Set leave reminder"
+                accessibilityRole="button"
               >
                 <Ionicons name={reminderSet ? 'checkmark-circle' : 'notifications-outline'} size={16} color={reminderSet ? COLORS.signalGood : COLORS.accent} />
                 <Text style={[styles.remindButtonText, reminderSet && styles.remindButtonTextActive]}>

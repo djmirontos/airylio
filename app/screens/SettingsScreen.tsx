@@ -27,11 +27,12 @@ export default function SettingsScreen() {
     favoriteLabelCol: { flex: 1 },
     favoriteLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginBottom: 2 },
     favoriteValue: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary },
-    clearButton: { padding: 8, marginRight: -8 },
+    clearButton: { padding: 8, marginRight: -8, minHeight: 44, minWidth: 44 },
     divider: { height: 1, backgroundColor: COLORS.divider },
-    editButton: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, backgroundColor: COLORS.accentTint, marginTop: 8 },
+    editButton: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, backgroundColor: COLORS.accentTint, marginTop: 8, minHeight: 44 },
     editButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent, textAlign: 'center' },
     autocompleteContainer: { marginTop: 8, marginBottom: 8 },
+    emptyHint: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginTop: 8, paddingHorizontal: 16 },
   }), [COLORS]);
 
   function handlePlaceSelect(type: 'home' | 'work', label: string, lat: number, lng: number) {
@@ -71,6 +72,7 @@ export default function SettingsScreen() {
               onValueChange={toggleTheme}
               trackColor={{ false: COLORS.divider, true: COLORS.accent }}
               thumbColor="#fff"
+              accessibilityLabel="Toggle dark mode"
             />
           </View>
         </View>
@@ -91,7 +93,7 @@ export default function SettingsScreen() {
               </View>
             </View>
             {favorites.home && (
-              <Pressable style={styles.clearButton} onPress={() => handleClear('home')}>
+              <Pressable style={styles.clearButton} onPress={() => handleClear('home')} accessibilityLabel="Clear home location" accessibilityRole="button">
                 <Ionicons name="close" size={18} color={COLORS.signalRisk} />
               </Pressable>
             )}
@@ -112,6 +114,8 @@ export default function SettingsScreen() {
             <Pressable
               style={styles.editButton}
               onPress={() => setEditingFavorite('home')}
+              accessibilityLabel={`${favorites.home ? 'Edit' : 'Set'} home location`}
+              accessibilityRole="button"
             >
               <Text style={styles.editButtonText}>{favorites.home ? 'Edit' : 'Set'}</Text>
             </Pressable>
@@ -131,7 +135,7 @@ export default function SettingsScreen() {
               </View>
             </View>
             {favorites.work && (
-              <Pressable style={styles.clearButton} onPress={() => handleClear('work')}>
+              <Pressable style={styles.clearButton} onPress={() => handleClear('work')} accessibilityLabel="Clear work location" accessibilityRole="button">
                 <Ionicons name="close" size={18} color={COLORS.signalRisk} />
               </Pressable>
             )}
@@ -152,11 +156,16 @@ export default function SettingsScreen() {
             <Pressable
               style={styles.editButton}
               onPress={() => setEditingFavorite('work')}
+              accessibilityLabel={`${favorites.work ? 'Edit' : 'Set'} work location`}
+              accessibilityRole="button"
             >
               <Text style={styles.editButtonText}>{favorites.work ? 'Edit' : 'Set'}</Text>
             </Pressable>
           )}
         </View>
+        {!favorites.home && !favorites.work && (
+          <Text style={styles.emptyHint}>Tap Set to save your Home or Work location for quick access.</Text>
+        )}
       </View>
     </ScrollView>
   );

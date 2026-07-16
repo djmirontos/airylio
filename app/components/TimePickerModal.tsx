@@ -155,12 +155,16 @@ export default function TimePickerModal({ visible, value, onConfirm, onCancel, c
               <Pressable
                 style={[styles.periodButton, { borderColor: colors.divider }, period === 'AM' && { backgroundColor: colors.accent, borderColor: colors.accent }]}
                 onPress={() => setPeriod('AM')}
+                accessibilityLabel="Select AM"
+                accessibilityRole="button"
               >
                 <Text style={[styles.periodButtonText, { color: period === 'AM' ? '#fff' : colors.textSecondary }]}>AM</Text>
               </Pressable>
               <Pressable
                 style={[styles.periodButton, { borderColor: colors.divider }, period === 'PM' && { backgroundColor: colors.accent, borderColor: colors.accent }]}
                 onPress={() => setPeriod('PM')}
+                accessibilityLabel="Select PM"
+                accessibilityRole="button"
               >
                 <Text style={[styles.periodButtonText, { color: period === 'PM' ? '#fff' : colors.textSecondary }]}>PM</Text>
               </Pressable>
@@ -168,10 +172,10 @@ export default function TimePickerModal({ visible, value, onConfirm, onCancel, c
           </View>
 
           <View style={styles.footerRow}>
-            <Pressable style={[styles.footerButton, { borderColor: colors.divider }]} onPress={onCancel}>
+            <Pressable style={[styles.footerButton, { borderColor: colors.divider }]} onPress={onCancel} accessibilityLabel="Cancel time selection" accessibilityRole="button">
               <Text style={[styles.footerButtonText, { color: colors.textSecondary }]}>Cancel</Text>
             </Pressable>
-            <Pressable style={[styles.footerButton, { backgroundColor: colors.accent, borderColor: colors.accent }]} onPress={handleDone}>
+            <Pressable style={[styles.footerButton, { backgroundColor: colors.accent, borderColor: colors.accent }]} onPress={handleDone} accessibilityLabel="Confirm time" accessibilityRole="button">
               <Text style={[styles.footerButtonText, { color: '#fff' }]}>Done</Text>
             </Pressable>
           </View>
@@ -198,16 +202,16 @@ const styles = StyleSheet.create({
   previewPeriodBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   previewPeriodText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#fff' },
   tabRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  tabButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12 },
+  tabButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12, minHeight: 44 },
   tabText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
   wheelRow: { flexDirection: 'row', gap: 8, height: 160, marginBottom: 16 },
   wheelColumn: { flex: 1, borderRadius: 12 },
   wheelItem: { paddingVertical: 10, alignItems: 'center', borderRadius: 8, marginHorizontal: 4, marginVertical: 1 },
   wheelItemText: { fontFamily: 'Poppins_700Bold', fontSize: 16 },
   periodColumn: { width: 56, gap: 8, justifyContent: 'center' },
-  periodButton: { paddingVertical: 12, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
+  periodButton: { paddingVertical: 12, borderRadius: 10, borderWidth: 1, alignItems: 'center', minHeight: 44, minWidth: 44 },
   periodButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 13 },
   footerRow: { flexDirection: 'row', gap: 10 },
-  footerButton: { flex: 1, paddingVertical: 13, borderRadius: 14, borderWidth: 1, alignItems: 'center' },
+  footerButton: { flex: 1, paddingVertical: 13, borderRadius: 14, borderWidth: 1, alignItems: 'center', minHeight: 44 },
   footerButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
 });

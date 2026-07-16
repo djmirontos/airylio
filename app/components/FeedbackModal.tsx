@@ -38,10 +38,10 @@ export default function FeedbackModal({ visible, tripId, destLabel, onClose }: F
     title: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 6 },
     subtitle: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 24 },
     ratingRow: { flexDirection: 'row', gap: 16, marginBottom: 20 },
-    ratingButton: { alignItems: 'center', gap: 8 },
+    ratingButton: { alignItems: 'center', gap: 8, minHeight: 44, minWidth: 44 },
     ratingEmoji: { fontSize: 40 },
     ratingLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.textSecondary },
-    skipButton: { paddingVertical: 8, paddingHorizontal: 16 },
+    skipButton: { paddingVertical: 8, paddingHorizontal: 16, minHeight: 44 },
     skipText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary },
   }), [COLORS]);
 
@@ -62,21 +62,21 @@ export default function FeedbackModal({ visible, tripId, destLabel, onClose }: F
                 <ActivityIndicator color={COLORS.accent} style={{ marginTop: 24 }} />
               ) : (
                 <View style={styles.ratingRow}>
-                  <Pressable style={styles.ratingButton} onPress={() => handleRating('accurate')}>
+                  <Pressable style={styles.ratingButton} onPress={() => handleRating('accurate')} accessibilityLabel="Rate as on time" accessibilityRole="button">
                     <Text style={styles.ratingEmoji}>ðŸ˜Š</Text>
                     <Text style={styles.ratingLabel}>On time</Text>
                   </Pressable>
-                  <Pressable style={styles.ratingButton} onPress={() => handleRating('close')}>
+                  <Pressable style={styles.ratingButton} onPress={() => handleRating('close')} accessibilityLabel="Rate as close" accessibilityRole="button">
                     <Text style={styles.ratingEmoji}>ðŸ˜</Text>
                     <Text style={styles.ratingLabel}>Close</Text>
                   </Pressable>
-                  <Pressable style={styles.ratingButton} onPress={() => handleRating('late')}>
+                  <Pressable style={styles.ratingButton} onPress={() => handleRating('late')} accessibilityLabel="Rate as late" accessibilityRole="button">
                     <Text style={styles.ratingEmoji}>ðŸ˜”</Text>
                     <Text style={styles.ratingLabel}>Late</Text>
                   </Pressable>
                 </View>
               )}
-              <Pressable onPress={onClose} style={styles.skipButton}>
+              <Pressable onPress={onClose} style={styles.skipButton} accessibilityLabel="Skip feedback" accessibilityRole="button">
                 <Text style={styles.skipText}>Skip</Text>
               </Pressable>
             </>

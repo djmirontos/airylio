@@ -3,7 +3,6 @@ import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, Refresh
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { supabase } from '../lib/supabase';
 import ResultModal from '../components/ResultModal';
 import { useTripContext } from '../context/TripContext';
 import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
@@ -183,6 +182,7 @@ export default function HistoryScreen() {
       borderRadius: 12,
       borderBottomWidth: 1,
       borderBottomColor: COLORS.divider,
+      minHeight: 44,
     },
     tripCardLeft: { marginRight: 10 },
     transportBadge: {

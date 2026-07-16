@@ -127,7 +127,7 @@ export default function ResultModal({
 
   const styles = useMemo(() => StyleSheet.create({
     resultScreen: { flex: 1, backgroundColor: COLORS.resultBody },
-    resultBackButton: { position: 'absolute', top: 32, left: 16, zIndex: 10 },
+    resultBackButton: { position: 'absolute', top: 32, left: 16, zIndex: 10, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
     resultContent: { flex: 1, paddingBottom: 0 },
     resultHero: { backgroundColor: COLORS.resultHero, paddingTop: 70, paddingBottom: 16, paddingHorizontal: 24, alignItems: 'flex-start' },
     resultHeroLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.7)' },
@@ -158,9 +158,9 @@ export default function ResultModal({
     transportPill: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center' },
     transportPillText: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
     transportPillTextSelected: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: '#fff', textAlign: 'center' },
-    viewRouteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.signalGood, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 4 },
+    viewRouteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.signalGood, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 4, minHeight: 44 },
     viewRouteButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
-    recalculateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 8 },
+    recalculateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 8, minHeight: 44 },
     recalculateButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
     updatedText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 2 },
   }), [COLORS]);
@@ -171,7 +171,7 @@ export default function ResultModal({
         <View style={styles.resultScreen}>
           <StatusBar style="light" />
           <View style={styles.resultHero}>
-            <Pressable style={styles.resultBackButton} onPress={onClose}>
+            <Pressable style={styles.resultBackButton} onPress={onClose} accessibilityLabel="Close result" accessibilityRole="button">
               <Ionicons name="arrow-back" size={22} color="#fff" />
             </Pressable>
 
@@ -299,7 +299,7 @@ export default function ResultModal({
             )}
 
             {onRecalculate && (
-              <Pressable style={styles.recalculateButton} onPress={onRecalculate}>
+              <Pressable style={styles.recalculateButton} onPress={onRecalculate} accessibilityLabel="Recalculate with current traffic" accessibilityRole="button">
                 <Ionicons name="refresh" size={16} color="#fff" />
                 <Text style={styles.recalculateButtonText}>Recalculate with current traffic</Text>
               </Pressable>
