@@ -3,14 +3,12 @@ const themeToggle = document.getElementById('themeToggle');
 const html = document.documentElement;
 const THEME_KEY = 'airylio-theme';
 
-// Initialize theme from localStorage or system preference
 function initializeTheme() {
   const savedTheme = localStorage.getItem(THEME_KEY);
 
   if (savedTheme) {
     setTheme(savedTheme);
   } else {
-    // Check system preference
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setTheme(prefersDark ? 'dark' : 'light');
   }
@@ -40,7 +38,6 @@ mobileMenuBtn.addEventListener('click', () => {
   navMenu.classList.toggle('active');
 });
 
-// Close menu when clicking on a link
 document.querySelectorAll('.nav-link').forEach(link => {
   link.addEventListener('click', () => {
     navMenu.classList.remove('active');
@@ -55,12 +52,10 @@ accordionHeaders.forEach(header => {
     const accordionItem = header.parentElement;
     const isActive = accordionItem.classList.contains('active');
 
-    // Close all other items
     document.querySelectorAll('.accordion-item').forEach(item => {
       item.classList.remove('active');
     });
 
-    // Toggle current item
     if (!isActive) {
       accordionItem.classList.add('active');
     }
@@ -96,12 +91,67 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, observerOptions);
 
-// Observe all sections and cards
 document.querySelectorAll(
-  '.hero-content, .feature-card, .how-step, .preview-phone, .confidence-card, .accordion-item'
+  '.hero-content, .feature-card, .demo-container, .feature-hero-card, .why-airylio'
 ).forEach(el => {
   observer.observe(el);
 });
+
+// Demo Calculator
+function calculateDemo() {
+  const from = document.getElementById('demo-from').value;
+  const to = document.getElementById('demo-to').value;
+  const arriveByInput = document.getElementById('demo-arrive').value;
+  const transport = document.getElementById('demo-transport').value;
+  const resultDiv = document.getElementById('demo-result');
+
+  // Parse arrive by time
+  const [arriveHour, arriveMin] = arriveByInput.split(':').map(Number);
+
+  // Simulate travel time based on transport mode
+  const travelTimes = {
+    drive: 45,
+    motorcycle: 35,
+    commute: 55,
+    walk: 120
+  };
+
+  const baseTravel = travelTimes[transport] || 45;
+  const travelTime = baseTravel + Math.floor(Math.random() * 20 - 10);
+
+  // Add buffer (5-15 min)
+  const buffer = 5 + Math.floor(Math.random() * 10);
+  const totalTime = travelTime + buffer;
+
+  // Calculate leave time
+  const leaveMinutes = arriveHour * 60 + arriveMin - totalTime;
+  const leaveHour = Math.floor(leaveMinutes / 60);
+  const leaveMin = leaveMinutes % 60;
+
+  const leaveHourDisplay = leaveHour < 10 ? `0${leaveHour}` : leaveHour;
+  const leaveMinDisplay = leaveMin < 10 ? `0${leaveMin}` : leaveMin;
+
+  // Generate confidence score (85-95%)
+  const confidence = 85 + Math.floor(Math.random() * 11);
+
+  // Show loading state
+  resultDiv.classList.remove('demo-result-hidden');
+  const resultContent = resultDiv.querySelector('.demo-result-content');
+  resultContent.style.opacity = '0.5';
+
+  setTimeout(() => {
+    // Update result values
+    document.getElementById('demo-leave-time').textContent = `${leaveHourDisplay}:${leaveMinDisplay} AM`;
+    document.getElementById('demo-confidence-pct').textContent = `${confidence}%`;
+    document.getElementById('demo-arrive-time').textContent = arriveByInput.replace(':', ':');
+
+    // Animate confidence ring
+    const ringAnimate = resultDiv.querySelector('.demo-ring-animate');
+    ringAnimate.style.strokeDasharray = `${(confidence / 100) * 201} 201`;
+
+    resultContent.style.opacity = '1';
+  }, 500);
+}
 
 // Initialize
 initializeTheme();

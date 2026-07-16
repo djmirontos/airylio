@@ -3,368 +3,428 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Airylio - Know Exactly When to Leave</title>
-  <meta name="description" content="Calculate the perfect departure time based on live traffic, weather, and your route. For Philippine commuters.">
+  <meta name="description" content="Airylio - Know exactly when to leave. Real-time traffic, weather, and confidence for Philippine commuters.">
   <meta name="theme-color" content="#4C4F9E">
+  <title>Airylio - Know When to Leave</title>
   <link rel="icon" type="image/x-icon" href="public/favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <!-- Navigation -->
-  <nav class="navbar">
+  <nav class="nav-bar">
     <div class="nav-container">
-      <div class="nav-brand">
-        <span class="brand-icon">✈</span>
-        <span class="brand-text">Airylio</span>
+      <div class="nav-logo">
+        Airylio
+        <div class="logo-dot"></div>
       </div>
-      <button class="nav-toggle" id="mobileMenuBtn" aria-label="Toggle menu">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <div class="nav-menu" id="navMenu">
+
+      <div class="nav-links" id="navMenu">
         <a href="#features" class="nav-link">Features</a>
-        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#how" class="nav-link">How It Works</a>
         <a href="#faq" class="nav-link">FAQ</a>
-        <a href="privacy.html" class="nav-link">Privacy</a>
-        <a href="terms.html" class="nav-link">Terms</a>
       </div>
-      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-        <span class="theme-icon">🌙</span>
-      </button>
-      <a href="#" class="play-badge" aria-label="Get it on Google Play">
-        <div class="play-badge-inner">
-          <svg class="play-icon" viewBox="0 0 24 24" fill="none">
-            <path d="M3.18 23.76c.3.17.64.24.99.2L14.9 12 4.17.04a1.54 1.54 0 0 0-.99.2C2.6.63 2.25 1.3 2.25 2.1v19.8c0 .8.35 1.47.93 1.86z" fill="#EA4335"/>
-            <path d="M18.98 15.8l-3.08-3.08-1.01 1.01L17.97 17l1.01-1.2z" fill="#FBBC04"/>
-            <path d="M21.75 10.5c-.4-.87-1.1-1.47-1.98-1.7l-2.8 2.8 2.8 2.8c.88-.23 1.58-.83 1.98-1.7.3-.63.3-1.57 0-2.2z" fill="#FBBC04"/>
-            <path d="M4.17.04L17.97 7l-3.08 3.08L3.18.24A1.54 1.54 0 0 0 4.17.04z" fill="#4285F4"/>
-            <path d="M4.17 23.76L17.97 17l-3.08-3.08L3.18 23.76c.3.17.64.24.99.2-.33-.04-.67-.11-.99-.2l.99.2z" fill="#34A853"/>
+
+      <div class="nav-right">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">🌙</button>
+        <a href="https://play.google.com/store/apps/details?id=com.daryljm.airylio" class="badge-link" target="_blank" rel="noopener" aria-label="Get Airylio on Google Play">
+          <svg class="google-play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M3,20.5V3.5C3,2.58 3.9,1.7 4.97,1.7C5.6,1.7 6.23,1.95 6.74,2.45L17.38,11.97L6.74,21.5C6.23,22.05 5.6,22.3 4.97,22.3C3.9,22.3 3,21.42 3,20.5Z"/>
           </svg>
-          <div class="play-text">
-            <span class="play-label">GET IT ON</span>
-            <span class="play-store">Google Play</span>
-          </div>
-        </div>
-      </a>
+        </a>
+      </div>
+
+      <button class="mobile-menu-btn" id="mobileMenuBtn" type="button" aria-label="Toggle menu">☰</button>
     </div>
   </nav>
 
   <!-- Hero Section -->
   <section class="hero">
-    <div class="aurora-bg" id="aurora"></div>
-    <div class="hero-bg-elements">
-      <svg class="route-lines" viewBox="0 0 400 400" preserveAspectRatio="none">
-        <path d="M 50 50 Q 200 100 350 150 T 350 350" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="5,5" opacity="0.08"/>
-        <path d="M 100 80 L 300 200 L 200 320" stroke="currentColor" stroke-width="1.5" fill="none" stroke-dasharray="4,4" opacity="0.06"/>
-        <circle cx="350" cy="150" r="8" fill="currentColor" opacity="0.08"/>
-        <circle cx="100" cy="50" r="6" fill="currentColor" opacity="0.07"/>
-      </svg>
-    </div>
-    <div class="hero-content">
-      <span class="eyebrow">For Philippine Commuters</span>
-      <h1 class="hero-headline">Leave smarter.<br>Arrive with confidence.</h1>
-      <p class="hero-subheadline">Airylio reads live traffic, weather, and your route — then tells you exactly when to leave so you arrive on time.</p>
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="hero-eyebrow">For Philippine Commuters</div>
 
-      <div class="hero-buttons">
-        <a href="#" class="play-badge" aria-label="Get it on Google Play">
-          <div class="play-badge-inner">
-            <svg class="play-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M3.18 23.76c.3.17.64.24.99.2L14.9 12 4.17.04a1.54 1.54 0 0 0-.99.2C2.6.63 2.25 1.3 2.25 2.1v19.8c0 .8.35 1.47.93 1.86z" fill="#EA4335"/>
-              <path d="M18.98 15.8l-3.08-3.08-1.01 1.01L17.97 17l1.01-1.2z" fill="#FBBC04"/>
-              <path d="M21.75 10.5c-.4-.87-1.1-1.47-1.98-1.7l-2.8 2.8 2.8 2.8c.88-.23 1.58-.83 1.98-1.7.3-.63.3-1.57 0-2.2z" fill="#FBBC04"/>
-              <path d="M4.17.04L17.97 7l-3.08 3.08L3.18.24A1.54 1.54 0 0 0 4.17.04z" fill="#4285F4"/>
-              <path d="M4.17 23.76L17.97 17l-3.08-3.08L3.18 23.76c.3.17.64.24.99.2-.33-.04-.67-.11-.99-.2l.99.2z" fill="#34A853"/>
+        <h1 class="hero-title">Stop guessing<br>when to leave.</h1>
+
+        <p class="hero-subtitle">Airylio reads live traffic, weather, and your route — then tells you exactly when to leave so you arrive on time, every time.</p>
+
+        <p class="hero-hook">
+          "Ever left too late because traffic got worse? Or waited too long and wasted your morning? Airylio solves that."
+        </p>
+
+        <div class="hero-cta-group">
+          <a href="https://play.google.com/store/apps/details?id=com.daryljm.airylio" class="cta-button-primary" target="_blank" rel="noopener">
+            Download on Google Play
+          </a>
+          <a href="#demo" class="cta-button-secondary">See how it works →</a>
+        </div>
+
+        <div class="hero-trust-badges">
+          <span class="trust-badge">✓ Powered by Google Routes</span>
+          <span class="trust-badge">✓ Live weather data</span>
+          <span class="trust-badge">✓ Philippine-wide</span>
+          <span class="trust-badge">✓ Free & private</span>
+        </div>
+      </div>
+
+      <div class="hero-phone">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <!-- Status bar -->
+            <div class="mock-status-bar">9:41 <span class="mock-status-ampm">AM</span></div>
+
+            <!-- Trip route -->
+            <div class="mock-route">
+              <div class="mock-route-origin">● Talisay, Cebu</div>
+              <div class="mock-route-line"></div>
+              <div class="mock-route-dest">📍 SM City Cebu</div>
+            </div>
+
+            <!-- Badges -->
+            <div class="mock-badges">
+              <span class="mock-badge green">● Live traffic</span>
+              <span class="mock-badge blue">☀ Clear</span>
+            </div>
+
+            <!-- Leave time section with confidence ring -->
+            <div class="mock-leave-section">
+              <div class="mock-leave-label">Leave at</div>
+              <div class="mock-leave-time-row">
+                <div class="mock-leave-time">8:14 AM</div>
+                <div class="mock-confidence-ring">
+                  <svg viewBox="0 0 80 80" class="confidence-svg">
+                    <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6"/>
+                    <circle cx="40" cy="40" r="32" fill="none" stroke="#12B886" stroke-width="6"
+                      stroke-dasharray="175 201" stroke-linecap="round"
+                      transform="rotate(-90 40 40)" class="confidence-ring-fill"/>
+                  </svg>
+                  <div class="mock-confidence-text">
+                    <span class="mock-pct">92%</span>
+                    <span class="mock-label">High</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Countdown -->
+            <div class="mock-countdown">Leave in 23 min</div>
+
+            <!-- Arrive by -->
+            <div class="mock-arrive">Arrive by 9:00 AM</div>
+
+            <!-- Trip details -->
+            <div class="mock-details">
+              <div class="mock-detail-item">
+                <span class="mock-detail-label">Travel time</span>
+                <span class="mock-detail-value">46 min</span>
+              </div>
+              <div class="mock-detail-item">
+                <span class="mock-detail-label">Distance</span>
+                <span class="mock-detail-value">12.4 km</span>
+              </div>
+            </div>
+
+            <!-- CTA Button -->
+            <div class="mock-cta-btn">View Route on Map</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aurora background -->
+    <div class="aurora-bg">
+      <div class="aurora-blob aurora-blob-1"></div>
+      <div class="aurora-blob aurora-blob-2"></div>
+      <div class="aurora-blob aurora-blob-3"></div>
+    </div>
+  </section>
+
+  <!-- Interactive Demo Section -->
+  <section class="demo" id="demo">
+    <div class="demo-container">
+      <div class="demo-header">
+        <h2>See it in action</h2>
+        <p class="demo-subtitle">Try a sample calculation — no download needed</p>
+      </div>
+
+      <div class="demo-content">
+        <div class="demo-form-wrapper">
+          <div class="demo-form">
+            <div class="demo-field">
+              <label for="demo-from">From</label>
+              <select id="demo-from">
+                <option value="Talisay, Cebu">Talisay, Cebu</option>
+                <option value="Mandaue City">Mandaue City</option>
+                <option value="Makati City">Makati City</option>
+                <option value="Quezon City">Quezon City</option>
+                <option value="Davao City">Davao City</option>
+              </select>
+            </div>
+
+            <div class="demo-field">
+              <label for="demo-to">To</label>
+              <select id="demo-to">
+                <option value="SM City Cebu">SM City Cebu</option>
+                <option value="Ayala Center Cebu">Ayala Center Cebu</option>
+                <option value="BGC, Taguig">BGC, Taguig</option>
+                <option value="Ortigas Center">Ortigas Center</option>
+                <option value="SM Davao">SM Davao</option>
+              </select>
+            </div>
+
+            <div class="demo-field">
+              <label for="demo-arrive">Arrive by</label>
+              <input type="time" id="demo-arrive" value="09:00">
+            </div>
+
+            <div class="demo-field">
+              <label for="demo-transport">Transport</label>
+              <select id="demo-transport">
+                <option value="drive">🚗 Drive</option>
+                <option value="motorcycle">🏍 Motorcycle</option>
+                <option value="commute">🚌 Commute</option>
+                <option value="walk">🚶 Walk</option>
+              </select>
+            </div>
+
+            <button class="demo-calculate-btn" type="button" onclick="calculateDemo()">
+              Get Recommendation
+            </button>
+          </div>
+        </div>
+
+        <div class="demo-result" id="demo-result" class="demo-result-hidden">
+          <div class="demo-result-content">
+            <div class="demo-result-label">Leave at</div>
+            <div class="demo-result-time" id="demo-leave-time">7:58 AM</div>
+
+            <div class="demo-result-confidence">
+              <div class="demo-ring-container">
+                <svg viewBox="0 0 80 80" class="demo-confidence-svg">
+                  <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(76,79,158,0.1)" stroke-width="6"/>
+                  <circle cx="40" cy="40" r="32" fill="none" stroke="#12B886" stroke-width="6"
+                    stroke-dasharray="0 201" stroke-linecap="round"
+                    transform="rotate(-90 40 40)" class="demo-ring-animate"/>
+                </svg>
+                <div class="demo-confidence-text">
+                  <span class="demo-pct" id="demo-confidence-pct">89%</span>
+                  <span class="demo-label">High</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="demo-result-arrive">Arrive by <strong id="demo-arrive-time">9:00 AM</strong></div>
+            <div class="demo-result-note">* This is a demonstration. Real results use live traffic data.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Showcase Section -->
+  <section class="features" id="features">
+    <div class="features-container">
+      <!-- Hero Feature Card -->
+      <div class="feature-hero-card">
+        <div class="feature-hero-left">
+          <h2>Departure confidence<br>you can trust</h2>
+          <p>Every recommendation includes a confidence score based on live traffic, weather, and historical data for your exact route.</p>
+          <ul class="feature-highlights">
+            <li>● Live traffic data</li>
+            <li>● Weather sensitivity</li>
+            <li>● Route history</li>
+            <li>● Buffer calculation</li>
+          </ul>
+        </div>
+        <div class="feature-hero-right">
+          <div class="feature-hero-ring">
+            <svg viewBox="0 0 120 120" class="feature-ring-svg">
+              <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(76,79,158,0.1)" stroke-width="8"/>
+              <circle cx="60" cy="60" r="48" fill="none" stroke="#12B886" stroke-width="8"
+                stroke-dasharray="0 302" stroke-linecap="round"
+                transform="rotate(-90 60 60)" class="feature-ring-animate"/>
             </svg>
-            <div class="play-text">
-              <span class="play-label">GET IT ON</span>
-              <span class="play-store">Google Play</span>
+            <div class="feature-ring-text">
+              <span class="feature-ring-pct">92%</span>
+              <span class="feature-ring-label">High</span>
             </div>
           </div>
-        </a>
-        <button class="cta-button secondary" onclick="document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })">See how it works</button>
-      </div>
-
-      <div class="hero-social-proof">
-        <span class="proof-badge">✓ Powered by Google Routes</span>
-        <span class="proof-badge">✓ Real-time weather data</span>
-        <span class="proof-badge">✓ Philippine-wide coverage</span>
-        <span class="proof-badge">✓ Anonymous & private</span>
-      </div>
-
-      <p class="hero-hook">Stop guessing. Join thousands of Philippine commuters who leave at the right time.</p>
-    </div>
-
-    <div class="hero-visual">
-      <div class="phone-frame">
-        <div class="screenshot-placeholder" data-filename="screenshot-plan.png">
-          <span>screenshot-plan.png</span>
-          <p>Replace with actual screenshot</p>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- Quick Steps Section -->
-  <section class="quick-steps">
-    <div class="container">
-      <div class="steps-strip">
-        <div class="step-item">
-          <span class="step-emoji">📍</span>
-          <span class="step-text">Enter destination</span>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step-item">
-          <span class="step-emoji">⏰</span>
-          <span class="step-text">Set arrival time</span>
-        </div>
-        <div class="step-arrow">→</div>
-        <div class="step-item">
-          <span class="step-emoji">🚗</span>
-          <span class="step-text">Get your leave time</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Features Section -->
-  <section class="features" id="features">
-    <div class="container">
-      <h2 class="section-title">Everything you need to leave at the right time</h2>
+      <!-- Supporting Features Grid -->
       <div class="features-grid">
-        <div class="feature-card" data-color="blue">
+        <div class="feature-card" data-color="traffic">
           <div class="feature-icon">🚦</div>
           <h3>Live Traffic</h3>
-          <p>Real-time Google Routes data for accurate ETAs on every journey</p>
+          <p>Real-time Google Routes data updated every 30 seconds</p>
         </div>
-        <div class="feature-card" data-color="teal">
+
+        <div class="feature-card" data-color="weather">
           <div class="feature-icon">🌧️</div>
           <h3>Weather-Aware</h3>
-          <p>Rain and storm conditions factored into your departure time</p>
+          <p>Rain and storm factors automatically adjust your timeline</p>
         </div>
-        <div class="feature-card" data-color="green">
-          <div class="feature-icon">📍</div>
-          <h3>Route Preview</h3>
-          <p>See your route on a map before you leave the house</p>
-        </div>
-        <div class="feature-card" data-color="purple">
-          <div class="feature-icon">🕐</div>
-          <h3>Smart Countdown</h3>
-          <p>Live countdown to your departure time with real-time updates</p>
-        </div>
-        <div class="feature-card" data-color="orange">
+
+        <div class="feature-card" data-color="remind">
           <div class="feature-icon">🔔</div>
           <h3>Leave Reminders</h3>
-          <p>Get notified exactly when it's time to go, on your schedule</p>
+          <p>Notification tells you exactly when it's time to go</p>
         </div>
-        <div class="feature-card" data-color="indigo">
+
+        <div class="feature-card" data-color="history">
           <div class="feature-icon">🗂️</div>
           <h3>Trip History</h3>
-          <p>Review past trips and recalculate anytime with fresh data</p>
+          <p>Review past trips and refine your departure strategy</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- How It Works Section -->
-  <section class="how-it-works" id="how-it-works">
-    <div class="container">
-      <h2 class="section-title">From address to departure time in seconds</h2>
-      <div class="how-grid">
-        <div class="how-step">
-          <div class="step-number">1</div>
-          <h3>Enter your destination</h3>
-          <p>Search any address in the Philippines</p>
-        </div>
-        <div class="how-step">
-          <div class="step-number">2</div>
-          <h3>Set your arrival time</h3>
-          <p>Choose when you need to be there</p>
-        </div>
-        <div class="how-step">
-          <div class="step-number">3</div>
-          <h3>Get your recommendation</h3>
-          <p>Airylio calculates the perfect leave time</p>
-        </div>
-        <div class="how-step">
-          <div class="step-number">4</div>
-          <h3>Leave on time</h3>
-          <p>Set a reminder and go with confidence</p>
-        </div>
+  <!-- Why Airylio Section -->
+  <section class="why-airylio" id="how">
+    <h2>Built on data<br>you can trust</h2>
+    <div class="data-sources">
+      <div class="data-source">
+        <div class="data-source-icon">🗺️</div>
+        <div class="data-source-name">Google Routes</div>
+        <div class="data-source-desc">Real-time traffic</div>
       </div>
-      <div class="how-screenshot">
-        <div class="screenshot-placeholder" data-filename="screenshot-result.png">
-          <span>screenshot-result.png</span>
-          <p>Replace with actual screenshot</p>
-        </div>
+      <div class="data-source-arrow">→</div>
+      <div class="data-source">
+        <div class="data-source-icon">🌤️</div>
+        <div class="data-source-name">Open-Meteo</div>
+        <div class="data-source-desc">Live weather</div>
       </div>
-    </div>
-  </section>
-
-  <!-- App Preview Section -->
-  <section class="preview">
-    <div class="container">
-      <h2 class="section-title">Built for the Philippine commute</h2>
-      <div class="preview-grid">
-        <div class="preview-phone">
-          <div class="screenshot-placeholder" data-filename="screenshot-plan.png">
-            <span>screenshot-plan.png</span>
-            <p>Replace with actual screenshot</p>
-          </div>
-        </div>
-        <div class="preview-phone">
-          <div class="screenshot-placeholder" data-filename="screenshot-history.png">
-            <span>screenshot-history.png</span>
-            <p>Replace with actual screenshot</p>
-          </div>
-        </div>
-        <div class="preview-phone">
-          <div class="screenshot-placeholder" data-filename="screenshot-map.png">
-            <span>screenshot-map.png</span>
-            <p>Replace with actual screenshot</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Confidence Section -->
-  <section class="confidence">
-    <div class="container">
-      <h2 class="section-title">Recommendations you can trust</h2>
-      <div class="confidence-grid">
-        <div class="confidence-card">
-          <div class="confidence-number">4</div>
-          <h3>Transport modes</h3>
-          <p>Drive, Motorcycle, Commute, Walk</p>
-        </div>
-        <div class="confidence-card">
-          <div class="confidence-number">∞</div>
-          <h3>Live + cached data</h3>
-          <p>Always the freshest route data available</p>
-        </div>
-        <div class="confidence-card">
-          <div class="confidence-number">🇵🇭</div>
-          <h3>Philippine-wide</h3>
-          <p>Covers all cities and provinces</p>
-        </div>
+      <div class="data-source-arrow">→</div>
+      <div class="data-source">
+        <div class="data-source-icon">📊</div>
+        <div class="data-source-name">Your History</div>
+        <div class="data-source-desc">Personalized accuracy</div>
       </div>
     </div>
   </section>
 
   <!-- FAQ Section -->
-  <section class="faq" id="faq">
-    <div class="container">
-      <h2 class="section-title">Common questions</h2>
-      <div class="accordion">
-        <div class="accordion-item">
-          <button class="accordion-header">
-            <span>Is Airylio free to use?</span>
-            <span class="accordion-icon">+</span>
-          </button>
-          <div class="accordion-content">
-            <p>Yes, Airylio is completely free to download and use. We make our money through premium features and partnerships, not by charging users.</p>
-          </div>
-        </div>
+  <section class="faq-section" id="faq">
+    <h2>Frequently Asked Questions</h2>
 
-        <div class="accordion-item">
-          <button class="accordion-header">
-            <span>Which cities does Airylio support?</span>
-            <span class="accordion-icon">+</span>
-          </button>
-          <div class="accordion-content">
-            <p>Airylio supports all cities and provinces in the Philippines with Google Routes coverage. This includes major urban centers like Metro Manila, Cebu, Davao, and surrounding areas.</p>
-          </div>
+    <div class="accordion">
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          How does Airylio calculate when to leave?
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-content">
+          <p>Airylio combines live traffic data from Google Routes, real-time weather conditions, and your historical trip data to calculate your exact departure time. It factors in buffer time based on how confident the prediction is.</p>
         </div>
+      </div>
 
-        <div class="accordion-item">
-          <button class="accordion-header">
-            <span>How accurate are the recommendations?</span>
-            <span class="accordion-icon">+</span>
-          </button>
-          <div class="accordion-content">
-            <p>Our recommendations achieve 90%+ accuracy by combining real-time traffic data, historical patterns, weather conditions, and route-specific factors. The more you use Airylio, the better it learns your patterns.</p>
-          </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          Is my location data private?
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-content">
+          <p>Yes. Airylio processes your location and trip data entirely on your phone. We never store or transmit your personal location history to our servers. All predictions are calculated locally.</p>
         </div>
+      </div>
 
-        <div class="accordion-item">
-          <button class="accordion-header">
-            <span>Does Airylio work without internet?</span>
-            <span class="accordion-icon">+</span>
-          </button>
-          <div class="accordion-content">
-            <p>Airylio requires internet for live traffic and weather data. However, we cache recent routes so you can view past trip data offline.</p>
-          </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          Can I use Airylio outside the Philippines?
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-content">
+          <p>Airylio is optimized for Philippine traffic patterns, road networks, and weather. While the app works internationally, recommendations are most accurate within the Philippines.</p>
         </div>
+      </div>
 
-        <div class="accordion-item">
-          <button class="accordion-header">
-            <span>How does the weather affect my departure time?</span>
-            <span class="accordion-icon">+</span>
-          </button>
-          <div class="accordion-content">
-            <p>Weather significantly impacts commute times, especially during rainy season. We add buffer time during heavy rain or storms to account for slower traffic and reduced visibility.</p>
-          </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          How often are traffic predictions updated?
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-content">
+          <p>Live traffic data updates every 30 seconds. Your recommendations refresh automatically whenever traffic conditions change, so you always have the most current departure time.</p>
         </div>
+      </div>
 
-        <div class="accordion-item">
-          <button class="accordion-header">
-            <span>Is my location data private?</span>
-            <span class="accordion-icon">+</span>
-          </button>
-          <div class="accordion-content">
-            <p>Your privacy is important to us. We only collect anonymized location data to calculate routes and improve our recommendations. We never sell your data. See our Privacy Policy for full details.</p>
-          </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          Does Airylio work offline?
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-content">
+          <p>Airylio requires live traffic data to calculate recommendations, so it needs an internet connection. However, once you have a recommendation, basic features like reminders work offline.</p>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">
+          How much does Airylio cost?
+          <span class="accordion-arrow">▼</span>
+        </button>
+        <div class="accordion-content">
+          <p>Airylio is completely free. We built this for Philippine commuters and have no plans to charge. All features are available at no cost.</p>
         </div>
       </div>
     </div>
+
+    <div class="faq-more">
+      <p>More questions? <a href="mailto:djmirontos@gmail.com">Email us</a> or visit our <a href="/privacy.html">privacy policy</a> and <a href="/terms.html">terms of service</a>.</p>
+    </div>
   </section>
 
-  <!-- CTA Section -->
+  <!-- Final CTA Section -->
   <section class="final-cta">
-    <div class="aurora-bg" id="auroraFinal"></div>
-    <div class="container">
-      <h2>Stop guessing. Start leaving on time.</h2>
-      <a href="#" class="play-badge play-badge-large" aria-label="Get it on Google Play">
-        <div class="play-badge-inner">
-          <svg class="play-icon" viewBox="0 0 24 24" fill="none">
-            <path d="M3.18 23.76c.3.17.64.24.99.2L14.9 12 4.17.04a1.54 1.54 0 0 0-.99.2C2.6.63 2.25 1.3 2.25 2.1v19.8c0 .8.35 1.47.93 1.86z" fill="#EA4335"/>
-            <path d="M18.98 15.8l-3.08-3.08-1.01 1.01L17.97 17l1.01-1.2z" fill="#FBBC04"/>
-            <path d="M21.75 10.5c-.4-.87-1.1-1.47-1.98-1.7l-2.8 2.8 2.8 2.8c.88-.23 1.58-.83 1.98-1.7.3-.63.3-1.57 0-2.2z" fill="#FBBC04"/>
-            <path d="M4.17.04L17.97 7l-3.08 3.08L3.18.24A1.54 1.54 0 0 0 4.17.04z" fill="#4285F4"/>
-            <path d="M4.17 23.76L17.97 17l-3.08-3.08L3.18 23.76c.3.17.64.24.99.2-.33-.04-.67-.11-.99-.2l.99.2z" fill="#34A853"/>
-          </svg>
-          <div class="play-text">
-            <span class="play-label">GET IT ON</span>
-            <span class="play-store">Google Play</span>
-          </div>
-        </div>
+    <div class="final-cta-content">
+      <h2>Leave smarter.<br>Arrive with confidence.</h2>
+      <a href="https://play.google.com/store/apps/details?id=com.daryljm.airylio" class="cta-button-primary cta-large" target="_blank" rel="noopener">
+        Download on Google Play
       </a>
+      <p class="final-cta-subtitle">Free for Philippine commuters</p>
+    </div>
+
+    <div class="aurora-bg aurora-bg-final">
+      <div class="aurora-blob aurora-blob-1"></div>
+      <div class="aurora-blob aurora-blob-2"></div>
+      <div class="aurora-blob aurora-blob-3"></div>
     </div>
   </section>
 
   <!-- Footer -->
   <footer class="footer">
-    <div class="container">
-      <div class="footer-top">
-        <div class="footer-brand">
-          <span class="brand-icon">✈</span>
-          <span class="brand-text">Airylio</span>
-          <p>The smarter way to commute in the Philippines</p>
-        </div>
-        <div class="footer-links">
-          <a href="privacy.html">Privacy Policy</a>
-          <span class="divider">·</span>
-          <a href="terms.html">Terms of Service</a>
-          <span class="divider">·</span>
-          <a href="mailto:support@airylio.com">Contact</a>
-        </div>
+    <div class="footer-content">
+      <div class="footer-section">
+        <h4>Airylio</h4>
+        <p>Know exactly when to leave.</p>
       </div>
-      <div class="footer-bottom">
-        <p>&copy; 2026 Airyl Tech · Airylio · All rights reserved</p>
-        <p>Built with ❤️ for Philippine commuters</p>
+      <div class="footer-section">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how">How It Works</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
       </div>
+      <div class="footer-section">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy.html">Privacy Policy</a></li>
+          <li><a href="/terms.html">Terms of Service</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Connect</h4>
+        <ul>
+          <li><a href="mailto:djmirontos@gmail.com">Email</a></li>
+          <li><a href="https://play.google.com/store/apps/details?id=com.daryljm.airylio" target="_blank" rel="noopener">Google Play</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 Airylio. Built for Philippine commuters.</p>
     </div>
   </footer>
 
