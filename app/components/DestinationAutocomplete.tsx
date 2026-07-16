@@ -173,10 +173,12 @@ export default function DestinationAutocomplete({
     }, 150);
   }
 
-  const showFavoritesSection = favorites?.home || favorites?.work;
-  const showDropdown = focused && (query.length > 0 || recentDestinations.length > 0 || showFavoritesSection);
+  const hasFavorites = !!(favorites?.home || favorites?.work);
+  const hasRecent = recentDestinations.length > 0;
+  const showDropdown = focused && (query.length > 0 || hasRecent || hasFavorites);
   const showSuggestedSection = query.length >= MIN_CHARS_TO_FETCH && suggestions.length > 0;
-  const showRecentSection = recentDestinations.length > 0;
+  const showRecentSection = hasRecent;
+  const showFavoritesSection = hasFavorites;
 
   return (
     <View style={{ position: 'relative' }}>
