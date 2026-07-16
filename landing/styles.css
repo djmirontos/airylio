@@ -210,6 +210,78 @@ html.dark .navbar {
   white-space: nowrap;
 }
 
+/* Google Play Badge */
+.play-badge {
+  display: inline-flex;
+  text-decoration: none;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.play-badge-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #000000;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: opacity 0.2s ease;
+}
+
+.play-badge:hover .play-badge-inner {
+  opacity: 0.85;
+}
+
+.play-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.play-label {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.play-store {
+  display: block;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.play-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.play-badge-large .play-badge-inner {
+  padding: 15px 30px;
+  gap: 15px;
+}
+
+.play-badge-large .play-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.play-badge-large .play-label {
+  font-size: 11px;
+}
+
+.play-badge-large .play-store {
+  font-size: 24px;
+}
+
 .nav-toggle {
   display: none;
   flex-direction: column;
@@ -912,6 +984,15 @@ html.dark .navbar {
     width: 100%;
   }
 
+  .hero-buttons .play-badge {
+    width: 100%;
+  }
+
+  .hero-buttons .play-badge-inner {
+    width: 100%;
+    justify-content: center;
+  }
+
   .features {
     padding: 3rem 1rem;
   }
@@ -944,5 +1025,48 @@ html.dark .navbar {
   .accordion-content p {
     padding: 0 1.25rem 1.25rem;
     font-size: 0.9rem;
+  }
+
+  .play-badge {
+    display: flex;
+    width: 100%;
+  }
+
+  .play-badge-inner {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .play-badge-large .play-badge-inner {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .play-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .play-badge-large .play-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .play-label {
+    font-size: 9px;
+  }
+
+  .play-store {
+    font-size: 16px;
+  }
+
+  .play-badge-large .play-label {
+    font-size: 9px;
+  }
+
+  .play-badge-large .play-store {
+    font-size: 18px;
   }
 }
