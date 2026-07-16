@@ -101,22 +101,30 @@ body {
 }
 
 .nav-logo {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-family: var(--font-display);
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
+  text-decoration: none;
+  transition: var(--transition);
 }
 
-.logo-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--signal-green);
-  animation: float 2s ease-in-out infinite;
+.nav-logo:hover .nav-logo-text {
+  color: var(--primary);
+}
+
+.nav-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: contain;
+}
+
+.nav-logo-text {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: var(--transition);
 }
 
 @keyframes float {
@@ -1350,8 +1358,13 @@ body {
 }
 
 @media (max-width: 480px) {
-  .nav-logo {
-    font-size: 1.2rem;
+  .nav-logo-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .nav-logo-text {
+    font-size: 18px;
   }
 
   .hero-title {
