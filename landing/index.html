@@ -54,10 +54,18 @@
   <!-- Hero Section -->
   <section class="hero">
     <div class="aurora-bg" id="aurora"></div>
+    <div class="hero-bg-elements">
+      <svg class="route-lines" viewBox="0 0 400 400" preserveAspectRatio="none">
+        <path d="M 50 50 Q 200 100 350 150 T 350 350" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="5,5" opacity="0.08"/>
+        <path d="M 100 80 L 300 200 L 200 320" stroke="currentColor" stroke-width="1.5" fill="none" stroke-dasharray="4,4" opacity="0.06"/>
+        <circle cx="350" cy="150" r="8" fill="currentColor" opacity="0.08"/>
+        <circle cx="100" cy="50" r="6" fill="currentColor" opacity="0.07"/>
+      </svg>
+    </div>
     <div class="hero-content">
       <span class="eyebrow">For Philippine Commuters</span>
-      <h1 class="hero-headline">Know exactly when to leave.</h1>
-      <p class="hero-subheadline">Airylio calculates the perfect departure time based on live traffic, weather, and your route — so you arrive on time, every time.</p>
+      <h1 class="hero-headline">Leave smarter.<br>Arrive with confidence.</h1>
+      <p class="hero-subheadline">Airylio reads live traffic, weather, and your route — then tells you exactly when to leave so you arrive on time.</p>
 
       <div class="hero-buttons">
         <a href="#" class="play-badge" aria-label="Get it on Google Play">
@@ -78,11 +86,14 @@
         <button class="cta-button secondary" onclick="document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })">See how it works</button>
       </div>
 
-      <div class="hero-badges">
-        <span class="badge">Live traffic</span>
-        <span class="badge">Real-time weather</span>
-        <span class="badge">90%+ accuracy</span>
+      <div class="hero-social-proof">
+        <span class="proof-badge">✓ Powered by Google Routes</span>
+        <span class="proof-badge">✓ Real-time weather data</span>
+        <span class="proof-badge">✓ Philippine-wide coverage</span>
+        <span class="proof-badge">✓ Anonymous & private</span>
       </div>
+
+      <p class="hero-hook">Stop guessing. Join thousands of Philippine commuters who leave at the right time.</p>
     </div>
 
     <div class="hero-visual">
@@ -95,37 +106,59 @@
     </div>
   </section>
 
+  <!-- Quick Steps Section -->
+  <section class="quick-steps">
+    <div class="container">
+      <div class="steps-strip">
+        <div class="step-item">
+          <span class="step-emoji">📍</span>
+          <span class="step-text">Enter destination</span>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+          <span class="step-emoji">⏰</span>
+          <span class="step-text">Set arrival time</span>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step-item">
+          <span class="step-emoji">🚗</span>
+          <span class="step-text">Get your leave time</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Features Section -->
   <section class="features" id="features">
     <div class="container">
       <h2 class="section-title">Everything you need to leave at the right time</h2>
       <div class="features-grid">
-        <div class="feature-card">
+        <div class="feature-card" data-color="blue">
           <div class="feature-icon">🚦</div>
           <h3>Live Traffic</h3>
           <p>Real-time Google Routes data for accurate ETAs on every journey</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-color="teal">
           <div class="feature-icon">🌧️</div>
           <h3>Weather-Aware</h3>
           <p>Rain and storm conditions factored into your departure time</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-color="green">
           <div class="feature-icon">📍</div>
           <h3>Route Preview</h3>
           <p>See your route on a map before you leave the house</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-color="purple">
           <div class="feature-icon">🕐</div>
           <h3>Smart Countdown</h3>
           <p>Live countdown to your departure time with real-time updates</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-color="orange">
           <div class="feature-icon">🔔</div>
           <h3>Leave Reminders</h3>
           <p>Get notified exactly when it's time to go, on your schedule</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-color="indigo">
           <div class="feature-icon">🗂️</div>
           <h3>Trip History</h3>
           <p>Review past trips and recalculate anytime with fresh data</p>
