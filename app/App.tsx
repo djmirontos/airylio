@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, TouchableWithoutFeedback, Keyboard, Alert } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DestinationAutocomplete from './components/DestinationAutocomplete';
@@ -433,7 +433,6 @@ export default function App() {
   }), [COLORS]);
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <View style={styles.root}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <PlanHeader greeting={getGreeting()} headerWeather={headerWeather} isDark={isDark} colors={COLORS} />
@@ -829,7 +828,6 @@ export default function App() {
         onClose={() => setShowFeedback(false)}
       />
     </View>
-    </TouchableWithoutFeedback>
   );
 }
 
