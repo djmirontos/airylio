@@ -3,6 +3,8 @@
     { "src": "/styles.css", "dest": "/styles.css" },
     { "src": "/script.js", "dest": "/script.js" },
     { "src": "/public/(.*)", "dest": "/public/$1" },
+    { "src": "/privacy.html", "dest": "/privacy.html" },
+    { "src": "/terms.html", "dest": "/terms.html" },
     { "src": "/privacy", "dest": "/privacy.html" },
     { "src": "/terms", "dest": "/terms.html" },
     { "src": "/(.*)", "dest": "/index.html" }
