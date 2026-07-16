@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTheme } from '../context/ThemeContext';
 import DestinationAutocomplete from '../components/DestinationAutocomplete';
@@ -33,6 +34,12 @@ export default function SettingsScreen() {
     editButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent, textAlign: 'center' },
     autocompleteContainer: { marginTop: 8, marginBottom: 8 },
     emptyHint: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginTop: 8, paddingHorizontal: 16 },
+    infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
+    infoRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    infoLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary },
+    infoValue: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary },
+    linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
+    linkLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginLeft: 12, flex: 1 },
   }), [COLORS]);
 
   function handlePlaceSelect(type: 'home' | 'work', label: string, lat: number, lng: number) {
@@ -166,6 +173,81 @@ export default function SettingsScreen() {
         {!favorites.home && !favorites.work && (
           <Text style={styles.emptyHint}>Tap Set to save your Home or Work location for quick access.</Text>
         )}
+      </View>
+
+      {/* Legal Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Legal</Text>
+        <View style={styles.card}>
+          <Pressable
+            style={styles.linkRow}
+            onPress={() => Linking.openURL('https://airylio.vercel.app/privacy.html')}
+            accessibilityLabel="View Privacy Policy"
+            accessibilityRole="button"
+          >
+            <View style={styles.infoRowLeft}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.linkLabel}>Privacy Policy</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.linkRow}
+            onPress={() => Linking.openURL('https://airylio.vercel.app/terms.html')}
+            accessibilityLabel="View Terms of Service"
+            accessibilityRole="button"
+          >
+            <View style={styles.infoRowLeft}>
+              <Ionicons name="document-text-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.linkLabel}>Terms of Service</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.linkRow}
+            onPress={() => Linking.openURL('mailto:support@airylio.com')}
+            accessibilityLabel="Contact support"
+            accessibilityRole="button"
+          >
+            <View style={styles.infoRowLeft}>
+              <Ionicons name="mail-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.linkLabel}>Contact Support</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textSecondary} />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* About Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About</Text>
+        <View style={styles.card}>
+          <View style={styles.infoRow}>
+            <View style={styles.infoRowLeft}>
+              <Ionicons name="phone-portrait-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.infoLabel}>Version</Text>
+            </View>
+            <Text style={styles.infoValue}>{Constants.expoConfig?.version ?? '1.0.0'}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.infoRow}>
+            <View style={styles.infoRowLeft}>
+              <Ionicons name="business-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.infoLabel}>Developer</Text>
+            </View>
+            <Text style={styles.infoValue}>Airyl Tech</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.infoRow}>
+            <View style={styles.infoRowLeft}>
+              <Ionicons name="location-outline" size={20} color={COLORS.accent} />
+              <Text style={styles.infoLabel}>Built for</Text>
+            </View>
+            <Text style={styles.infoValue}>Philippine commuters</Text>
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
