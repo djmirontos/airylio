@@ -465,52 +465,54 @@ export default function App() {
         </View>
 
         {/* From */}
-        <View style={styles.fieldRow}>
-          <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
-          <View style={styles.fieldTextCol}>
-            <Text style={styles.fieldLabel}>From</Text>
-            {showGpsChip ? (
-              <Pressable onPress={() => setOriginEditing(true)}>
-                <Text style={styles.fieldValue}>Your current location</Text>
+        <View style={{ position: 'relative' }}>
+          <View style={styles.fieldRow}>
+            <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
+            <View style={styles.fieldTextCol}>
+              <Text style={styles.fieldLabel}>From</Text>
+              {showGpsChip ? (
+                <Pressable onPress={() => setOriginEditing(true)}>
+                  <Text style={styles.fieldValue}>Your current location</Text>
+                </Pressable>
+              ) : showManualChip ? (
+                <Pressable onPress={() => setOriginEditing(true)}>
+                  <Text style={styles.fieldValue} numberOfLines={1}>{originLabel}</Text>
+                </Pressable>
+              ) : (
+                <DestinationAutocomplete
+                  apiKey={GOOGLE_PLACES_API_KEY}
+                  recentDestinations={recentOrigins}
+                  placeholder={locationError ?? 'Search origin'}
+                  favorites={favorites}
+                  suggestedLabel="Suggested Locations"
+                  autoFocus={originEditing}
+                  dropdownOffsetLeft={-35}
+                  dropdownOffsetRight={gpsCoords ? -44 : -14}
+                  colors={{
+                    accent: COLORS.accent,
+                    textPrimary: COLORS.textPrimary,
+                    textSecondary: COLORS.textSecondary,
+                    divider: COLORS.divider,
+                    card: COLORS.card,
+                    signalRisk: COLORS.signalRisk,
+                    ink: COLORS.ink,
+                  }}
+                  onSelect={(place) => {
+                    setOriginLabel(place.label);
+                    setOriginCoords({ lat: place.lat, lng: place.lng });
+                    setOriginEditing(false);
+                    addRecentOrigin(place);
+                  }}
+                />
+              )}
+            </View>
+            {gpsCoords && !showGpsChip && (
+              <Pressable onPress={useCurrentLocation}>
+                <Ionicons name="locate-outline" size={18} color={COLORS.textSecondary} />
               </Pressable>
-            ) : showManualChip ? (
-              <Pressable onPress={() => setOriginEditing(true)}>
-                <Text style={styles.fieldValue} numberOfLines={1}>{originLabel}</Text>
-              </Pressable>
-            ) : (
-              <DestinationAutocomplete
-                apiKey={GOOGLE_PLACES_API_KEY}
-                recentDestinations={recentOrigins}
-                placeholder={locationError ?? 'Search origin'}
-                favorites={favorites}
-                suggestedLabel="Suggested Locations"
-                autoFocus={originEditing}
-                dropdownOffsetLeft={-35}
-                dropdownOffsetRight={gpsCoords ? -44 : -14}
-                colors={{
-                  accent: COLORS.accent,
-                  textPrimary: COLORS.textPrimary,
-                  textSecondary: COLORS.textSecondary,
-                  divider: COLORS.divider,
-                  card: COLORS.card,
-                  signalRisk: COLORS.signalRisk,
-                  ink: COLORS.ink,
-                }}
-                onSelect={(place) => {
-                  setOriginLabel(place.label);
-                  setOriginCoords({ lat: place.lat, lng: place.lng });
-                  setOriginEditing(false);
-                  addRecentOrigin(place);
-                }}
-              />
             )}
+            {showGpsChip && <Ionicons name="locate" size={18} color={COLORS.accent} />}
           </View>
-          {gpsCoords && !showGpsChip && (
-            <Pressable onPress={useCurrentLocation}>
-              <Ionicons name="locate-outline" size={18} color={COLORS.textSecondary} />
-            </Pressable>
-          )}
-          {showGpsChip && <Ionicons name="locate" size={18} color={COLORS.accent} />}
         </View>
 
         {/* To */}
