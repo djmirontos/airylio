@@ -173,6 +173,12 @@ export default function DestinationAutocomplete({
     }, 250);
   }
 
+  function closeDropdown() {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setFocused(false);
+    onFocusChange?.(false);
+  }
+
   const hasFavorites = !!(favorites?.home || favorites?.work);
   const hasRecent = recentDestinations.length > 0;
   const showDropdown = focused && (query.length > 0 || hasRecent || hasFavorites);
@@ -192,6 +198,13 @@ export default function DestinationAutocomplete({
         placeholderTextColor={colors.textSecondary}
         style={[styles.input, { color: colors.textPrimary }]}
       />
+
+      {showDropdown && (
+        <Pressable
+          style={styles.overlay}
+          onPress={closeDropdown}
+        />
+      )}
 
       {showDropdown && (
         <View
@@ -308,6 +321,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     padding: 0,
     margin: 0,
+  },
+  overlay: {
+    position: 'absolute',
+    top: -10000,
+    left: -10000,
+    right: -10000,
+    bottom: -10000,
+    backgroundColor: 'transparent',
+    zIndex: 1000,
+    elevation: 1000,
   },
   dropdown: {
     position: 'absolute',
