@@ -200,13 +200,6 @@ export default function DestinationAutocomplete({
       />
 
       {showDropdown && (
-        <Pressable
-          style={styles.overlay}
-          onPress={closeDropdown}
-        />
-      )}
-
-      {showDropdown && (
         <View
           style={[
             styles.dropdown,
@@ -309,6 +302,13 @@ export default function DestinationAutocomplete({
             )}
           </ScrollView>
         </View>
+      )}
+
+      {showDropdown && (
+        <Pressable
+          style={styles.overlay}
+          onPress={closeDropdown}
+        />
       )}
     </View>
   );
