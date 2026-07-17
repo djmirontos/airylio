@@ -181,7 +181,7 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <Pressable
             style={styles.linkRow}
-            onPress={() => Linking.openURL('https://airylio.vercel.app/privacy.html')}
+            onPress={() => Linking.openURL('https://www.airylio.com/privacy.html')}
             accessibilityLabel="View Privacy Policy"
             accessibilityRole="button"
           >
@@ -194,7 +194,7 @@ export default function SettingsScreen() {
           <View style={styles.divider} />
           <Pressable
             style={styles.linkRow}
-            onPress={() => Linking.openURL('https://airylio.vercel.app/terms.html')}
+            onPress={() => Linking.openURL('https://www.airylio.com/terms.html')}
             accessibilityLabel="View Terms of Service"
             accessibilityRole="button"
           >
