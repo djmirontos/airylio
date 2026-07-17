@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, Alert } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, Alert, Keyboard } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DestinationAutocomplete from './components/DestinationAutocomplete';
@@ -562,7 +562,7 @@ export default function App() {
           </View>
         )}
         </View>
-        <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled" onScrollBeginDrag={Keyboard.dismiss}>
           {/* Date & time - the main focal point, styled prominently */}
           <Text style={styles.dateTimeSectionLabel}>
             {planningMode === 'arrive_by' ? 'Arrival date & time' : 'Departure date & time'}

@@ -170,7 +170,7 @@ export default function DestinationAutocomplete({
     blurTimer.current = setTimeout(() => {
       setFocused(false);
       onFocusChange?.(false);
-    }, 150);
+    }, 250);
   }
 
   const hasFavorites = !!(favorites?.home || favorites?.work);
