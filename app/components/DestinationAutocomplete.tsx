@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritePlace } from '../hooks/useFavorites';
-import { BOTTOM_NAV_HEIGHT, DROPDOWN_MAX_HEIGHT } from '../constants/config';
+import { DROPDOWN_MAX_HEIGHT } from '../constants/config';
 
 interface RecentDestination {
   label: string;
@@ -27,8 +27,6 @@ interface DestinationAutocompleteProps {
   recentDestinations: RecentDestination[];
   onSelect: (place: SelectedPlace) => void;
   onFocusChange?: (focused: boolean) => void;
-  dropdownOffsetLeft?: number;
-  dropdownOffsetRight?: number;
   placeholder?: string;
   suggestedLabel?: string;
   autoFocus?: boolean;
@@ -60,8 +58,6 @@ export default function DestinationAutocomplete({
   recentDestinations,
   onSelect,
   onFocusChange,
-  dropdownOffsetLeft = 0,
-  dropdownOffsetRight = 0,
   placeholder = 'Search destination',
   suggestedLabel = 'Suggested Destinations',
   autoFocus = false,
@@ -74,6 +70,11 @@ export default function DestinationAutocomplete({
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
   const sessionToken = useRef(generateSessionToken());
+  const [dropdownTop, setDropdownTop] = useState(0);
+  const [dropdownLeft, setDropdownLeft] = useState(0);
+  const [dropdownWidth, setDropdownWidth] = useState(0);
+  const containerRef = useRef<View>(null);
+  const { height: windowHeight } = useWindowDimensions();
 
   useEffect(() => {
     if (autoFocus) {
@@ -163,6 +164,7 @@ export default function DestinationAutocomplete({
     if (blurTimer.current) clearTimeout(blurTimer.current);
     setFocused(true);
     onFocusChange?.(true);
+    measureDropdownPosition();
   }
 
   function handleBlur() {
@@ -173,10 +175,12 @@ export default function DestinationAutocomplete({
     }, 250);
   }
 
-  function closeDropdown() {
-    if (blurTimer.current) clearTimeout(blurTimer.current);
-    setFocused(false);
-    onFocusChange?.(false);
+  function measureDropdownPosition() {
+    containerRef.current?.measureInWindow((x, y, width, height) => {
+      setDropdownTop(y + height + 4);
+      setDropdownLeft(x);
+      setDropdownWidth(width);
+    });
   }
 
   const hasFavorites = !!(favorites?.home || favorites?.work);
@@ -187,7 +191,7 @@ export default function DestinationAutocomplete({
   const showFavoritesSection = hasFavorites;
 
   return (
-    <View style={{ position: 'relative' }}>
+    <View ref={containerRef} style={{ position: 'relative' }} onLayout={measureDropdownPosition}>
       <TextInput
         ref={inputRef}
         value={query}
@@ -199,117 +203,145 @@ export default function DestinationAutocomplete({
         style={[styles.input, { color: colors.textPrimary }]}
       />
 
-      {showDropdown && (
-        <View
-          style={[
-            styles.dropdown,
-            {
-              backgroundColor: colors.card,
-              shadowColor: colors.ink,
-              left: dropdownOffsetLeft,
-              right: dropdownOffsetRight,
-            },
-          ]}
-        >
-          <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-            {loading && (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={colors.accent} />
-              </View>
-            )}
-
-            {!query ? (
-              <>
-                {showFavoritesSection && (
-                  <>
-                    <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
-                      Favorites
-                    </Text>
-                    {favorites?.home && (
-                      <Pressable
-                        style={[styles.favoriteShortcut, { borderBottomColor: colors.divider }]}
-                        onPress={() => onSelect({ label: favorites.home!.label, lat: favorites.home!.lat, lng: favorites.home!.lng })}
-                      >
-                        <Ionicons name="home" size={16} color={colors.accent} />
-                        <Text style={[styles.favoriteShortcutText, { color: colors.textPrimary }]}>Home</Text>
-                      </Pressable>
-                    )}
-                    {favorites?.work && (
-                      <Pressable
-                        style={[styles.favoriteShortcut, { borderBottomColor: colors.divider }]}
-                        onPress={() => onSelect({ label: favorites.work!.label, lat: favorites.work!.lat, lng: favorites.work!.lng })}
-                      >
-                        <Ionicons name="briefcase" size={16} color={colors.accent} />
-                        <Text style={[styles.favoriteShortcutText, { color: colors.textPrimary }]}>Work</Text>
-                      </Pressable>
-                    )}
-                  </>
-                )}
-
-                {showFavoritesSection && showRecentSection && <View style={styles.sectionGap} />}
-
-                {showRecentSection && (
-                  <>
-                    <Text style={[styles.sectionHeaderMuted, { color: colors.textSecondary }]}>
-                      Recent
-                    </Text>
-                    {recentDestinations.map((item) => (
-                      <Pressable
-                        key={item.label}
-                        style={[styles.row, { borderBottomColor: colors.divider }]}
-                        onPress={() => handleSelectRecent(item)}
-                      >
-                        <View style={styles.recentRowInner}>
-                          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                          <Text
-                            style={[styles.rowMainMuted, { color: colors.textSecondary }]}
-                            numberOfLines={2}
-                          >
-                            {item.label}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    ))}
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                {showSuggestedSection && (
-                  <>
-                    <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
-                      {suggestedLabel}
-                    </Text>
-                    {suggestions.map((item) => (
-                      <Pressable
-                        key={item.placeId}
-                        style={[styles.row, { borderBottomColor: colors.divider }]}
-                        onPress={() => handleSelectSuggestion(item)}
-                      >
-                        <Text style={[styles.rowMain, { color: colors.textPrimary }]} numberOfLines={1}>
-                          {item.mainText}
-                        </Text>
-                        {!!item.secondaryText && (
-                          <Text style={[styles.rowSecondary, { color: colors.textSecondary }]} numberOfLines={1}>
-                            {item.secondaryText}
-                          </Text>
-                        )}
-                      </Pressable>
-                    ))}
-                  </>
-                )}
-              </>
-            )}
-          </ScrollView>
-        </View>
-      )}
-
-      {showDropdown && (
+      <Modal
+        visible={showDropdown}
+        transparent
+        animationType="none"
+        onRequestClose={() => {
+          setFocused(false);
+          onFocusChange?.(false);
+        }}
+      >
         <Pressable
-          style={styles.overlay}
-          onPress={closeDropdown}
-        />
-      )}
+          style={{ flex: 1 }}
+          onPress={() => {
+            if (blurTimer.current) clearTimeout(blurTimer.current);
+            setFocused(false);
+            onFocusChange?.(false);
+          }}
+        >
+          <View
+            style={{
+              position: 'absolute',
+              top: dropdownTop,
+              left: dropdownLeft,
+              width: dropdownWidth,
+              maxHeight: DROPDOWN_MAX_HEIGHT,
+              backgroundColor: colors.card,
+              borderRadius: 16,
+              shadowColor: colors.ink,
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.14,
+              shadowRadius: 20,
+              elevation: 24,
+              overflow: 'hidden',
+            }}
+          >
+            <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+              {loading && (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color={colors.accent} />
+                </View>
+              )}
+
+              {!query ? (
+                <>
+                  {showFavoritesSection && (
+                    <>
+                      <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
+                        Favorites
+                      </Text>
+                      {favorites?.home && (
+                        <Pressable
+                          style={[styles.favoriteShortcut, { borderBottomColor: colors.divider }]}
+                          onPress={() => {
+                            onSelect({ label: favorites.home!.label, lat: favorites.home!.lat, lng: favorites.home!.lng });
+                            setFocused(false);
+                          }}
+                        >
+                          <Ionicons name="home" size={16} color={colors.accent} />
+                          <Text style={[styles.favoriteShortcutText, { color: colors.textPrimary }]}>Home</Text>
+                        </Pressable>
+                      )}
+                      {favorites?.work && (
+                        <Pressable
+                          style={[styles.favoriteShortcut, { borderBottomColor: colors.divider }]}
+                          onPress={() => {
+                            onSelect({ label: favorites.work!.label, lat: favorites.work!.lat, lng: favorites.work!.lng });
+                            setFocused(false);
+                          }}
+                        >
+                          <Ionicons name="briefcase" size={16} color={colors.accent} />
+                          <Text style={[styles.favoriteShortcutText, { color: colors.textPrimary }]}>Work</Text>
+                        </Pressable>
+                      )}
+                    </>
+                  )}
+
+                  {showFavoritesSection && showRecentSection && <View style={styles.sectionGap} />}
+
+                  {showRecentSection && (
+                    <>
+                      <Text style={[styles.sectionHeaderMuted, { color: colors.textSecondary }]}>
+                        Recent
+                      </Text>
+                      {recentDestinations.map((item) => (
+                        <Pressable
+                          key={item.label}
+                          style={[styles.row, { borderBottomColor: colors.divider }]}
+                          onPress={() => {
+                            handleSelectRecent(item);
+                            setFocused(false);
+                          }}
+                        >
+                          <View style={styles.recentRowInner}>
+                            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                            <Text
+                              style={[styles.rowMainMuted, { color: colors.textSecondary }]}
+                              numberOfLines={2}
+                            >
+                              {item.label}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      ))}
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {showSuggestedSection && (
+                    <>
+                      <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
+                        {suggestedLabel}
+                      </Text>
+                      {suggestions.map((item) => (
+                        <Pressable
+                          key={item.placeId}
+                          style={[styles.row, { borderBottomColor: colors.divider }]}
+                          onPress={() => {
+                            handleSelectSuggestion(item);
+                            setFocused(false);
+                          }}
+                        >
+                          <Text style={[styles.rowMain, { color: colors.textPrimary }]} numberOfLines={1}>
+                            {item.mainText}
+                          </Text>
+                          {!!item.secondaryText && (
+                            <Text style={[styles.rowSecondary, { color: colors.textSecondary }]} numberOfLines={1}>
+                              {item.secondaryText}
+                            </Text>
+                          )}
+                        </Pressable>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -321,32 +353,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     padding: 0,
     margin: 0,
-  },
-  overlay: {
-    position: 'absolute',
-    top: -10000,
-    left: -10000,
-    right: -10000,
-    bottom: -10000,
-    backgroundColor: 'transparent',
-    zIndex: 99998,
-    elevation: 99998,
-  },
-  dropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: 8,
-    marginBottom: BOTTOM_NAV_HEIGHT,
-    borderRadius: 16,
-    maxHeight: DROPDOWN_MAX_HEIGHT,
-    zIndex: 99999,
-    elevation: 99999,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-    overflow: 'hidden',
   },
   loadingRow: { paddingVertical: 12, alignItems: 'center' },
   sectionHeader: {

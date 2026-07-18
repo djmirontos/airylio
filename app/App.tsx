@@ -465,7 +465,7 @@ export default function App() {
         </View>
 
         {/* From */}
-        <View style={{ position: 'relative', zIndex: 99999, elevation: 99999 }}>
+        <View style={{ position: 'relative' }}>
           <View style={styles.fieldRow}>
             <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
             <View style={styles.fieldTextCol}>
@@ -486,8 +486,6 @@ export default function App() {
                   favorites={favorites}
                   suggestedLabel="Suggested Locations"
                   autoFocus={originEditing}
-                  dropdownOffsetLeft={-35}
-                  dropdownOffsetRight={gpsCoords ? -44 : -14}
                   colors={{
                     accent: COLORS.accent,
                     textPrimary: COLORS.textPrimary,
@@ -516,7 +514,7 @@ export default function App() {
         </View>
 
         {/* To */}
-        <View style={{ position: 'relative', zIndex: 99999, elevation: 99999 }}>
+        <View style={{ position: 'relative' }}>
         {destLabel ? (
           <Pressable
             style={styles.fieldRow}
@@ -540,8 +538,6 @@ export default function App() {
               <DestinationAutocomplete
                 apiKey={GOOGLE_PLACES_API_KEY}
                 recentDestinations={recentDestinations}
-                dropdownOffsetLeft={-42}
-                dropdownOffsetRight={-14}
                 colors={{
                   accent: COLORS.accent,
                   textPrimary: COLORS.textPrimary,
