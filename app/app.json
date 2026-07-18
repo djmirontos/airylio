@@ -1,14 +1,12 @@
 {
   "expo": {
     "name": "Airylio",
-    "slug": "app",
+    "slug": "airylio",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
-    "sdkVersion": "54.0.0",
-    "main": "index.ts",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -26,7 +24,12 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "$GOOGLE_MAPS_API_KEY"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -50,4 +53,3 @@
     "owner": "daryljm"
   }
 }
-
