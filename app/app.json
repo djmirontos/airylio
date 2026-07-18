@@ -35,12 +35,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "react-native-maps",
-        {
-          "googleMapsApiKey": "$GOOGLE_MAPS_API_KEY"
-        }
-      ],
       "@react-native-community/datetimepicker",
       "expo-font",
       [
