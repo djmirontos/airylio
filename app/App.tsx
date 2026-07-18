@@ -374,7 +374,7 @@ export default function App() {
     fieldValue: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.textPrimary },
     sectionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
     dateTimeSectionLabel: { fontFamily: 'Poppins_700Bold', fontSize: 15, color: COLORS.textPrimary, marginTop: 10, marginBottom: 6 },
-    dateTimeCard: { flexDirection: 'row', backgroundColor: COLORS.accentTint, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginBottom: 4, overflow: 'hidden' },
+    dateTimeCard: { flexDirection: 'row', backgroundColor: COLORS.accentTint, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginBottom: 4 },
     dateTimeHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10 },
     dateTimeIconWrap: { width: 34, height: 34, borderRadius: 10, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
     dateTimeDividerVertical: { width: 1, backgroundColor: COLORS.accent, opacity: 0.25 },
@@ -465,7 +465,7 @@ export default function App() {
         </View>
 
         {/* From */}
-        <View style={{ position: 'relative' }}>
+        <View style={{ position: 'relative', zIndex: 99999, elevation: 99999 }}>
           <View style={styles.fieldRow}>
             <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
             <View style={styles.fieldTextCol}>
@@ -516,7 +516,7 @@ export default function App() {
         </View>
 
         {/* To */}
-        <View style={{ position: 'relative' }}>
+        <View style={{ position: 'relative', zIndex: 99999, elevation: 99999 }}>
         {destLabel ? (
           <Pressable
             style={styles.fieldRow}
