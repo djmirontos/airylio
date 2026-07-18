@@ -203,7 +203,7 @@
 | 8 - Medium | Dark Mode | ✅ | Full theme system with light/dark color palettes, AsyncStorage persistence |
 | 9 - Low | Leave Now shortcut | ⏳ | Target = now, instant calculation |
 | 10 - Low | Flexible Arrival window | ⏳ | Arrive between 8:00-8:30 |
-| 11 - Low | EAS Build / App Store | ⏳ | Requires Expo account + build config |
+| 11 - Low | EAS Build / App Store | 🔄 | Submitted to closed testing. Investigating startup crash on production build. |
 | 12 - Low | Real user testing | ⏳ | 10-20 PH commuters for real feedback |
 
 **Before Production:**
@@ -438,6 +438,24 @@ airylio/
 ---
 
 ## 14. Changelog
+
+### 2026-07-17
+- **EAS Build Configuration & Play Store Submission**
+- Pinned Node version to 20.18.0 in both preview and production build profiles for consistent environment
+- Submitted app to Google Play Store closed testing track
+- Investigated startup crash on production build: disabled New Architecture flag in app.json
+- Confirmed Expo SDK version 54.0.34, app.json sdkVersion 54.0.0
+
+### 2026-07-16
+- **Landing Page Launch & Settings Enhancements**
+- Completely redesigned landing/index.html and landing/styles.css: new 8-section layout (Nav, Hero with phone mockup, Interactive Demo calculator, Feature Showcase, Why Airylio data sources, FAQ accordion, Final CTA, Footer)
+- Implemented Confidence Ring visual element as Airylio's signature metric
+- Integrated Formspree contact form with email delivery
+- Added Privacy Policy and Terms of Service pages with links in Legal section
+- Redesigned theme toggle: replaced pill-style sun/moon switch with premium circular icon button
+- Fixed autocomplete dropdown: Favorites/Recent show on field focus, dropdown closes on outside tap, reliable focus/blur cycling
+- Settings screen enhancements: Added Legal section (Privacy Policy, Terms, Contact Support) and About section (Version, Developer, Built for)
+- Updated privacy/terms URLs to airylio.com
 
 ### 2026-07-15
 - **Week 2 Production-Readiness Fixes**
