@@ -92,6 +92,7 @@ export default function DestinationAutocomplete({
     }
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => fetchSuggestions(query), DEBOUNCE_MS);
+    measureDropdownPosition();
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
@@ -192,16 +193,31 @@ export default function DestinationAutocomplete({
 
   return (
     <View ref={containerRef} style={{ position: 'relative' }} onLayout={measureDropdownPosition}>
-      <TextInput
-        ref={inputRef}
-        value={query}
-        onChangeText={setQuery}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textSecondary}
-        style={[styles.input, { color: colors.textPrimary }]}
-      />
+      <View style={styles.inputRow}>
+        <TextInput
+          ref={inputRef}
+          value={query}
+          onChangeText={setQuery}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textSecondary}
+          style={[styles.input, { flex: 1, color: colors.textPrimary }]}
+        />
+        {query.length > 0 && (
+          <Pressable
+            style={styles.clearButton}
+            onPress={() => {
+              setQuery('');
+              setSuggestions([]);
+              inputRef.current?.focus();
+            }}
+            accessibilityLabel="Clear input"
+          >
+            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+          </Pressable>
+        )}
+      </View>
 
       <Modal
         visible={showDropdown}
@@ -238,12 +254,6 @@ export default function DestinationAutocomplete({
             }}
           >
             <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-              {loading && (
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator size="small" color={colors.accent} />
-                </View>
-              )}
-
               {!query ? (
                 <>
                   {showFavoritesSection && (
@@ -310,6 +320,11 @@ export default function DestinationAutocomplete({
                 </>
               ) : (
                 <>
+                  {loading && query.length >= MIN_CHARS_TO_FETCH && (
+                    <View style={styles.loadingRow}>
+                      <ActivityIndicator size="small" color={colors.accent} />
+                    </View>
+                  )}
                   {showSuggestedSection && (
                     <>
                       <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
@@ -347,6 +362,7 @@ export default function DestinationAutocomplete({
 }
 
 const styles = StyleSheet.create({
+  inputRow: { flexDirection: 'row', alignItems: 'center' },
   input: {
     height: 22,
     fontSize: 15,
@@ -354,6 +370,7 @@ const styles = StyleSheet.create({
     padding: 0,
     margin: 0,
   },
+  clearButton: { padding: 4, marginLeft: 4 },
   loadingRow: { paddingVertical: 12, alignItems: 'center' },
   sectionHeader: {
     fontFamily: 'Inter_600SemiBold',
