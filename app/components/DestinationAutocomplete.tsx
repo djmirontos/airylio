@@ -74,7 +74,7 @@ export default function DestinationAutocomplete({
   const [dropdownLeft, setDropdownLeft] = useState(0);
   const [dropdownWidth, setDropdownWidth] = useState(0);
   const containerRef = useRef<View>(null);
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
 
   useEffect(() => {
     if (autoFocus) {
@@ -177,11 +177,15 @@ export default function DestinationAutocomplete({
   }
 
   function measureDropdownPosition() {
-    containerRef.current?.measureInWindow((x, y, width, height) => {
-      setDropdownTop(y + height + 4);
-      setDropdownLeft(x);
-      setDropdownWidth(width);
-    });
+    setTimeout(() => {
+      containerRef.current?.measureInWindow((x, y, width, height) => {
+        if (width > 0) {
+          setDropdownTop(y + height + 4);
+          setDropdownLeft(x);
+          setDropdownWidth(width);
+        }
+      });
+    }, 50);
   }
 
   const hasFavorites = !!(favorites?.home || favorites?.work);
@@ -240,8 +244,8 @@ export default function DestinationAutocomplete({
             style={{
               position: 'absolute',
               top: dropdownTop,
-              left: dropdownLeft,
-              width: dropdownWidth,
+              left: dropdownLeft > 0 ? dropdownLeft : 16,
+              width: dropdownWidth > 0 ? dropdownWidth : windowWidth - 32,
               maxHeight: DROPDOWN_MAX_HEIGHT,
               backgroundColor: colors.card,
               borderRadius: 16,
