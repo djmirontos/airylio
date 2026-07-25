@@ -179,6 +179,7 @@ export default function DestinationAutocomplete({
   function measureDropdownPosition() {
     setTimeout(() => {
       containerRef.current?.measureInWindow((x, y, width, height) => {
+        console.log('measureInWindow:', { x, y, width, height });
         if (width > 0) {
           setDropdownTop(y + height + 4);
           setDropdownLeft(x);
@@ -222,6 +223,15 @@ export default function DestinationAutocomplete({
           </Pressable>
         )}
       </View>
+
+      {/* TEMPORARY DEBUG PANEL - REMOVE BEFORE PRODUCTION */}
+      {focused && (
+        <View style={{ backgroundColor: 'rgba(255,0,0,0.8)', padding: 4, borderRadius: 4, marginTop: 2 }}>
+          <Text style={{ color: '#fff', fontSize: 10, fontFamily: 'Inter_400Regular' }}>
+            top:{Math.round(dropdownTop)} left:{Math.round(dropdownLeft)} w:{Math.round(dropdownWidth)} focused:{focused ? 'T' : 'F'} query:"{query}" showDD:{showDropdown ? 'T' : 'F'}
+          </Text>
+        </View>
+      )}
 
       <Modal
         visible={showDropdown}
