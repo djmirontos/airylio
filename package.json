@@ -13,6 +13,7 @@
   "dependencies": {
     "@mapbox/polyline": "^1.2.1",
     "@supabase/supabase-js": "^2.110.0",
+    "expo-dev-client": "~5.0.0",
     "react-native-maps": "^1.29.0"
   },
   "devDependencies": {
