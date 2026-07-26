@@ -179,7 +179,6 @@ export default function DestinationAutocomplete({
   function measureDropdownPosition() {
     setTimeout(() => {
       containerRef.current?.measureInWindow((x, y, width, height) => {
-        console.log('measureInWindow:', { x, y, width, height });
         if (width > 0) {
           setDropdownTop(y + height + 4);
           setDropdownLeft(x);
@@ -191,7 +190,7 @@ export default function DestinationAutocomplete({
 
   const hasFavorites = !!(favorites?.home || favorites?.work);
   const hasRecent = recentDestinations.length > 0;
-  const showDropdown = focused && (query.length > 0 || hasRecent || hasFavorites);
+  const showDropdown = focused;
   const showSuggestedSection = query.length >= MIN_CHARS_TO_FETCH && suggestions.length > 0;
   const showRecentSection = hasRecent;
   const showFavoritesSection = hasFavorites;
@@ -223,15 +222,6 @@ export default function DestinationAutocomplete({
           </Pressable>
         )}
       </View>
-
-      {/* TEMPORARY DEBUG PANEL - REMOVE BEFORE PRODUCTION */}
-      {focused && (
-        <View style={{ backgroundColor: 'rgba(255,0,0,0.8)', padding: 4, borderRadius: 4, marginTop: 2 }}>
-          <Text style={{ color: '#fff', fontSize: 10, fontFamily: 'Inter_400Regular' }}>
-            top:{Math.round(dropdownTop)} left:{Math.round(dropdownLeft)} w:{Math.round(dropdownWidth)} focused:{focused ? 'T' : 'F'} query:"{query}" showDD:{showDropdown ? 'T' : 'F'}
-          </Text>
-        </View>
-      )}
 
       <Modal
         visible={showDropdown}
@@ -330,6 +320,14 @@ export default function DestinationAutocomplete({
                         </Pressable>
                       ))}
                     </>
+                  )}
+
+                  {!showFavoritesSection && !showRecentSection && (
+                    <View style={{ padding: 16, alignItems: 'center' }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 13, fontFamily: 'Inter_400Regular' }}>
+                        Start typing to search
+                      </Text>
+                    </View>
                   )}
                 </>
               ) : (
