@@ -1,6 +1,6 @@
 ﻿import { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Linking, ActivityIndicator } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { decode } from '@mapbox/polyline';
 import { useTheme } from '../context/ThemeContext';
@@ -118,7 +118,6 @@ export default function MapScreen() {
           <MapView
             ref={mapRef}
             style={styles.map}
-            provider={PROVIDER_GOOGLE}
             initialRegion={{
               latitude: currentMeta.originLat,
               longitude: currentMeta.originLng,
