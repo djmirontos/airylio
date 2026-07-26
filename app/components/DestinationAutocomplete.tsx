@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritePlace } from '../hooks/useFavorites';
 import { DROPDOWN_MAX_HEIGHT } from '../constants/config';
@@ -70,33 +70,19 @@ export default function DestinationAutocomplete({
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
   const sessionToken = useRef(generateSessionToken());
-  const [dropdownTop, setDropdownTop] = useState(0);
-  const [dropdownLeft, setDropdownLeft] = useState(0);
-  const [dropdownWidth, setDropdownWidth] = useState(0);
-  const containerRef = useRef<View>(null);
-  const { width: windowWidth } = useWindowDimensions();
 
-  useEffect(() => {
-    if (autoFocus) {
-      const timer = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(timer);
-    }
-  }, []);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (query.length < MIN_CHARS_TO_FETCH) {
+  const handleQueryChange = (text: string) => {
+    setQuery(text);
+    if (text.length < MIN_CHARS_TO_FETCH) {
       setSuggestions([]);
       return;
     }
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => fetchSuggestions(query), DEBOUNCE_MS);
-    measureDropdownPosition();
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, [query]);
+    debounceTimer.current = setTimeout(() => fetchSuggestions(text), DEBOUNCE_MS);
+  };
 
   async function fetchSuggestions(text: string) {
     setLoading(true);
@@ -165,7 +151,6 @@ export default function DestinationAutocomplete({
     if (blurTimer.current) clearTimeout(blurTimer.current);
     setFocused(true);
     onFocusChange?.(true);
-    measureDropdownPosition();
   }
 
   function handleBlur() {
@@ -176,32 +161,20 @@ export default function DestinationAutocomplete({
     }, 250);
   }
 
-  function measureDropdownPosition() {
-    setTimeout(() => {
-      containerRef.current?.measureInWindow((x, y, width, height) => {
-        if (width > 0) {
-          setDropdownTop(y + height + 4);
-          setDropdownLeft(x);
-          setDropdownWidth(width);
-        }
-      });
-    }, 50);
-  }
-
   const hasFavorites = !!(favorites?.home || favorites?.work);
   const hasRecent = recentDestinations.length > 0;
-  const showDropdown = focused;
+  const showDropdown = focused && (query.length > 0 || hasRecent || hasFavorites);
   const showSuggestedSection = query.length >= MIN_CHARS_TO_FETCH && suggestions.length > 0;
   const showRecentSection = hasRecent;
   const showFavoritesSection = hasFavorites;
 
   return (
-    <View ref={containerRef} style={{ position: 'relative' }} onLayout={measureDropdownPosition}>
+    <View style={{ position: 'relative' }}>
       <View style={styles.inputRow}>
         <TextInput
           ref={inputRef}
           value={query}
-          onChangeText={setQuery}
+          onChangeText={handleQueryChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={placeholder}
@@ -223,40 +196,17 @@ export default function DestinationAutocomplete({
         )}
       </View>
 
-      <Modal
-        visible={showDropdown}
-        transparent
-        animationType="none"
-        onRequestClose={() => {
-          setFocused(false);
-          onFocusChange?.(false);
-        }}
-      >
-        <Pressable
-          style={{ flex: 1 }}
-          onPress={() => {
-            if (blurTimer.current) clearTimeout(blurTimer.current);
-            setFocused(false);
-            onFocusChange?.(false);
-          }}
-        >
-          <View
-            style={{
-              position: 'absolute',
-              top: dropdownTop,
-              left: dropdownLeft > 0 ? dropdownLeft : 16,
-              width: dropdownWidth > 0 ? dropdownWidth : windowWidth - 32,
-              maxHeight: DROPDOWN_MAX_HEIGHT,
-              backgroundColor: colors.card,
-              borderRadius: 16,
-              shadowColor: colors.ink,
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.14,
-              shadowRadius: 20,
-              elevation: 24,
-              overflow: 'hidden',
+      {showDropdown && (
+        <>
+          <Pressable
+            style={styles.overlay}
+            onPress={() => {
+              if (blurTimer.current) clearTimeout(blurTimer.current);
+              setFocused(false);
+              onFocusChange?.(false);
             }}
-          >
+          />
+          <View style={[styles.dropdown, { backgroundColor: colors.card, shadowColor: colors.ink }]}>
             <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
               {!query ? (
                 <>
@@ -367,8 +317,8 @@ export default function DestinationAutocomplete({
               )}
             </ScrollView>
           </View>
-        </Pressable>
-      </Modal>
+        </>
+      )}
     </View>
   );
 }
@@ -383,6 +333,31 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   clearButton: { padding: 4, marginLeft: 4 },
+  overlay: {
+    position: 'absolute',
+    top: -9999,
+    left: -9999,
+    right: -9999,
+    bottom: -9999,
+    backgroundColor: 'transparent',
+    zIndex: 9998,
+    elevation: 9998,
+  },
+  dropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: 8,
+    borderRadius: 16,
+    maxHeight: 280,
+    zIndex: 9999,
+    elevation: 9999,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    overflow: 'hidden',
+  },
   loadingRow: { paddingVertical: 12, alignItems: 'center' },
   sectionHeader: {
     fontFamily: 'Inter_600SemiBold',
