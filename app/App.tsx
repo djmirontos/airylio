@@ -486,6 +486,8 @@ export default function App() {
                   favorites={favorites}
                   suggestedLabel="Suggested Locations"
                   autoFocus={originEditing}
+                  dropdownOffsetLeft={-32}
+                  dropdownOffsetRight={-14}
                   colors={{
                     accent: COLORS.accent,
                     textPrimary: COLORS.textPrimary,
@@ -538,6 +540,8 @@ export default function App() {
               <DestinationAutocomplete
                 apiKey={GOOGLE_PLACES_API_KEY}
                 recentDestinations={recentDestinations}
+                dropdownOffsetLeft={-32}
+                dropdownOffsetRight={-14}
                 colors={{
                   accent: COLORS.accent,
                   textPrimary: COLORS.textPrimary,

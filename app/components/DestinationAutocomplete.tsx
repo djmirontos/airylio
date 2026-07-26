@@ -30,6 +30,8 @@ interface DestinationAutocompleteProps {
   placeholder?: string;
   suggestedLabel?: string;
   autoFocus?: boolean;
+  dropdownOffsetLeft?: number;
+  dropdownOffsetRight?: number;
   colors: {
     accent: string;
     textPrimary: string;
@@ -61,6 +63,8 @@ export default function DestinationAutocomplete({
   placeholder = 'Search destination',
   suggestedLabel = 'Suggested Destinations',
   autoFocus = false,
+  dropdownOffsetLeft = 0,
+  dropdownOffsetRight = 0,
   colors,
   favorites,
 }: DestinationAutocompleteProps) {
@@ -211,7 +215,7 @@ export default function DestinationAutocomplete({
               onFocusChange?.(false);
             }}
           />
-          <View style={[styles.dropdown, { backgroundColor: colors.card, shadowColor: colors.ink }]}>
+          <View style={[styles.dropdown, { backgroundColor: colors.card, shadowColor: colors.ink, left: dropdownOffsetLeft, right: dropdownOffsetRight }]}>
             <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
               {!query ? (
                 <>
@@ -351,8 +355,8 @@ const styles = StyleSheet.create({
   dropdown: {
     position: 'absolute',
     top: '100%',
-    left: -50,
-    right: -16,
+    left: 0,
+    right: 0,
     marginTop: 4,
     borderRadius: 16,
     maxHeight: 280,
