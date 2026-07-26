@@ -43,7 +43,7 @@ interface DestinationAutocompleteProps {
 }
 
 const MIN_CHARS_TO_FETCH = 2;
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 150;
 
 function generateSessionToken(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -68,6 +68,7 @@ export default function DestinationAutocomplete({
   const inputRef = useRef<TextInput>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [focused, setFocused] = useState(false);
   const sessionToken = useRef(generateSessionToken());
 
@@ -76,7 +77,10 @@ export default function DestinationAutocomplete({
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
-    if (text.length < MIN_CHARS_TO_FETCH) {
+    if (text.length >= MIN_CHARS_TO_FETCH) {
+      setIsTyping(true);
+    } else {
+      setIsTyping(false);
       setSuggestions([]);
       return;
     }
@@ -114,6 +118,7 @@ export default function DestinationAutocomplete({
       setSuggestions([]);
     } finally {
       setLoading(false);
+      setIsTyping(false);
     }
   }
 
@@ -163,7 +168,7 @@ export default function DestinationAutocomplete({
 
   const hasFavorites = !!(favorites?.home || favorites?.work);
   const hasRecent = recentDestinations.length > 0;
-  const showDropdown = focused && (query.length > 0 || hasRecent || hasFavorites);
+  const showDropdown = focused;
   const showSuggestedSection = query.length >= MIN_CHARS_TO_FETCH && suggestions.length > 0;
   const showRecentSection = hasRecent;
   const showFavoritesSection = hasFavorites;
@@ -282,7 +287,7 @@ export default function DestinationAutocomplete({
                 </>
               ) : (
                 <>
-                  {loading && query.length >= MIN_CHARS_TO_FETCH && (
+                  {(isTyping || loading) && query.length >= MIN_CHARS_TO_FETCH && (
                     <View style={styles.loadingRow}>
                       <ActivityIndicator size="small" color={colors.accent} />
                     </View>
@@ -346,16 +351,16 @@ const styles = StyleSheet.create({
   dropdown: {
     position: 'absolute',
     top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: 8,
+    left: -50,
+    right: -16,
+    marginTop: 4,
     borderRadius: 16,
     maxHeight: 280,
     zIndex: 9999,
     elevation: 9999,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
     overflow: 'hidden',
   },
   loadingRow: { paddingVertical: 12, alignItems: 'center' },
