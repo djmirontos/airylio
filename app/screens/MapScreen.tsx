@@ -119,6 +119,7 @@ export default function MapScreen() {
             ref={mapRef}
             style={styles.map}
             provider={PROVIDER_GOOGLE}
+            mapType="standard"
             initialRegion={{
               latitude: currentMeta.originLat,
               longitude: currentMeta.originLng,

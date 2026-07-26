@@ -507,11 +507,11 @@ export default function App() {
               )}
             </View>
             {gpsCoords && !showGpsChip && (
-              <Pressable onPress={useCurrentLocation}>
+              <Pressable style={{ position: 'absolute', right: 14 }} onPress={useCurrentLocation}>
                 <Ionicons name="locate-outline" size={18} color={COLORS.textSecondary} />
               </Pressable>
             )}
-            {showGpsChip && <Ionicons name="locate" size={18} color={COLORS.accent} />}
+            {showGpsChip && <Ionicons name="locate" size={18} color={COLORS.accent} style={{ position: 'absolute', right: 14 }} />}
           </View>
         </View>
 

@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Keyboard, KeyboardEvent, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritePlace } from '../hooks/useFavorites';
 import { DROPDOWN_MAX_HEIGHT } from '../constants/config';
@@ -74,10 +74,21 @@ export default function DestinationAutocomplete({
   const [loading, setLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const sessionToken = useRef(generateSessionToken());
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   const handleQueryChange = (text: string) => {
     setQuery(text);
@@ -215,8 +226,8 @@ export default function DestinationAutocomplete({
               onFocusChange?.(false);
             }}
           />
-          <View style={[styles.dropdown, { backgroundColor: colors.card, shadowColor: colors.ink, left: dropdownOffsetLeft, right: dropdownOffsetRight }]}>
-            <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+          <View style={[styles.dropdown, { backgroundColor: colors.card, shadowColor: colors.ink, left: dropdownOffsetLeft, right: dropdownOffsetRight, maxHeight: keyboardHeight > 0 ? 200 : DROPDOWN_MAX_HEIGHT }]}>
+            <ScrollView keyboardShouldPersistTaps="always" nestedScrollEnabled>
               {!query ? (
                 <>
                   {showFavoritesSection && (
@@ -357,7 +368,7 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    marginTop: 4,
+    marginTop: 8,
     borderRadius: 16,
     maxHeight: 280,
     zIndex: 9999,
