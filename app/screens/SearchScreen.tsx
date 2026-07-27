@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -38,6 +39,7 @@ export default function SearchScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { colors: COLORS } = useTheme();
+  const insets = useSafeAreaInsets();
   const { type, recentDestinations, favorites, apiKey, placeholder } = route.params as RouteParams;
 
   const [query, setQuery] = useState('');
@@ -96,7 +98,7 @@ export default function SearchScreen() {
       });
       const data = await res.json();
       if (data.location) {
-        navigation.navigate('Plan', {
+        navigation.navigate('PlanMain', {
           selectedPlace: {
             label: data.formattedAddress ?? item.mainText,
             lat: data.location.latitude,
@@ -151,7 +153,7 @@ export default function SearchScreen() {
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
           onPress={() =>
-            navigation.navigate('Plan', {
+            navigation.navigate('PlanMain', {
               selectedPlace: {
                 label: item.data.label,
                 lat: item.data.lat,
@@ -176,7 +178,7 @@ export default function SearchScreen() {
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
           onPress={() =>
-            navigation.navigate('Plan', {
+            navigation.navigate('PlanMain', {
               selectedPlace: {
                 label: item.data.label,
                 lat: item.data.lat,
@@ -201,7 +203,7 @@ export default function SearchScreen() {
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
           onPress={() =>
-            navigation.navigate('Plan', {
+            navigation.navigate('PlanMain', {
               selectedPlace: {
                 label: item.data.label,
                 lat: item.data.lat,
@@ -242,7 +244,7 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: COLORS.canvas }]}>
-      <View style={[styles.header, { borderBottomColor: COLORS.divider }]}>
+      <View style={[styles.header, { borderBottomColor: COLORS.divider, paddingTop: insets.top }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
         </Pressable>
