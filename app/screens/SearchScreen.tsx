@@ -106,7 +106,11 @@ export default function SearchScreen() {
         const params = { selectedPlace: place, type };
         console.log('[SearchScreen] Selected place:', place);
         console.log('[SearchScreen] Navigating back with params:', params);
-        navigation.navigate('PlanMain', params);
+        const parentNav = navigation.getParent();
+        if (parentNav) {
+          parentNav.setParams(params);
+        }
+        navigation.goBack();
       }
     } catch (err) {
       console.log('[SearchScreen] selectSuggestion error:', err);
@@ -155,12 +159,17 @@ export default function SearchScreen() {
       return (
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
+          activeOpacity={0.7}
           onPress={() => {
             const place = { label: item.data.label, lat: item.data.lat, lng: item.data.lng };
             const params = { selectedPlace: place, type };
             console.log('[SearchScreen] Selected home:', place);
             console.log('[SearchScreen] Navigating back with params:', params);
-            navigation.navigate('PlanMain', params);
+            const parentNav = navigation.getParent();
+            if (parentNav) {
+              parentNav.setParams(params);
+            }
+            navigation.goBack();
           }}
         >
           <Ionicons name="home-outline" size={18} color={COLORS.accent} />
@@ -177,12 +186,17 @@ export default function SearchScreen() {
       return (
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
+          activeOpacity={0.7}
           onPress={() => {
             const place = { label: item.data.label, lat: item.data.lat, lng: item.data.lng };
             const params = { selectedPlace: place, type };
             console.log('[SearchScreen] Selected work:', place);
             console.log('[SearchScreen] Navigating back with params:', params);
-            navigation.navigate('PlanMain', params);
+            const parentNav = navigation.getParent();
+            if (parentNav) {
+              parentNav.setParams(params);
+            }
+            navigation.goBack();
           }}
         >
           <Ionicons name="briefcase-outline" size={18} color={COLORS.accent} />
@@ -199,12 +213,17 @@ export default function SearchScreen() {
       return (
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
+          activeOpacity={0.7}
           onPress={() => {
             const place = { label: item.data.label, lat: item.data.lat, lng: item.data.lng };
             const params = { selectedPlace: place, type };
             console.log('[SearchScreen] Selected recent:', place);
             console.log('[SearchScreen] Navigating back with params:', params);
-            navigation.navigate('PlanMain', params);
+            const parentNav = navigation.getParent();
+            if (parentNav) {
+              parentNav.setParams(params);
+            }
+            navigation.goBack();
           }}
         >
           <Ionicons name="time-outline" size={18} color={COLORS.textSecondary} />
@@ -218,6 +237,7 @@ export default function SearchScreen() {
       return (
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
+          activeOpacity={0.7}
           onPress={() => selectSuggestion(item.data)}
         >
           <Ionicons name="location-outline" size={18} color={COLORS.accent} />
@@ -239,7 +259,7 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: COLORS.canvas }]}>
       <View style={[styles.header, { borderBottomColor: COLORS.divider, paddingTop: insets.top }]}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <Pressable activeOpacity={0.7} onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={COLORS.textPrimary} />
         </Pressable>
         <TextInput

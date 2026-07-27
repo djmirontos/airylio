@@ -289,7 +289,10 @@ export default function App() {
       }
 
       // Clear the route params to avoid re-applying them
+      // Only clear when we have valid values to process
       navigation.setParams({ selectedPlace: undefined, type: undefined });
+    } else {
+      console.log('[Plan] Skipping param processing - selectedPlace or type missing');
     }
   }, [route.params]);
 
@@ -498,16 +501,13 @@ export default function App() {
             <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
             <View style={styles.fieldTextCol}>
               <Text style={styles.fieldLabel}>From</Text>
-              {showGpsChip ? (
-                <Pressable onPress={() => setOriginEditing(true)}>
-                  <Text style={styles.fieldValue}>Your current location</Text>
-                </Pressable>
-              ) : showManualChip ? (
-                <Pressable onPress={() => setOriginEditing(true)}>
+              {originLabel ? (
+                <Pressable activeOpacity={0.7} onPress={() => setOriginEditing(true)}>
                   <Text style={styles.fieldValue} numberOfLines={1}>{originLabel}</Text>
                 </Pressable>
               ) : (
                 <Pressable
+                  activeOpacity={0.7}
                   onPress={() => {
                     console.log('Origin field tapped');
                     navigation.navigate('Search', {
@@ -525,12 +525,11 @@ export default function App() {
                 </Pressable>
               )}
             </View>
-            {gpsCoords && !showGpsChip && (
+            {!originLabel && (
               <Pressable style={{ position: 'absolute', right: 14 }} onPress={useCurrentLocation}>
                 <Ionicons name="locate-outline" size={18} color={COLORS.textSecondary} />
               </Pressable>
             )}
-            {showGpsChip && <Ionicons name="locate" size={18} color={COLORS.accent} style={{ position: 'absolute', right: 14 }} />}
           </View>
         </View>
 
@@ -539,6 +538,7 @@ export default function App() {
         {destLabel ? (
           <Pressable
             style={styles.fieldRow}
+            activeOpacity={0.7}
             onPress={() => {
               setDestCoords(null);
               setDestLabel('');
@@ -554,6 +554,7 @@ export default function App() {
         ) : (
           <Pressable
             style={styles.fieldRow}
+            activeOpacity={0.7}
             onPress={() => {
               console.log('Destination field tapped');
               navigation.navigate('Search', {
