@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Modal,
   Pressable,
   ScrollView,
@@ -98,11 +99,22 @@ export default function DestinationAutocomplete({
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(measureDropdown, 100);
+    });
+    return () => sub.remove();
+  }, []);
+
   function measureDropdown() {
     [0, 100, 300].forEach(delay => {
       setTimeout(() => {
         containerRef.current?.measureInWindow((x, y, w, h) => {
-          if (w > 0 && h > 0) setDropdownPos({ top: y + h + 4, left: x, width: w });
+          console.log('measureInWindow:', { x, y, w, h, delay });
+          if (w > 0 && h > 0) {
+            setDropdownPos({ top: y + h + 4, left: x, width: w });
+            console.log('dropdownPos set:', { top: y + h + 4, left: x, width: w });
+          }
         });
       }, delay);
     });
@@ -201,18 +213,20 @@ export default function DestinationAutocomplete({
       </View>
 
       <Modal visible={focused} transparent animationType="none" onRequestClose={closeDropdown}>
-        <Pressable style={styles.modalBackdrop} onPress={closeDropdown} />
-        <View style={[styles.dropdown, {
-          top: dropdownPos.top,
-          left: dropdownPos.width > 0 ? dropdownPos.left : 16,
-          width: dropdownPos.width > 0 ? dropdownPos.width : winWidth - 32,
-          backgroundColor: colors.card,
-          borderColor: colors.divider,
-        }]}>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator
-            nestedScrollEnabled
+        <View style={{ flex: 1 }} pointerEvents="box-none">
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeDropdown} />
+          <View style={[styles.dropdown, {
+            top: dropdownPos.top,
+            left: dropdownPos.width > 0 ? dropdownPos.left : 16,
+            width: dropdownPos.width > 0 ? dropdownPos.width : winWidth - 32,
+            backgroundColor: colors.card,
+            borderColor: colors.divider,
+          }]}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+              bounces={false}
           >
             {!showSuggestions ? (
               <>
@@ -276,7 +290,8 @@ export default function DestinationAutocomplete({
                 )}
               </>
             )}
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>
