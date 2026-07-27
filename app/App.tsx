@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, Alert, Keyboard } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import DestinationAutocomplete from './components/DestinationAutocomplete';
 import TimePickerModal from './components/TimePickerModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -266,6 +265,31 @@ export default function App() {
   }, [result]);
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      const route = navigation.getState().routes[navigation.getState().index] as any;
+      const params = route?.params;
+
+      if (params?.selectedPlace && params?.type) {
+        if (params.type === 'origin') {
+          setOriginLabel(params.selectedPlace.label);
+          setOriginCoords({ lat: params.selectedPlace.lat, lng: params.selectedPlace.lng });
+          setOriginEditing(false);
+          addRecentOrigin(params.selectedPlace);
+        } else if (params.type === 'destination') {
+          setDestLabel(params.selectedPlace.label);
+          setDestCoords({ lat: params.selectedPlace.lat, lng: params.selectedPlace.lng });
+          addRecentDestination(params.selectedPlace);
+        }
+
+        // Clear the route params to avoid re-applying them
+        navigation.setParams({ selectedPlace: undefined, type: undefined });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
       if (data?.type === 'feedback' && data?.tripId) {
@@ -479,29 +503,24 @@ export default function App() {
                   <Text style={styles.fieldValue} numberOfLines={1}>{originLabel}</Text>
                 </Pressable>
               ) : (
-                <DestinationAutocomplete
-                  apiKey={GOOGLE_PLACES_API_KEY}
-                  recentDestinations={recentOrigins}
-                  placeholder={locationError ?? 'Search origin'}
-                  favorites={favorites}
-                  suggestedLabel="Suggested Locations"
-                  autoFocus={originEditing}
-                  colors={{
-                    accent: COLORS.accent,
-                    textPrimary: COLORS.textPrimary,
-                    textSecondary: COLORS.textSecondary,
-                    divider: COLORS.divider,
-                    card: COLORS.card,
-                    signalRisk: COLORS.signalRisk,
-                    ink: COLORS.ink,
+                <Pressable
+                  onPress={() => {
+                    navigation.navigate('Plan', {
+                      name: 'Search',
+                      params: {
+                        type: 'origin',
+                        recentDestinations: recentOrigins,
+                        favorites,
+                        apiKey: GOOGLE_PLACES_API_KEY,
+                        placeholder: locationError ?? 'Search origin',
+                      },
+                    });
                   }}
-                  onSelect={(place) => {
-                    setOriginLabel(place.label);
-                    setOriginCoords({ lat: place.lat, lng: place.lng });
-                    setOriginEditing(false);
-                    addRecentOrigin(place);
-                  }}
-                />
+                >
+                  <Text style={[styles.fieldValue, { color: COLORS.textSecondary }]}>
+                    {locationError ?? 'Search origin'}
+                  </Text>
+                </Pressable>
               )}
             </View>
             {gpsCoords && !showGpsChip && (
@@ -531,31 +550,29 @@ export default function App() {
             <Ionicons name="close" size={18} color={COLORS.textSecondary} />
           </Pressable>
         ) : (
-          <View style={styles.fieldRow}>
+          <Pressable
+            style={styles.fieldRow}
+            onPress={() => {
+              navigation.navigate('Plan', {
+                name: 'Search',
+                params: {
+                  type: 'destination',
+                  recentDestinations,
+                  favorites,
+                  apiKey: GOOGLE_PLACES_API_KEY,
+                  placeholder: 'Search destination',
+                },
+              });
+            }}
+          >
             <Ionicons name="location" size={16} color={COLORS.signalRisk} style={styles.fieldPinIcon} />
             <View style={styles.fieldTextCol}>
               <Text style={styles.fieldLabel}>To</Text>
-              <DestinationAutocomplete
-                apiKey={GOOGLE_PLACES_API_KEY}
-                recentDestinations={recentDestinations}
-                colors={{
-                  accent: COLORS.accent,
-                  textPrimary: COLORS.textPrimary,
-                  textSecondary: COLORS.textSecondary,
-                  divider: COLORS.divider,
-                  card: COLORS.card,
-                  signalRisk: COLORS.signalRisk,
-                  ink: COLORS.ink,
-                }}
-                onSelect={(place) => {
-                  setDestCoords({ lat: place.lat, lng: place.lng });
-                  setDestLabel(place.label);
-                  addRecentDestination(place);
-                }}
-                favorites={favorites}
-              />
+              <Text style={[styles.fieldValue, { color: COLORS.textSecondary }]}>
+                Search destination
+              </Text>
             </View>
-          </View>
+          </Pressable>
         )}
         </View>
         <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled" onScrollBeginDrag={Keyboard.dismiss}>

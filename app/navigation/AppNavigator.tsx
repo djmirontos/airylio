@@ -1,4 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Keyboard } from 'react-native';
@@ -7,8 +8,25 @@ import PlanScreen from '../App';
 import HistoryScreen from '../screens/HistoryScreen';
 import MapScreen from '../screens/MapScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import SearchScreen from '../screens/SearchScreen';
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
+
+function PlanStackNavigator() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="PlanMain" component={PlanScreen} />
+      <Stack.Group screenOptions={{ presentation: 'modal' }}>
+        <Stack.Screen name="Search" component={SearchScreen} />
+      </Stack.Group>
+    </Stack.Navigator>
+  );
+}
 
 export default function AppNavigator() {
   const { colors: COLORS } = useTheme();
@@ -50,7 +68,7 @@ export default function AppNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Plan" component={PlanScreen} />
+      <Tab.Screen name="Plan" component={PlanStackNavigator} />
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
