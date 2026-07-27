@@ -92,6 +92,13 @@ export default function DestinationAutocomplete({
     return () => { show.remove(); hide.remove(); };
   }, []);
 
+  useEffect(() => {
+    if (autoFocus) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
+
   const handleQueryChange = (text: string) => {
     setQuery(text);
     if (text.length >= MIN_CHARS_TO_FETCH) {
@@ -226,9 +233,9 @@ export default function DestinationAutocomplete({
             position: 'absolute' as const,
             left: dropdownOffsetLeft ?? 0,
             right: dropdownOffsetRight ?? 0,
-            maxHeight: 220,
+            maxHeight: DROPDOWN_MAX_HEIGHT,
             zIndex: 9999,
-            elevation: 99,
+            elevation: 9999,
             borderRadius: 16,
             backgroundColor: colors.card,
             shadowColor: '#000',
@@ -393,20 +400,7 @@ const styles = StyleSheet.create({
     bottom: -9999,
     backgroundColor: 'transparent',
     zIndex: 9998,
-    elevation: 9998,
-  },
-  dropdown: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    borderRadius: 16,
-    maxHeight: 280,
-    zIndex: 9999,
-    elevation: 9999,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    overflow: 'hidden',
+    elevation: 8,
   },
   loadingRow: { paddingVertical: 12, alignItems: 'center' },
   sectionHeader: {
