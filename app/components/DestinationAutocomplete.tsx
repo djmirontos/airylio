@@ -199,7 +199,7 @@ export default function DestinationAutocomplete({
     blurRef.current = setTimeout(() => {
       setFocused(false);
       onFocusChange?.(false);
-    }, 200);
+    }, 500);
   }
 
   const hasFavorites = !!(favorites?.home || favorites?.work);
@@ -232,8 +232,8 @@ export default function DestinationAutocomplete({
           <Pressable style={StyleSheet.absoluteFillObject} onPress={closeDropdown} />
           <View style={[styles.dropdown, {
             top: dropdownPos.top,
-            left: dropdownPos.width > 0 ? dropdownPos.left : 16,
-            width: dropdownPos.width > 0 ? dropdownPos.width : winWidth - 32,
+            left: 16,
+            width: winWidth - 32,
             backgroundColor: colors.card,
             borderColor: colors.divider,
           }]}>
