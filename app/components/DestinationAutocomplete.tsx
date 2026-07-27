@@ -8,6 +8,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritePlace } from '../hooks/useFavorites';
@@ -74,6 +75,7 @@ export default function DestinationAutocomplete({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionToken = useRef(Math.random().toString(36));
+  const { width: winWidth } = useWindowDimensions();
 
   useEffect(() => {
     if (autoFocus) {
@@ -90,20 +92,33 @@ export default function DestinationAutocomplete({
   }, [query]);
 
   function measureDropdown() {
-    containerRef.current?.measureInWindow((x, y, width, height) => {
-      if (width > 0) setDropdownPos({ top: y + height + 4, left: x, width });
+    [0, 100, 300].forEach(delay => {
+      setTimeout(() => {
+        containerRef.current?.measureInWindow((x, y, w, h) => {
+          if (w > 0 && h > 0) setDropdownPos({ top: y + h + 4, left: x, width: w });
+        });
+      }, delay);
     });
   }
 
   async function fetchSuggestions(text: string) {
     setLoading(true);
+    console.log('Searching for:', text);
+    console.log('API Key exists:', !!apiKey);
     try {
       const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat',
+        },
         body: JSON.stringify({ input: text, includedRegionCodes: ['ph'], sessionToken: sessionToken.current }),
       });
+      console.log('Autocomplete status:', res.status);
       const data = await res.json();
+      console.log('Autocomplete response:', JSON.stringify(data, null, 2));
+      if (!res.ok) throw new Error(JSON.stringify(data));
       setSuggestions(
         (data.suggestions ?? [])
           .filter((s: any) => s.placePrediction)
@@ -113,7 +128,10 @@ export default function DestinationAutocomplete({
             secondaryText: s.placePrediction.structuredFormat?.secondaryText?.text ?? '',
           }))
       );
-    } catch { setSuggestions([]); }
+    } catch (err) {
+      console.log('Autocomplete error:', err);
+      setSuggestions([]);
+    }
     finally { setLoading(false); }
   }
 
@@ -157,7 +175,7 @@ export default function DestinationAutocomplete({
   const showSuggestions = query.length >= MIN_CHARS;
 
   return (
-    <View ref={containerRef} onLayout={measureDropdown} style={styles.root}>
+    <View ref={containerRef} style={styles.root}>
       <View style={styles.inputRow}>
         <TextInput
           ref={inputRef}
@@ -180,8 +198,8 @@ export default function DestinationAutocomplete({
         <Pressable style={styles.modalBackdrop} onPress={closeDropdown} />
         <View style={[styles.dropdown, {
           top: dropdownPos.top,
-          left: dropdownPos.left,
-          width: dropdownPos.width,
+          left: dropdownPos.width > 0 ? dropdownPos.left : 16,
+          width: dropdownPos.width > 0 ? dropdownPos.width : winWidth - 32,
           backgroundColor: colors.card,
           borderColor: colors.divider,
         }]}>
