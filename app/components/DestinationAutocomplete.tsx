@@ -92,10 +92,6 @@ export default function DestinationAutocomplete({
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  useEffect(() => {
-    console.log('focused changed:', focused, 'query:', query);
-  }, [focused, query]);
-
   const handleQueryChange = (text: string) => {
     setQuery(text);
     if (text.length >= MIN_CHARS_TO_FETCH) {
@@ -236,18 +232,20 @@ export default function DestinationAutocomplete({
           />
           <View style={{
             position: 'absolute' as const,
-            left: dropdownOffsetLeft,
-            right: dropdownOffsetRight,
+            left: dropdownOffsetLeft ?? 0,
+            right: dropdownOffsetRight ?? 0,
             maxHeight: 220,
             zIndex: 9999,
             elevation: 99,
             borderRadius: 16,
             backgroundColor: colors.card,
             overflow: 'hidden' as const,
-            shadowColor: colors.ink,
+            shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.12,
+            shadowOpacity: 0.15,
             shadowRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.divider,
             ...(shouldShowAbove
               ? { bottom: 32, marginBottom: 8 }
               : { top: '100%' as any, marginTop: 8 }
