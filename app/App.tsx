@@ -93,7 +93,6 @@ export default function App() {
 
   const [originCoords, setOriginCoords] = useState<Coords | null>(null);
   const [originLabel, setOriginLabel] = useState('Current Location');
-  const [originEditing, setOriginEditing] = useState(false);
 
   const [destCoords, setDestCoords] = useState<Coords | null>(null);
   const [destLabel, setDestLabel] = useState('');
@@ -119,7 +118,7 @@ export default function App() {
   const { setCurrentTrip, prefillData, setPrefillData } = useTripContext();
   const { favorites } = useFavorites();
   const { colors: COLORS, isDark } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
 
   const confidenceColor = (score: number): string => {
     if (score >= 85) return COLORS.signalGood;
@@ -255,7 +254,6 @@ export default function App() {
     setDestLabel(prefillData.destLabel);
     setDestCoords({ lat: prefillData.destLat, lng: prefillData.destLng });
     setPlanningMode(prefillData.planningMode);
-    setOriginEditing(false);
     setTimeout(() => setShowTimePicker(true), 300);
     setPrefillData(null);
   }, [prefillData]);
@@ -267,33 +265,21 @@ export default function App() {
   const route = useRoute();
 
   useEffect(() => {
-    const params = route.params as any;
+    const params = route.params as { selectedPlace?: Coords & { label: string }; type?: string } | undefined;
+    if (!params?.selectedPlace || !params?.type) return;
 
-    console.log('[Plan] Route params changed:', params);
-    console.log('[Plan] selectedPlace:', params?.selectedPlace);
-    console.log('[Plan] type:', params?.type);
-
-    if (params?.selectedPlace && params?.type) {
-      console.log('[Plan] Processing selected place:', params.selectedPlace, 'type:', params.type);
-      if (params.type === 'origin') {
-        console.log('[Plan] Setting origin:', params.selectedPlace.label);
-        setOriginLabel(params.selectedPlace.label);
-        setOriginCoords({ lat: params.selectedPlace.lat, lng: params.selectedPlace.lng });
-        setOriginEditing(false);
-        addRecentOrigin(params.selectedPlace);
-      } else if (params.type === 'destination') {
-        console.log('[Plan] Setting destination:', params.selectedPlace.label);
-        setDestLabel(params.selectedPlace.label);
-        setDestCoords({ lat: params.selectedPlace.lat, lng: params.selectedPlace.lng });
-        addRecentDestination(params.selectedPlace);
-      }
-
-      // Clear the route params to avoid re-applying them
-      // Only clear when we have valid values to process
-      navigation.setParams({ selectedPlace: undefined, type: undefined });
-    } else {
-      console.log('[Plan] Skipping param processing - selectedPlace or type missing');
+    const { label, lat, lng } = params.selectedPlace;
+    if (params.type === 'origin') {
+      setOriginLabel(label);
+      setOriginCoords({ lat, lng });
+      addRecentOrigin(params.selectedPlace);
+    } else if (params.type === 'destination') {
+      setDestLabel(label);
+      setDestCoords({ lat, lng });
+      addRecentDestination(params.selectedPlace);
     }
+
+    navigation.setParams({ selectedPlace: undefined, type: undefined });
   }, [route.params]);
 
   useEffect(() => {
@@ -312,7 +298,6 @@ export default function App() {
     if (!gpsCoords) return;
     setOriginCoords(gpsCoords);
     setOriginLabel('Current Location');
-    setOriginEditing(false);
   }
 
   async function handleSetReminder() {
@@ -329,9 +314,6 @@ export default function App() {
       Alert.alert('Permission Required', 'Please enable notifications in your device settings to use this feature.');
     }
   }
-
-  const showGpsChip = originLabel === 'Current Location' && !!originCoords && !originEditing;
-  const showManualChip = originLabel !== 'Current Location' && !!originCoords && !originEditing;
 
   const selectedDateTime = combineDateAndTime(selectedDate, selectedTime);
   const isValidDepartureTime = selectedDateTime.getTime() >= Date.now() - LEAVE_AT_GRACE_MS;
@@ -497,40 +479,37 @@ export default function App() {
 
         {/* From */}
         <View style={{ position: 'relative' }}>
-          <View style={styles.fieldRow}>
+          <Pressable
+            style={styles.fieldRow}
+            onPress={() =>
+              navigation.navigate('Search', {
+                type: 'origin',
+                recentDestinations: recentOrigins,
+                favorites,
+                apiKey: GOOGLE_PLACES_API_KEY,
+                placeholder: 'Search origin',
+              })
+            }
+          >
             <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
             <View style={styles.fieldTextCol}>
               <Text style={styles.fieldLabel}>From</Text>
-              {originLabel ? (
-                <Pressable activeOpacity={0.7} onPress={() => setOriginEditing(true)}>
-                  <Text style={styles.fieldValue} numberOfLines={1}>{originLabel}</Text>
-                </Pressable>
-              ) : (
-                <Pressable
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    console.log('Origin field tapped');
-                    navigation.navigate('Search', {
-                      type: 'origin',
-                      recentDestinations: recentOrigins,
-                      favorites,
-                      apiKey: GOOGLE_PLACES_API_KEY,
-                      placeholder: locationError ?? 'Search origin',
-                    });
-                  }}
-                >
-                  <Text style={[styles.fieldValue, { color: COLORS.textSecondary }]}>
-                    {locationError ?? 'Search origin'}
-                  </Text>
-                </Pressable>
-              )}
+              <Text
+                style={[styles.fieldValue, !originLabel && { color: COLORS.textSecondary }]}
+                numberOfLines={1}
+              >
+                {originLabel || locationError || 'Search origin'}
+              </Text>
             </View>
-            {!originLabel && (
-              <Pressable style={{ position: 'absolute', right: 14 }} onPress={useCurrentLocation}>
+            {gpsCoords && originLabel !== 'Current Location' && (
+              <Pressable hitSlop={8} onPress={useCurrentLocation}>
                 <Ionicons name="locate-outline" size={18} color={COLORS.textSecondary} />
               </Pressable>
             )}
-          </View>
+            {originLabel === 'Current Location' && (
+              <Ionicons name="locate" size={18} color={COLORS.accent} />
+            )}
+          </Pressable>
         </View>
 
         {/* To */}
@@ -538,7 +517,6 @@ export default function App() {
         {destLabel ? (
           <Pressable
             style={styles.fieldRow}
-            activeOpacity={0.7}
             onPress={() => {
               setDestCoords(null);
               setDestLabel('');
@@ -554,9 +532,7 @@ export default function App() {
         ) : (
           <Pressable
             style={styles.fieldRow}
-            activeOpacity={0.7}
             onPress={() => {
-              console.log('Destination field tapped');
               navigation.navigate('Search', {
                 type: 'destination',
                 recentDestinations,
