@@ -98,16 +98,19 @@ export default function SearchScreen() {
       });
       const data = await res.json();
       if (data.location) {
-        navigation.navigate('PlanMain', {
-          selectedPlace: {
-            label: data.formattedAddress ?? item.mainText,
-            lat: data.location.latitude,
-            lng: data.location.longitude,
-          },
-          type,
-        });
+        const place = {
+          label: data.formattedAddress ?? item.mainText,
+          lat: data.location.latitude,
+          lng: data.location.longitude,
+        };
+        const params = { selectedPlace: place, type };
+        console.log('[SearchScreen] Selected place:', place);
+        console.log('[SearchScreen] Navigating back with params:', params);
+        navigation.navigate('PlanMain', params);
       }
-    } catch {}
+    } catch (err) {
+      console.log('[SearchScreen] selectSuggestion error:', err);
+    }
   }
 
   const showSuggestions = query.length >= MIN_CHARS;
@@ -152,16 +155,13 @@ export default function SearchScreen() {
       return (
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
-          onPress={() =>
-            navigation.navigate('PlanMain', {
-              selectedPlace: {
-                label: item.data.label,
-                lat: item.data.lat,
-                lng: item.data.lng,
-              },
-              type,
-            })
-          }
+          onPress={() => {
+            const place = { label: item.data.label, lat: item.data.lat, lng: item.data.lng };
+            const params = { selectedPlace: place, type };
+            console.log('[SearchScreen] Selected home:', place);
+            console.log('[SearchScreen] Navigating back with params:', params);
+            navigation.navigate('PlanMain', params);
+          }}
         >
           <Ionicons name="home-outline" size={18} color={COLORS.accent} />
           <View style={styles.itemTextCol}>
@@ -177,16 +177,13 @@ export default function SearchScreen() {
       return (
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
-          onPress={() =>
-            navigation.navigate('PlanMain', {
-              selectedPlace: {
-                label: item.data.label,
-                lat: item.data.lat,
-                lng: item.data.lng,
-              },
-              type,
-            })
-          }
+          onPress={() => {
+            const place = { label: item.data.label, lat: item.data.lat, lng: item.data.lng };
+            const params = { selectedPlace: place, type };
+            console.log('[SearchScreen] Selected work:', place);
+            console.log('[SearchScreen] Navigating back with params:', params);
+            navigation.navigate('PlanMain', params);
+          }}
         >
           <Ionicons name="briefcase-outline" size={18} color={COLORS.accent} />
           <View style={styles.itemTextCol}>
@@ -202,16 +199,13 @@ export default function SearchScreen() {
       return (
         <Pressable
           style={[styles.item, { borderBottomColor: COLORS.divider }]}
-          onPress={() =>
-            navigation.navigate('PlanMain', {
-              selectedPlace: {
-                label: item.data.label,
-                lat: item.data.lat,
-                lng: item.data.lng,
-              },
-              type,
-            })
-          }
+          onPress={() => {
+            const place = { label: item.data.label, lat: item.data.lat, lng: item.data.lng };
+            const params = { selectedPlace: place, type };
+            console.log('[SearchScreen] Selected recent:', place);
+            console.log('[SearchScreen] Navigating back with params:', params);
+            navigation.navigate('PlanMain', params);
+          }}
         >
           <Ionicons name="time-outline" size={18} color={COLORS.textSecondary} />
           <Text style={[styles.itemSub, { color: COLORS.textSecondary, flex: 1 }]} numberOfLines={2}>

@@ -269,13 +269,20 @@ export default function App() {
       const route = navigation.getState().routes[navigation.getState().index] as any;
       const params = route?.params;
 
+      console.log('[Plan] Screen focused, received params:', params);
+      console.log('[Plan] selectedPlace:', params?.selectedPlace);
+      console.log('[Plan] type:', params?.type);
+
       if (params?.selectedPlace && params?.type) {
+        console.log('[Plan] Processing selected place:', params.selectedPlace, 'type:', params.type);
         if (params.type === 'origin') {
+          console.log('[Plan] Setting origin:', params.selectedPlace.label);
           setOriginLabel(params.selectedPlace.label);
           setOriginCoords({ lat: params.selectedPlace.lat, lng: params.selectedPlace.lng });
           setOriginEditing(false);
           addRecentOrigin(params.selectedPlace);
         } else if (params.type === 'destination') {
+          console.log('[Plan] Setting destination:', params.selectedPlace.label);
           setDestLabel(params.selectedPlace.label);
           setDestCoords({ lat: params.selectedPlace.lat, lng: params.selectedPlace.lng });
           addRecentDestination(params.selectedPlace);
