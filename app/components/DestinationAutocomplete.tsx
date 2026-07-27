@@ -54,6 +54,14 @@ interface Props {
 const MIN_CHARS = 2;
 const DEBOUNCE_MS = 200;
 
+function generateSessionToken(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export default function DestinationAutocomplete({
   apiKey,
   recentDestinations,
@@ -74,7 +82,7 @@ export default function DestinationAutocomplete({
   const containerRef = useRef<View>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sessionToken = useRef(Math.random().toString(36));
+  const sessionToken = useRef(generateSessionToken());
   const { width: winWidth } = useWindowDimensions();
 
   useEffect(() => {
@@ -144,7 +152,7 @@ export default function DestinationAutocomplete({
       if (data.location) {
         onSelect({ label: data.formattedAddress ?? item.mainText, lat: data.location.latitude, lng: data.location.longitude });
         closeDropdown();
-        sessionToken.current = Math.random().toString(36);
+        sessionToken.current = generateSessionToken();
       }
     } catch {}
   }
