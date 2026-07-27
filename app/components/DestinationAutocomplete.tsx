@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardEvent, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Keyboard, KeyboardEvent, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritePlace } from '../hooks/useFavorites';
 import { DROPDOWN_MAX_HEIGHT } from '../constants/config';
@@ -75,9 +75,6 @@ export default function DestinationAutocomplete({
   const [isTyping, setIsTyping] = useState(false);
   const [focused, setFocused] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [inputY, setInputY] = useState(0);
-  const [inputHeight, setInputHeight] = useState(0);
-  const windowHeight = useWindowDimensions().height;
   const sessionToken = useRef(generateSessionToken());
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -191,9 +188,6 @@ export default function DestinationAutocomplete({
   const showRecentSection = hasRecent;
   const showFavoritesSection = hasFavorites;
 
-  const spaceBelow = windowHeight - inputY - inputHeight - keyboardHeight;
-  const showAbove = keyboardHeight > 0 && spaceBelow < 150;
-
   return (
     <View style={{ position: 'relative' }}>
       <View style={styles.inputRow}>
@@ -203,10 +197,6 @@ export default function DestinationAutocomplete({
           onChangeText={handleQueryChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          onLayout={(e) => {
-            setInputY(e.nativeEvent.layout.y);
-            setInputHeight(e.nativeEvent.layout.height);
-          }}
           placeholder={placeholder}
           placeholderTextColor={colors.textSecondary}
           style={[styles.input, { flex: 1, color: colors.textPrimary }]}
@@ -236,7 +226,7 @@ export default function DestinationAutocomplete({
               onFocusChange?.(false);
             }}
           />
-          <View style={[styles.dropdown, { backgroundColor: colors.card, shadowColor: colors.ink, left: dropdownOffsetLeft, right: dropdownOffsetRight, maxHeight: keyboardHeight > 0 ? 200 : DROPDOWN_MAX_HEIGHT, ...(showAbove ? { bottom: inputHeight + 8 } : { top: '100%', marginTop: 8 }) }]}>
+          <View style={[{ position: 'absolute', left: dropdownOffsetLeft, right: dropdownOffsetRight, maxHeight: 220, zIndex: 9999, elevation: 9999, shadowColor: colors.ink, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, overflow: 'hidden' as const, borderRadius: 16, backgroundColor: colors.card, ...(keyboardHeight > 0 ? { bottom: 32, marginBottom: 8 } : { top: '100%' as any, marginTop: 8 }) }]}>
             <ScrollView
               keyboardShouldPersistTaps="handled"
               scrollEnabled={suggestions.length > 2 || recentDestinations.length > 2}
@@ -253,6 +243,7 @@ export default function DestinationAutocomplete({
                       {favorites?.home && (
                         <Pressable
                           style={[styles.favoriteShortcut, { borderBottomColor: colors.divider }]}
+                          delayLongPress={100}
                           onPress={() => {
                             onSelect({ label: favorites.home!.label, lat: favorites.home!.lat, lng: favorites.home!.lng });
                             setFocused(false);
@@ -265,6 +256,7 @@ export default function DestinationAutocomplete({
                       {favorites?.work && (
                         <Pressable
                           style={[styles.favoriteShortcut, { borderBottomColor: colors.divider }]}
+                          delayLongPress={100}
                           onPress={() => {
                             onSelect({ label: favorites.work!.label, lat: favorites.work!.lat, lng: favorites.work!.lng });
                             setFocused(false);
@@ -288,6 +280,7 @@ export default function DestinationAutocomplete({
                         <Pressable
                           key={item.label}
                           style={[styles.row, { borderBottomColor: colors.divider }]}
+                          delayLongPress={100}
                           onPress={() => {
                             handleSelectRecent(item);
                             setFocused(false);
@@ -331,6 +324,7 @@ export default function DestinationAutocomplete({
                         <Pressable
                           key={item.placeId}
                           style={[styles.row, { borderBottomColor: colors.divider }]}
+                          delayLongPress={100}
                           onPress={() => {
                             handleSelectSuggestion(item);
                             setFocused(false);
