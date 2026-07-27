@@ -486,7 +486,7 @@ export default function App() {
                   favorites={favorites}
                   suggestedLabel="Suggested Locations"
                   autoFocus={originEditing}
-                  dropdownOffsetLeft={-32}
+                  dropdownOffsetLeft={-35}
                   dropdownOffsetRight={-14}
                   dropdownDirection="down"
                   colors={{
@@ -541,7 +541,7 @@ export default function App() {
               <DestinationAutocomplete
                 apiKey={GOOGLE_PLACES_API_KEY}
                 recentDestinations={recentDestinations}
-                dropdownOffsetLeft={-32}
+                dropdownOffsetLeft={-35}
                 dropdownOffsetRight={-14}
                 dropdownDirection="up-when-keyboard"
                 colors={{
