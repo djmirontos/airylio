@@ -32,6 +32,7 @@ interface DestinationAutocompleteProps {
   autoFocus?: boolean;
   dropdownOffsetLeft?: number;
   dropdownOffsetRight?: number;
+  dropdownDirection?: 'down' | 'up-when-keyboard';
   colors: {
     accent: string;
     textPrimary: string;
@@ -65,6 +66,7 @@ export default function DestinationAutocomplete({
   autoFocus = false,
   dropdownOffsetLeft = 0,
   dropdownOffsetRight = 0,
+  dropdownDirection = 'up-when-keyboard',
   colors,
   favorites,
 }: DestinationAutocompleteProps) {
@@ -188,6 +190,8 @@ export default function DestinationAutocomplete({
   const showRecentSection = hasRecent;
   const showFavoritesSection = hasFavorites;
 
+  const shouldShowAbove = dropdownDirection !== 'down' && keyboardHeight > 0;
+
   return (
     <View style={{ position: 'relative' }}>
       <View style={styles.inputRow}>
@@ -226,7 +230,25 @@ export default function DestinationAutocomplete({
               onFocusChange?.(false);
             }}
           />
-          <View style={[{ position: 'absolute', left: dropdownOffsetLeft, right: dropdownOffsetRight, maxHeight: 220, zIndex: 9999, elevation: 9999, shadowColor: colors.ink, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, overflow: 'hidden' as const, borderRadius: 16, backgroundColor: colors.card, ...(keyboardHeight > 0 ? { bottom: 32, marginBottom: 8 } : { top: '100%' as any, marginTop: 8 }) }]}>
+          <View style={{
+            position: 'absolute' as const,
+            left: dropdownOffsetLeft,
+            right: dropdownOffsetRight,
+            maxHeight: 220,
+            zIndex: 9999,
+            elevation: 9999,
+            borderRadius: 16,
+            backgroundColor: colors.card,
+            overflow: 'hidden' as const,
+            shadowColor: colors.ink,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.12,
+            shadowRadius: 12,
+            ...(shouldShowAbove
+              ? { bottom: 32, marginBottom: 8 }
+              : { top: '100%' as any, marginTop: 8 }
+            ),
+          }}>
             <ScrollView
               keyboardShouldPersistTaps="handled"
               scrollEnabled={suggestions.length > 2 || recentDestinations.length > 2}

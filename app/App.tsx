@@ -488,6 +488,7 @@ export default function App() {
                   autoFocus={originEditing}
                   dropdownOffsetLeft={-32}
                   dropdownOffsetRight={-14}
+                  dropdownDirection="down"
                   colors={{
                     accent: COLORS.accent,
                     textPrimary: COLORS.textPrimary,
@@ -542,6 +543,7 @@ export default function App() {
                 recentDestinations={recentDestinations}
                 dropdownOffsetLeft={-32}
                 dropdownOffsetRight={-14}
+                dropdownDirection="up-when-keyboard"
                 colors={{
                   accent: COLORS.accent,
                   textPrimary: COLORS.textPrimary,
