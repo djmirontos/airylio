@@ -92,11 +92,9 @@ export default function SearchScreen() {
   }
 
   function returnWithPlace(place: { label: string; lat: number; lng: number }) {
-    navigation.navigate({
-      name: 'PlanMain',
-      params: { selectedPlace: place, type },
-      merge: true,
-    });
+    // popTo, not navigate: in React Navigation 7 navigate pushes a fresh PlanMain
+    // instead of returning to the existing one, which resets the Plan screen's state.
+    navigation.popTo('PlanMain', { selectedPlace: place, type }, { merge: true });
   }
 
   async function selectSuggestion(item: Suggestion) {

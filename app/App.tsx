@@ -93,6 +93,7 @@ export default function App() {
 
   const [originCoords, setOriginCoords] = useState<Coords | null>(null);
   const [originLabel, setOriginLabel] = useState('Current Location');
+  const originPickedRef = useRef(false);
 
   const [destCoords, setDestCoords] = useState<Coords | null>(null);
   const [destLabel, setDestLabel] = useState('');
@@ -173,8 +174,11 @@ export default function App() {
         const position = await Location.getCurrentPositionAsync({});
         const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
         setGpsCoords(coords);
-        setOriginCoords(coords);
-        setOriginLabel('Current Location');
+        // Don't stomp an origin the user picked while the GPS lookup was in flight.
+        if (!originPickedRef.current) {
+          setOriginCoords(coords);
+          setOriginLabel('Current Location');
+        }
       } catch {
         setLocationError('Could not detect your current location. Please search for your origin manually.');
       }
@@ -270,6 +274,7 @@ export default function App() {
 
     const { label, lat, lng } = params.selectedPlace;
     if (params.type === 'origin') {
+      originPickedRef.current = true;
       setOriginLabel(label);
       setOriginCoords({ lat, lng });
       addRecentOrigin(params.selectedPlace);
@@ -296,6 +301,7 @@ export default function App() {
 
   function useCurrentLocation() {
     if (!gpsCoords) return;
+    originPickedRef.current = false;
     setOriginCoords(gpsCoords);
     setOriginLabel('Current Location');
   }
