@@ -207,7 +207,7 @@ export default function DestinationAutocomplete({
   const showSuggestions = query.length >= MIN_CHARS;
 
   return (
-    <View ref={containerRef} style={styles.root}>
+    <View ref={containerRef} style={styles.root} collapsable={false}>
       <View style={styles.inputRow}>
         <TextInput
           ref={inputRef}
@@ -314,7 +314,7 @@ export default function DestinationAutocomplete({
 }
 
 const styles = StyleSheet.create({
-  root: {},
+  root: { width: '100%' },
   inputRow: { flexDirection: 'row', alignItems: 'center' },
   input: { flex: 1, height: 22, fontSize: 15, fontFamily: 'Inter_500Medium', padding: 0, margin: 0 },
   clearBtn: { padding: 4, marginLeft: 4 },
