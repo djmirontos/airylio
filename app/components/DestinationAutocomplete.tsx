@@ -233,6 +233,9 @@ export default function DestinationAutocomplete({
             ) : (
               <>
                 {loading && <ActivityIndicator size="small" color={colors.accent} style={{ paddingVertical: 16 }} />}
+                {!loading && suggestions.length === 0 && (
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No results found</Text>
+                )}
                 {suggestions.length > 0 && (
                   <>
                     <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>{suggestedLabel}</Text>
@@ -264,7 +267,7 @@ const styles = StyleSheet.create({
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'transparent' },
   dropdown: {
     position: 'absolute',
-    maxHeight: 300,
+    maxHeight: 360,
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     elevation: 24,
@@ -274,10 +277,25 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     overflow: 'hidden',
   },
-  sectionHeader: { fontFamily: 'Inter_600SemiBold', fontSize: 12, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth },
-  itemTextCol: { flex: 1 },
-  itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
-  itemSub: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
-  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', padding: 20 },
+  sectionHeader: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth
+  },
+  itemTextCol: { flex: 1, justifyContent: 'center' },
+  itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, lineHeight: 18 },
+  itemSub: { fontFamily: 'Inter_400Regular', fontSize: 12, lineHeight: 16, marginTop: 3 },
+  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', paddingVertical: 24, paddingHorizontal: 16 },
 });
