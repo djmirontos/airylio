@@ -92,6 +92,10 @@ export default function DestinationAutocomplete({
     return () => { show.remove(); hide.remove(); };
   }, []);
 
+  useEffect(() => {
+    console.log('focused changed:', focused, 'query:', query);
+  }, [focused, query]);
+
   const handleQueryChange = (text: string) => {
     setQuery(text);
     if (text.length >= MIN_CHARS_TO_FETCH) {
@@ -236,7 +240,7 @@ export default function DestinationAutocomplete({
             right: dropdownOffsetRight,
             maxHeight: 220,
             zIndex: 9999,
-            elevation: 9999,
+            elevation: 99,
             borderRadius: 16,
             backgroundColor: colors.card,
             overflow: 'hidden' as const,

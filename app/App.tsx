@@ -465,7 +465,7 @@ export default function App() {
         </View>
 
         {/* From */}
-        <View style={{ position: 'relative', zIndex: 9999, elevation: 9999 }}>
+        <View style={{ position: 'relative' }}>
           <View style={styles.fieldRow}>
             <View style={[styles.fieldDot, { backgroundColor: COLORS.accent }]} />
             <View style={styles.fieldTextCol}>
@@ -517,7 +517,7 @@ export default function App() {
         </View>
 
         {/* To */}
-        <View style={{ position: 'relative', zIndex: 9998, elevation: 9998 }}>
+        <View style={{ position: 'relative' }}>
         {destLabel ? (
           <Pressable
             style={styles.fieldRow}
