@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritePlace } from '../hooks/useFavorites';
 
@@ -29,9 +38,6 @@ interface Props {
   placeholder?: string;
   suggestedLabel?: string;
   autoFocus?: boolean;
-  dropdownOffsetLeft?: number;
-  dropdownOffsetRight?: number;
-  useModal?: boolean;
   colors: {
     accent: string;
     textPrimary: string;
@@ -45,11 +51,7 @@ interface Props {
 }
 
 const MIN_CHARS = 2;
-const DEBOUNCE_MS = 150;
-
-function generateToken(): string {
-  return Math.random().toString(36).substring(2);
-}
+const DEBOUNCE_MS = 200;
 
 export default function DestinationAutocomplete({
   apiKey,
@@ -59,9 +61,6 @@ export default function DestinationAutocomplete({
   placeholder = 'Search destination',
   suggestedLabel = 'Suggested Locations',
   autoFocus = false,
-  dropdownOffsetLeft = 0,
-  dropdownOffsetRight = 0,
-  useModal = false,
   colors,
   favorites,
 }: Props) {
@@ -74,9 +73,8 @@ export default function DestinationAutocomplete({
   const containerRef = useRef<View>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tokenRef = useRef(generateToken());
+  const sessionToken = useRef(Math.random().toString(36));
 
-  // Auto focus
   useEffect(() => {
     if (autoFocus) {
       const t = setTimeout(() => inputRef.current?.focus(), 50);
@@ -84,7 +82,6 @@ export default function DestinationAutocomplete({
     }
   }, [autoFocus]);
 
-  // Fetch suggestions on query change
   useEffect(() => {
     if (query.length < MIN_CHARS) { setSuggestions([]); return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -92,14 +89,10 @@ export default function DestinationAutocomplete({
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
-  function measurePosition() {
-    setTimeout(() => {
-      containerRef.current?.measureInWindow((x, y, width, height) => {
-        if (width > 0) {
-          setDropdownPos({ top: y + height + 4, left: x, width });
-        }
-      });
-    }, 100);
+  function measureDropdown() {
+    containerRef.current?.measureInWindow((x, y, width, height) => {
+      if (width > 0) setDropdownPos({ top: y + height + 4, left: x, width });
+    });
   }
 
   async function fetchSuggestions(text: string) {
@@ -108,7 +101,7 @@ export default function DestinationAutocomplete({
       const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey },
-        body: JSON.stringify({ input: text, includedRegionCodes: ['ph'], sessionToken: tokenRef.current }),
+        body: JSON.stringify({ input: text, includedRegionCodes: ['ph'], sessionToken: sessionToken.current }),
       });
       const data = await res.json();
       setSuggestions(
@@ -132,23 +125,13 @@ export default function DestinationAutocomplete({
       const data = await res.json();
       if (data.location) {
         onSelect({ label: data.formattedAddress ?? item.mainText, lat: data.location.latitude, lng: data.location.longitude });
-        close();
-        tokenRef.current = generateToken();
+        closeDropdown();
+        sessionToken.current = Math.random().toString(36);
       }
     } catch {}
   }
 
-  function selectRecent(item: RecentDestination) {
-    onSelect({ label: item.label, lat: item.lat, lng: item.lng });
-    close();
-  }
-
-  function selectFavorite(place: FavoritePlace) {
-    onSelect({ label: place.label, lat: place.lat, lng: place.lng });
-    close();
-  }
-
-  function close() {
+  function closeDropdown() {
     setQuery('');
     setSuggestions([]);
     setFocused(false);
@@ -159,7 +142,7 @@ export default function DestinationAutocomplete({
     if (blurRef.current) clearTimeout(blurRef.current);
     setFocused(true);
     onFocusChange?.(true);
-    if (useModal) measurePosition();
+    setTimeout(measureDropdown, 100);
   }
 
   function handleBlur() {
@@ -171,119 +154,10 @@ export default function DestinationAutocomplete({
 
   const hasFavorites = !!(favorites?.home || favorites?.work);
   const hasRecent = recentDestinations.length > 0;
-  const showDropdown = focused;
-
-  const dropdownContent = (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={true}
-      nestedScrollEnabled
-    >
-      {query.length === 0 ? (
-        <>
-          {hasFavorites && (
-            <>
-              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Favorites</Text>
-              {favorites?.home && (
-                <Pressable style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectFavorite(favorites.home!)}>
-                  <Ionicons name="home" size={15} color={colors.accent} />
-                  <Text style={[styles.itemText, { color: colors.textPrimary }]}>Home</Text>
-                </Pressable>
-              )}
-              {favorites?.work && (
-                <Pressable style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectFavorite(favorites.work!)}>
-                  <Ionicons name="briefcase" size={15} color={colors.accent} />
-                  <Text style={[styles.itemText, { color: colors.textPrimary }]}>Work</Text>
-                </Pressable>
-              )}
-            </>
-          )}
-          {hasRecent && (
-            <>
-              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Recent</Text>
-              {recentDestinations.map((item) => (
-                <Pressable key={item.label} style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectRecent(item)}>
-                  <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
-                  <Text style={[styles.itemSubText, { color: colors.textSecondary }]} numberOfLines={1}>{item.label}</Text>
-                </Pressable>
-              ))}
-            </>
-          )}
-          {!hasFavorites && !hasRecent && (
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Start typing to search</Text>
-          )}
-        </>
-      ) : (
-        <>
-          {loading && <ActivityIndicator size="small" color={colors.accent} style={styles.loader} />}
-          {suggestions.length > 0 && (
-            <>
-              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>{suggestedLabel}</Text>
-              {suggestions.map((item) => (
-                <Pressable key={item.placeId} style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectSuggestion(item)}>
-                  <Ionicons name="location-outline" size={15} color={colors.accent} />
-                  <View style={styles.suggestionText}>
-                    <Text style={[styles.itemText, { color: colors.textPrimary }]} numberOfLines={1}>{item.mainText}</Text>
-                    {!!item.secondaryText && <Text style={[styles.itemSubText, { color: colors.textSecondary }]} numberOfLines={1}>{item.secondaryText}</Text>}
-                  </View>
-                </Pressable>
-              ))}
-            </>
-          )}
-        </>
-      )}
-    </ScrollView>
-  );
-
-  if (useModal) {
-    return (
-      <View style={styles.root} ref={containerRef} onLayout={measurePosition}>
-        <View style={styles.inputRow}>
-          <TextInput
-            ref={inputRef}
-            value={query}
-            onChangeText={setQuery}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            placeholder={placeholder}
-            placeholderTextColor={colors.textSecondary}
-            style={[styles.input, { color: colors.textPrimary }]}
-          />
-          {query.length > 0 && (
-            <Pressable onPress={() => { setQuery(''); setSuggestions([]); inputRef.current?.focus(); }} style={styles.clearBtn}>
-              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-            </Pressable>
-          )}
-        </View>
-
-        <Modal visible={showDropdown} transparent animationType="none" onRequestClose={() => { setFocused(false); onFocusChange?.(false); }}>
-          <Pressable style={styles.backdrop} onPress={() => { setFocused(false); onFocusChange?.(false); }} />
-          <View style={{
-            position: 'absolute',
-            top: dropdownPos.top,
-            left: dropdownPos.left,
-            width: dropdownPos.width,
-            maxHeight: 260,
-            backgroundColor: colors.card,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: colors.divider,
-            zIndex: 9999,
-            elevation: 9999,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 12,
-          }}>
-            {dropdownContent}
-          </View>
-        </Modal>
-      </View>
-    );
-  }
+  const showSuggestions = query.length >= MIN_CHARS;
 
   return (
-    <View style={styles.root} ref={containerRef}>
+    <View ref={containerRef} onLayout={measureDropdown} style={styles.root}>
       <View style={styles.inputRow}>
         <TextInput
           ref={inputRef}
@@ -302,63 +176,108 @@ export default function DestinationAutocomplete({
         )}
       </View>
 
-      {showDropdown && (
-        <>
-          <Pressable
-            style={styles.backdrop}
-            onPress={() => { setFocused(false); onFocusChange?.(false); }}
-          />
-          <View style={[
-            styles.dropdown,
-            {
-              left: dropdownOffsetLeft,
-              right: dropdownOffsetRight,
-              backgroundColor: colors.card,
-              borderColor: colors.divider,
-            }
-          ]}>
-            {dropdownContent}
-          </View>
-        </>
-      )}
+      <Modal visible={focused} transparent animationType="none" onRequestClose={closeDropdown}>
+        <Pressable style={styles.modalBackdrop} onPress={closeDropdown} />
+        <View style={[styles.dropdown, {
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          width: dropdownPos.width,
+          backgroundColor: colors.card,
+          borderColor: colors.divider,
+        }]}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
+            nestedScrollEnabled
+          >
+            {!showSuggestions ? (
+              <>
+                {hasFavorites && (
+                  <>
+                    <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Favorites</Text>
+                    {favorites?.home && (
+                      <Pressable style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => { onSelect({ label: favorites.home!.label, lat: favorites.home!.lat, lng: favorites.home!.lng }); closeDropdown(); }}>
+                        <Ionicons name="home-outline" size={18} color={colors.accent} />
+                        <View style={styles.itemTextCol}>
+                          <Text style={[styles.itemTitle, { color: colors.textPrimary }]}>Home</Text>
+                          <Text style={[styles.itemSub, { color: colors.textSecondary }]} numberOfLines={1}>{favorites.home.label}</Text>
+                        </View>
+                      </Pressable>
+                    )}
+                    {favorites?.work && (
+                      <Pressable style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => { onSelect({ label: favorites.work!.label, lat: favorites.work!.lat, lng: favorites.work!.lng }); closeDropdown(); }}>
+                        <Ionicons name="briefcase-outline" size={18} color={colors.accent} />
+                        <View style={styles.itemTextCol}>
+                          <Text style={[styles.itemTitle, { color: colors.textPrimary }]}>Work</Text>
+                          <Text style={[styles.itemSub, { color: colors.textSecondary }]} numberOfLines={1}>{favorites.work.label}</Text>
+                        </View>
+                      </Pressable>
+                    )}
+                  </>
+                )}
+                {hasRecent && (
+                  <>
+                    <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Recent</Text>
+                    {recentDestinations.map((item) => (
+                      <Pressable key={item.label} style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => { onSelect({ label: item.label, lat: item.lat, lng: item.lng }); closeDropdown(); }}>
+                        <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
+                        <Text style={[styles.itemSub, { color: colors.textSecondary, flex: 1 }]} numberOfLines={2}>{item.label}</Text>
+                      </Pressable>
+                    ))}
+                  </>
+                )}
+                {!hasFavorites && !hasRecent && (
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Start typing to search</Text>
+                )}
+              </>
+            ) : (
+              <>
+                {loading && <ActivityIndicator size="small" color={colors.accent} style={{ paddingVertical: 16 }} />}
+                {suggestions.length > 0 && (
+                  <>
+                    <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>{suggestedLabel}</Text>
+                    {suggestions.map((item) => (
+                      <Pressable key={item.placeId} style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectSuggestion(item)}>
+                        <Ionicons name="location-outline" size={18} color={colors.accent} />
+                        <View style={styles.itemTextCol}>
+                          <Text style={[styles.itemTitle, { color: colors.textPrimary }]} numberOfLines={1}>{item.mainText}</Text>
+                          {!!item.secondaryText && <Text style={[styles.itemSub, { color: colors.textSecondary }]} numberOfLines={1}>{item.secondaryText}</Text>}
+                        </View>
+                      </Pressable>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { position: 'relative' },
+  root: {},
   inputRow: { flexDirection: 'row', alignItems: 'center' },
   input: { flex: 1, height: 22, fontSize: 15, fontFamily: 'Inter_500Medium', padding: 0, margin: 0 },
   clearBtn: { padding: 4, marginLeft: 4 },
-  backdrop: {
-    position: 'absolute',
-    top: -9999,
-    left: -9999,
-    right: -9999,
-    bottom: -9999,
-    backgroundColor: 'transparent',
-    zIndex: 100,
-    elevation: 100,
-  },
+  modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'transparent' },
   dropdown: {
     position: 'absolute',
-    top: '100%' as any,
-    marginTop: 4,
-    maxHeight: 260,
+    maxHeight: 300,
     borderRadius: 16,
-    borderWidth: 1,
-    zIndex: 9999,
-    elevation: 9999,
+    borderWidth: StyleSheet.hairlineWidth,
+    elevation: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
+    overflow: 'hidden',
   },
-  sectionLabel: { fontFamily: 'Inter_500Medium', fontSize: 11, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth },
-  itemText: { fontFamily: 'Inter_500Medium', fontSize: 14, flex: 1 },
-  itemSubText: { fontFamily: 'Inter_400Regular', fontSize: 12, flex: 1 },
-  suggestionText: { flex: 1 },
-  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', padding: 16 },
-  loader: { paddingVertical: 12 },
+  sectionHeader: { fontFamily: 'Inter_600SemiBold', fontSize: 12, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth },
+  itemTextCol: { flex: 1 },
+  itemTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14 },
+  itemSub: { fontFamily: 'Inter_400Regular', fontSize: 12, marginTop: 2 },
+  emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', padding: 20 },
 });
