@@ -101,19 +101,28 @@ export default function DestinationAutocomplete({
 
   useEffect(() => {
     const sub = Keyboard.addListener('keyboardDidShow', () => {
+      console.log('[Dropdown] keyboardDidShow event, re-measuring after 100ms');
       setTimeout(measureDropdown, 100);
     });
     return () => sub.remove();
   }, []);
 
+  useEffect(() => {
+    console.log('[Dropdown] focused changed:', focused, 'dropdownPos:', dropdownPos);
+  }, [focused, dropdownPos]);
+
   function measureDropdown() {
+    console.log('[Dropdown] measureDropdown called');
     [0, 100, 300].forEach(delay => {
       setTimeout(() => {
         containerRef.current?.measureInWindow((x, y, w, h) => {
-          console.log('measureInWindow:', { x, y, w, h, delay });
+          console.log('[Dropdown] measureInWindow result:', { x, y, width: w, height: h, delay, valid: w > 0 && h > 0 });
           if (w > 0 && h > 0) {
-            setDropdownPos({ top: y + h + 4, left: x, width: w });
-            console.log('dropdownPos set:', { top: y + h + 4, left: x, width: w });
+            const newPos = { top: y + h + 4, left: x, width: w };
+            console.log('[Dropdown] Setting dropdownPos:', newPos);
+            setDropdownPos(newPos);
+          } else {
+            console.warn('[Dropdown] Invalid dimensions:', { w, h });
           }
         });
       }, delay);
@@ -168,6 +177,7 @@ export default function DestinationAutocomplete({
   }
 
   function closeDropdown() {
+    console.log('[Dropdown] closeDropdown called');
     setQuery('');
     setSuggestions([]);
     setFocused(false);
@@ -175,10 +185,14 @@ export default function DestinationAutocomplete({
   }
 
   function handleFocus() {
+    console.log('[Dropdown] handleFocus called');
     if (blurRef.current) clearTimeout(blurRef.current);
     setFocused(true);
     onFocusChange?.(true);
-    setTimeout(measureDropdown, 100);
+    setTimeout(() => {
+      console.log('[Dropdown] handleFocus: measuring after 100ms');
+      measureDropdown();
+    }, 100);
   }
 
   function handleBlur() {
@@ -212,6 +226,7 @@ export default function DestinationAutocomplete({
         )}
       </View>
 
+      {focused && console.log('[Dropdown] Modal rendering:', { focused, dropdownPos, winWidth, hasWidth: dropdownPos.width > 0, top: dropdownPos.top, left: dropdownPos.width > 0 ? dropdownPos.left : 16, width: dropdownPos.width > 0 ? dropdownPos.width : winWidth - 32 })}
       <Modal visible={focused} transparent animationType="none" onRequestClose={closeDropdown}>
         <View style={{ flex: 1 }} pointerEvents="box-none">
           <Pressable style={StyleSheet.absoluteFillObject} onPress={closeDropdown} />
