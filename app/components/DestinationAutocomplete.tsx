@@ -82,7 +82,6 @@ export default function DestinationAutocomplete({
   const containerRef = useRef<View>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sessionToken = useRef(generateSessionToken());
   const { width: winWidth } = useWindowDimensions();
 
   useEffect(() => {
@@ -121,7 +120,7 @@ export default function DestinationAutocomplete({
           'X-Goog-Api-Key': apiKey,
           'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat',
         },
-        body: JSON.stringify({ input: text, includedRegionCodes: ['ph'], sessionToken: sessionToken.current }),
+        body: JSON.stringify({ input: text, includedRegionCodes: ['ph'] }),
       });
       console.log('Autocomplete status:', res.status);
       const data = await res.json();
@@ -152,7 +151,6 @@ export default function DestinationAutocomplete({
       if (data.location) {
         onSelect({ label: data.formattedAddress ?? item.mainText, lat: data.location.latitude, lng: data.location.longitude });
         closeDropdown();
-        sessionToken.current = generateSessionToken();
       }
     } catch {}
   }
