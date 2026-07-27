@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, KeyboardEvent, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FavoritePlace } from '../hooks/useFavorites';
 
@@ -31,7 +31,7 @@ interface Props {
   autoFocus?: boolean;
   dropdownOffsetLeft?: number;
   dropdownOffsetRight?: number;
-  dropdownDirection?: 'down' | 'up-when-keyboard';
+  useModal?: boolean;
   colors: {
     accent: string;
     textPrimary: string;
@@ -61,7 +61,7 @@ export default function DestinationAutocomplete({
   autoFocus = false,
   dropdownOffsetLeft = 0,
   dropdownOffsetRight = 0,
-  dropdownDirection = 'down',
+  useModal = false,
   colors,
   favorites,
 }: Props) {
@@ -69,18 +69,12 @@ export default function DestinationAutocomplete({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const inputRef = useRef<TextInput>(null);
+  const containerRef = useRef<View>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tokenRef = useRef(generateToken());
-
-  // Keyboard listener
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
-    return () => { show.remove(); hide.remove(); };
-  }, []);
 
   // Auto focus
   useEffect(() => {
@@ -97,6 +91,16 @@ export default function DestinationAutocomplete({
     debounceRef.current = setTimeout(() => fetchSuggestions(query), DEBOUNCE_MS);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
+
+  function measurePosition() {
+    setTimeout(() => {
+      containerRef.current?.measureInWindow((x, y, width, height) => {
+        if (width > 0) {
+          setDropdownPos({ top: y + height + 4, left: x, width });
+        }
+      });
+    }, 100);
+  }
 
   async function fetchSuggestions(text: string) {
     setLoading(true);
@@ -155,6 +159,7 @@ export default function DestinationAutocomplete({
     if (blurRef.current) clearTimeout(blurRef.current);
     setFocused(true);
     onFocusChange?.(true);
+    if (useModal) measurePosition();
   }
 
   function handleBlur() {
@@ -167,15 +172,118 @@ export default function DestinationAutocomplete({
   const hasFavorites = !!(favorites?.home || favorites?.work);
   const hasRecent = recentDestinations.length > 0;
   const showDropdown = focused;
-  const showAbove = dropdownDirection === 'up-when-keyboard' && keyboardHeight > 0;
 
-  const dropdownPositionStyle = showAbove
-    ? { bottom: 36, marginBottom: 4 }
-    : { top: '100%' as any, marginTop: 4 };
+  const dropdownContent = (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={true}
+      nestedScrollEnabled
+    >
+      {query.length === 0 ? (
+        <>
+          {hasFavorites && (
+            <>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Favorites</Text>
+              {favorites?.home && (
+                <Pressable style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectFavorite(favorites.home!)}>
+                  <Ionicons name="home" size={15} color={colors.accent} />
+                  <Text style={[styles.itemText, { color: colors.textPrimary }]}>Home</Text>
+                </Pressable>
+              )}
+              {favorites?.work && (
+                <Pressable style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectFavorite(favorites.work!)}>
+                  <Ionicons name="briefcase" size={15} color={colors.accent} />
+                  <Text style={[styles.itemText, { color: colors.textPrimary }]}>Work</Text>
+                </Pressable>
+              )}
+            </>
+          )}
+          {hasRecent && (
+            <>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Recent</Text>
+              {recentDestinations.map((item) => (
+                <Pressable key={item.label} style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectRecent(item)}>
+                  <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
+                  <Text style={[styles.itemSubText, { color: colors.textSecondary }]} numberOfLines={1}>{item.label}</Text>
+                </Pressable>
+              ))}
+            </>
+          )}
+          {!hasFavorites && !hasRecent && (
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Start typing to search</Text>
+          )}
+        </>
+      ) : (
+        <>
+          {loading && <ActivityIndicator size="small" color={colors.accent} style={styles.loader} />}
+          {suggestions.length > 0 && (
+            <>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>{suggestedLabel}</Text>
+              {suggestions.map((item) => (
+                <Pressable key={item.placeId} style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectSuggestion(item)}>
+                  <Ionicons name="location-outline" size={15} color={colors.accent} />
+                  <View style={styles.suggestionText}>
+                    <Text style={[styles.itemText, { color: colors.textPrimary }]} numberOfLines={1}>{item.mainText}</Text>
+                    {!!item.secondaryText && <Text style={[styles.itemSubText, { color: colors.textSecondary }]} numberOfLines={1}>{item.secondaryText}</Text>}
+                  </View>
+                </Pressable>
+              ))}
+            </>
+          )}
+        </>
+      )}
+    </ScrollView>
+  );
+
+  if (useModal) {
+    return (
+      <View style={styles.root} ref={containerRef} onLayout={measurePosition}>
+        <View style={styles.inputRow}>
+          <TextInput
+            ref={inputRef}
+            value={query}
+            onChangeText={setQuery}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textSecondary}
+            style={[styles.input, { color: colors.textPrimary }]}
+          />
+          {query.length > 0 && (
+            <Pressable onPress={() => { setQuery(''); setSuggestions([]); inputRef.current?.focus(); }} style={styles.clearBtn}>
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            </Pressable>
+          )}
+        </View>
+
+        <Modal visible={showDropdown} transparent animationType="none" onRequestClose={() => { setFocused(false); onFocusChange?.(false); }}>
+          <Pressable style={styles.backdrop} onPress={() => { setFocused(false); onFocusChange?.(false); }} />
+          <View style={{
+            position: 'absolute',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            maxHeight: 260,
+            backgroundColor: colors.card,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: colors.divider,
+            zIndex: 9999,
+            elevation: 9999,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+          }}>
+            {dropdownContent}
+          </View>
+        </Modal>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.root}>
-      {/* Input row */}
+    <View style={styles.root} ref={containerRef}>
       <View style={styles.inputRow}>
         <TextInput
           ref={inputRef}
@@ -194,18 +302,14 @@ export default function DestinationAutocomplete({
         )}
       </View>
 
-      {/* Dropdown */}
       {showDropdown && (
         <>
-          {/* Backdrop to close on outside tap */}
           <Pressable
             style={styles.backdrop}
             onPress={() => { setFocused(false); onFocusChange?.(false); }}
           />
-          {/* Dropdown panel - rendered AFTER backdrop so it's on top */}
           <View style={[
             styles.dropdown,
-            dropdownPositionStyle,
             {
               left: dropdownOffsetLeft,
               right: dropdownOffsetRight,
@@ -213,65 +317,7 @@ export default function DestinationAutocomplete({
               borderColor: colors.divider,
             }
           ]}>
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={true}
-              nestedScrollEnabled
-            >
-              {query.length === 0 ? (
-                <>
-                  {hasFavorites && (
-                    <>
-                      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Favorites</Text>
-                      {favorites?.home && (
-                        <Pressable style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectFavorite(favorites.home!)}>
-                          <Ionicons name="home" size={15} color={colors.accent} />
-                          <Text style={[styles.itemText, { color: colors.textPrimary }]}>Home</Text>
-                        </Pressable>
-                      )}
-                      {favorites?.work && (
-                        <Pressable style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectFavorite(favorites.work!)}>
-                          <Ionicons name="briefcase" size={15} color={colors.accent} />
-                          <Text style={[styles.itemText, { color: colors.textPrimary }]}>Work</Text>
-                        </Pressable>
-                      )}
-                    </>
-                  )}
-                  {hasRecent && (
-                    <>
-                      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Recent</Text>
-                      {recentDestinations.map((item) => (
-                        <Pressable key={item.label} style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectRecent(item)}>
-                          <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
-                          <Text style={[styles.itemSubText, { color: colors.textSecondary }]} numberOfLines={1}>{item.label}</Text>
-                        </Pressable>
-                      ))}
-                    </>
-                  )}
-                  {!hasFavorites && !hasRecent && (
-                    <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Start typing to search</Text>
-                  )}
-                </>
-              ) : (
-                <>
-                  {loading && <ActivityIndicator size="small" color={colors.accent} style={styles.loader} />}
-                  {suggestions.length > 0 && (
-                    <>
-                      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>{suggestedLabel}</Text>
-                      {suggestions.map((item) => (
-                        <Pressable key={item.placeId} style={[styles.item, { borderBottomColor: colors.divider }]} onPress={() => selectSuggestion(item)}>
-                          <Ionicons name="location-outline" size={15} color={colors.accent} />
-                          <View style={styles.suggestionText}>
-                            <Text style={[styles.itemText, { color: colors.textPrimary }]} numberOfLines={1}>{item.mainText}</Text>
-                            {!!item.secondaryText && <Text style={[styles.itemSubText, { color: colors.textSecondary }]} numberOfLines={1}>{item.secondaryText}</Text>}
-                          </View>
-                        </Pressable>
-                      ))}
-                    </>
-                  )}
-                </>
-              )}
-            </ScrollView>
+            {dropdownContent}
           </View>
         </>
       )}
@@ -296,6 +342,8 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
+    top: '100%' as any,
+    marginTop: 4,
     maxHeight: 260,
     borderRadius: 16,
     borderWidth: 1,
@@ -313,6 +361,4 @@ const styles = StyleSheet.create({
   suggestionText: { flex: 1 },
   emptyText: { fontFamily: 'Inter_400Regular', fontSize: 13, textAlign: 'center', padding: 16 },
   loader: { paddingVertical: 12 },
-  sectionGap: { height: 4 },
-  recentRowInner: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
 });
