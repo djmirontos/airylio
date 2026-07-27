@@ -222,14 +222,6 @@ export default function DestinationAutocomplete({
 
       {showDropdown && (
         <>
-          <Pressable
-            style={styles.overlay}
-            onPress={() => {
-              if (blurTimer.current) clearTimeout(blurTimer.current);
-              setFocused(false);
-              onFocusChange?.(false);
-            }}
-          />
           <View style={{
             position: 'absolute' as const,
             left: dropdownOffsetLeft ?? 0,
@@ -239,7 +231,6 @@ export default function DestinationAutocomplete({
             elevation: 99,
             borderRadius: 16,
             backgroundColor: colors.card,
-            overflow: 'hidden' as const,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.15,
@@ -370,6 +361,14 @@ export default function DestinationAutocomplete({
               )}
             </ScrollView>
           </View>
+          <Pressable
+            style={styles.overlay}
+            onPress={() => {
+              if (blurTimer.current) clearTimeout(blurTimer.current);
+              setFocused(false);
+              onFocusChange?.(false);
+            }}
+          />
         </>
       )}
     </View>
