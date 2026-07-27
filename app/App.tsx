@@ -505,15 +505,13 @@ export default function App() {
               ) : (
                 <Pressable
                   onPress={() => {
-                    navigation.navigate('Plan', {
-                      name: 'Search',
-                      params: {
-                        type: 'origin',
-                        recentDestinations: recentOrigins,
-                        favorites,
-                        apiKey: GOOGLE_PLACES_API_KEY,
-                        placeholder: locationError ?? 'Search origin',
-                      },
+                    console.log('Origin field tapped');
+                    navigation.navigate('Search', {
+                      type: 'origin',
+                      recentDestinations: recentOrigins,
+                      favorites,
+                      apiKey: GOOGLE_PLACES_API_KEY,
+                      placeholder: locationError ?? 'Search origin',
                     });
                   }}
                 >
@@ -553,15 +551,13 @@ export default function App() {
           <Pressable
             style={styles.fieldRow}
             onPress={() => {
-              navigation.navigate('Plan', {
-                name: 'Search',
-                params: {
-                  type: 'destination',
-                  recentDestinations,
-                  favorites,
-                  apiKey: GOOGLE_PLACES_API_KEY,
-                  placeholder: 'Search destination',
-                },
+              console.log('Destination field tapped');
+              navigation.navigate('Search', {
+                type: 'destination',
+                recentDestinations,
+                favorites,
+                apiKey: GOOGLE_PLACES_API_KEY,
+                placeholder: 'Search destination',
               });
             }}
           >
