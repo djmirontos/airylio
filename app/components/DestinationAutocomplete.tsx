@@ -83,6 +83,7 @@ export default function DestinationAutocomplete({
   const containerRef = useRef<View>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const modalVisibleRef = useRef(false);
   const { width: winWidth } = useWindowDimensions();
 
   useEffect(() => {
@@ -178,6 +179,7 @@ export default function DestinationAutocomplete({
 
   function closeDropdown() {
     console.log('[Dropdown] closeDropdown called');
+    modalVisibleRef.current = false;
     setQuery('');
     setSuggestions([]);
     setFocused(false);
@@ -187,6 +189,7 @@ export default function DestinationAutocomplete({
   function handleFocus() {
     console.log('[Dropdown] handleFocus called');
     if (blurRef.current) clearTimeout(blurRef.current);
+    modalVisibleRef.current = true;
     setFocused(true);
     onFocusChange?.(true);
     setTimeout(() => {
@@ -197,8 +200,10 @@ export default function DestinationAutocomplete({
 
   function handleBlur() {
     blurRef.current = setTimeout(() => {
-      setFocused(false);
-      onFocusChange?.(false);
+      if (!modalVisibleRef.current) {
+        setFocused(false);
+        onFocusChange?.(false);
+      }
     }, 500);
   }
 
