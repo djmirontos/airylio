@@ -50,7 +50,7 @@ function formatDate(isoString: string): string {
 
 export default function HistoryScreen() {
   const { colors: COLORS } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { setPrefillData } = useTripContext();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);

@@ -53,6 +53,16 @@ export default function SearchScreen() {
   }, []);
 
   useEffect(() => {
+    // Dismiss if the user leaves the Plan tab with this open, so coming back to
+    // Plan (e.g. "plan again" from History) lands on the Plan screen, not a
+    // stale search. No-op when this screen is already being popped.
+    const unsubscribe = navigation.addListener('blur', () => {
+      if (navigation.canGoBack()) navigation.goBack();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
     if (query.length < MIN_CHARS) {
       setSuggestions([]);
       return;
