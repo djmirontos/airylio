@@ -1,10 +1,11 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useFonts, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import AppNavigator from './navigation/AppNavigator';
 import { TripProvider } from './context/TripContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Suppress non-critical RN text rendering warnings in dev mode
@@ -33,14 +34,42 @@ export default function Root() {
 
   return (
     <ErrorBoundary>
-      <NavigationContainer>
-        <ThemeProvider>
-          <TripProvider>
-            <AppNavigator />
-          </TripProvider>
-        </ThemeProvider>
-      </NavigationContainer>
+      {/* ThemeProvider sits above NavigationContainer so the navigator's own
+          background can be themed - unthemed, it defaults to near-white and
+          shows through wherever a screen hasn't painted yet (edges during a
+          slide, the strip a hidden tab bar leaves behind). */}
+      <ThemeProvider>
+        <ThemedNavigation />
+      </ThemeProvider>
     </ErrorBoundary>
+  );
+}
+
+function ThemedNavigation() {
+  const { colors: COLORS, isDark } = useTheme();
+
+  const navTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      dark: isDark,
+      colors: {
+        ...base.colors,
+        background: COLORS.canvas,
+        card: COLORS.card,
+        text: COLORS.textPrimary,
+        border: COLORS.divider,
+        primary: COLORS.accent,
+      },
+    };
+  }, [COLORS, isDark]);
+
+  return (
+    <NavigationContainer theme={navTheme}>
+      <TripProvider>
+        <AppNavigator />
+      </TripProvider>
+    </NavigationContainer>
   );
 }
 

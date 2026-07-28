@@ -13,10 +13,14 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function PlanStackNavigator() {
+  const { colors: COLORS } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        // Paints the screen container itself, so the sliding card is opaque and
+        // never reveals the window background at its edges.
+        contentStyle: { backgroundColor: COLORS.canvas },
       }}
     >
       <Stack.Screen name="PlanMain" component={PlanScreen} />
@@ -28,10 +32,14 @@ function PlanStackNavigator() {
 }
 
 function SettingsStackNavigator() {
+  const { colors: COLORS } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        // Paints the screen container itself, so the sliding card is opaque and
+        // never reveals the window background at its edges.
+        contentStyle: { backgroundColor: COLORS.canvas },
       }}
     >
       <Stack.Screen name="SettingsMain" component={SettingsScreen} />
@@ -51,6 +59,8 @@ export default function AppNavigator() {
         headerShown: false,
         tabBarActiveTintColor: COLORS.accent,
         tabBarInactiveTintColor: COLORS.textSecondary,
+        // Paints the strip the tab bar leaves behind when it hides for Search.
+        sceneStyle: { backgroundColor: COLORS.canvas },
         // Decided from the focused nested route, so the bar is already gone in the
         // same commit that pushes Search. Reacting to the keyboard instead meant a
         // second layout pass landing mid-transition, which read as a jump.
