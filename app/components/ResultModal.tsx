@@ -305,7 +305,7 @@ export default function ResultModal({
               </Pressable>
             )}
 
-            <Text style={styles.updatedText}>Updated just now</Text>
+            
           </ScrollView>
         </View>
       )}
