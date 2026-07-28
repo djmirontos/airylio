@@ -3,7 +3,11 @@ import { Platform } from 'react-native';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // shouldShowAlert is deprecated in SDK 54; banner/list replace it. Both are
+    // required by NotificationBehavior, and omitting them meant foreground
+    // notifications had no defined presentation.
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),

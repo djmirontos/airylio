@@ -45,11 +45,19 @@ export async function calculateTrip(params: CalculateTripParams): Promise<TripRe
   return data;
 }
 
-// Fetch user's trip history from database
+// Fetch user's trip history from database.
+// Scoping is enforced by RLS on `trips`; the explicit device_id filter here is
+// defence in depth, so a policy regression cannot silently expose other users'
+// trips (which carry home/work coordinates).
 export async function fetchTripHistory(): Promise<Trip[]> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const deviceId = sessionData.session?.user?.id;
+  if (!deviceId) return [];
+
   const { data, error } = await supabase
     .from('trips')
     .select('id, transport_mode, recommended_leave_time, predicted_arrival_time, confidence_score, confidence_reason, recommendation_explanation, planning_mode, target_time, data_freshness, weather_condition, origin_label, destination_label, origin_lat, origin_lng, destination_lat, destination_lng, created_at')
+    .eq('device_id', deviceId)
     .order('created_at', { ascending: false })
     .limit(20);
 
