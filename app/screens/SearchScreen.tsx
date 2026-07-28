@@ -43,11 +43,12 @@ export default function SearchScreen() {
   const { colors: COLORS } = useTheme();
   const insets = useSafeAreaInsets();
   const { type, returnTo, apiKey, placeholder } = route.params as RouteParams;
-  const { favorites } = useFavorites();
+  const { favorites, loaded: favoritesLoaded } = useFavorites();
 
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [recent, setRecent] = useState<RecentDestination[]>([]);
+  const [recentLoaded, setRecentLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   /** Query the current `suggestions` belong to; '' when showing shortcuts. */
   const [resultsFor, setResultsFor] = useState('');
@@ -56,8 +57,13 @@ export default function SearchScreen() {
   const latestQueryRef = useRef('');
 
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 100);
-  }, []);
+    // Focus when the push animation ends, not on a timer. Raising the keyboard
+    // while the screen is still sliding animates the two against each other.
+    const unsubscribe = navigation.addListener('transitionEnd', (e: any) => {
+      if (!e?.data?.closing) inputRef.current?.focus();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     // Read recents here rather than take them as a param, so every entry point
@@ -70,6 +76,8 @@ export default function SearchScreen() {
         if (stored) setRecent(JSON.parse(stored));
       } catch (err) {
         console.warn('[SearchScreen] Failed to load recent locations:', err);
+      } finally {
+        setRecentLoaded(true);
       }
     })();
   }, [type]);
@@ -280,7 +288,9 @@ export default function SearchScreen() {
     let message: string | null = null;
     if (isSearching && resultsAreCurrent && suggestions.length === 0) {
       message = 'No results found';
-    } else if (!isSearching) {
+    } else if (!isSearching && favoritesLoaded && recentLoaded) {
+      // Only once the shortcuts are known to be empty - otherwise this flashes
+      // for a frame on mount and is then replaced by Home/Work/Recent.
       message = 'Start typing to search';
     }
     if (!message) return null;

@@ -1,8 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { Keyboard } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import PlanScreen from '../App';
 import HistoryScreen from '../screens/HistoryScreen';
@@ -45,13 +44,6 @@ function SettingsStackNavigator() {
 
 export default function AppNavigator() {
   const { colors: COLORS } = useTheme();
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => { show.remove(); hide.remove(); };
-  }, []);
 
   return (
     <Tab.Navigator
@@ -59,7 +51,10 @@ export default function AppNavigator() {
         headerShown: false,
         tabBarActiveTintColor: COLORS.accent,
         tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: keyboardVisible ? { display: 'none' } : {
+        // Decided from the focused nested route, so the bar is already gone in the
+        // same commit that pushes Search. Reacting to the keyboard instead meant a
+        // second layout pass landing mid-transition, which read as a jump.
+        tabBarStyle: getFocusedRouteNameFromRoute(route) === 'Search' ? { display: 'none' } : {
           backgroundColor: COLORS.card,
           borderTopColor: COLORS.divider,
           borderTopWidth: 1,
