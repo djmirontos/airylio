@@ -13,7 +13,6 @@ import FeedbackModal from './components/FeedbackModal';
 import PlanHeader from './components/PlanHeader';
 import { supabase } from './lib/supabase';
 import { useTripContext, PlanPrefill } from './context/TripContext';
-import { useFavorites } from './hooks/useFavorites';
 import { scheduleLeaveReminder, cancelLeaveReminder } from './hooks/useNotifications';
 import * as Notifications from 'expo-notifications';
 import { useTheme } from './context/ThemeContext';
@@ -117,7 +116,6 @@ export default function App() {
   const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
   const { setCurrentTrip, prefillData, setPrefillData } = useTripContext();
-  const { favorites } = useFavorites();
   const { colors: COLORS, isDark } = useTheme();
   const navigation = useNavigation<any>();
 
@@ -491,8 +489,6 @@ export default function App() {
               navigation.navigate('Search', {
                 type: 'origin',
                 returnTo: 'PlanMain',
-                recentDestinations: recentOrigins,
-                favorites,
                 apiKey: GOOGLE_PLACES_API_KEY,
                 placeholder: 'Search origin',
               })
@@ -543,8 +539,6 @@ export default function App() {
               navigation.navigate('Search', {
                 type: 'destination',
                 returnTo: 'PlanMain',
-                recentDestinations,
-                favorites,
                 apiKey: GOOGLE_PLACES_API_KEY,
                 placeholder: 'Search destination',
               });

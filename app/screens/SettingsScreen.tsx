@@ -57,7 +57,6 @@ export default function SettingsScreen() {
     navigation.navigate('Search', {
       type,
       returnTo: 'SettingsMain',
-      recentDestinations: [],
       apiKey: GOOGLE_PLACES_API_KEY,
       placeholder: `Search ${type} address`,
     });

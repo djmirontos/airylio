@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { FavoritePlace } from '../hooks/useFavorites';
+import { useFavorites } from '../hooks/useFavorites';
+import { RECENT_DESTINATIONS_KEY, RECENT_ORIGINS_KEY } from '../constants/config';
 
 interface RecentDestination {
   label: string;
@@ -22,19 +24,17 @@ interface RouteParams {
   type: 'origin' | 'destination' | 'home' | 'work';
   /** Route to return the pick to: 'PlanMain' or 'SettingsMain'. */
   returnTo: string;
-  recentDestinations?: RecentDestination[];
-  favorites?: { home: FavoritePlace | null; work: FavoritePlace | null };
   apiKey: string;
   placeholder: string;
 }
 
 interface ListItem {
   id: string;
-  type: 'favorite-home' | 'favorite-work' | 'recent' | 'suggestion';
+  type: 'header' | 'favorite-home' | 'favorite-work' | 'recent' | 'suggestion';
   data: any;
 }
 
-const MIN_CHARS = 2;
+const MIN_CHARS = 1;
 const DEBOUNCE_MS = 200;
 
 export default function SearchScreen() {
@@ -42,11 +42,12 @@ export default function SearchScreen() {
   const navigation = useNavigation<any>();
   const { colors: COLORS } = useTheme();
   const insets = useSafeAreaInsets();
-  const { type, returnTo, recentDestinations, favorites, apiKey, placeholder } = route.params as RouteParams;
-  const recent = recentDestinations ?? [];
+  const { type, returnTo, apiKey, placeholder } = route.params as RouteParams;
+  const { favorites } = useFavorites();
 
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [recent, setRecent] = useState<RecentDestination[]>([]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,6 +55,21 @@ export default function SearchScreen() {
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
+
+  useEffect(() => {
+    // Read recents here rather than take them as a param, so every entry point
+    // (origin, destination, home, work) shows the same shortcuts.
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(
+          type === 'origin' ? RECENT_ORIGINS_KEY : RECENT_DESTINATIONS_KEY
+        );
+        if (stored) setRecent(JSON.parse(stored));
+      } catch (err) {
+        console.warn('[SearchScreen] Failed to load recent locations:', err);
+      }
+    })();
+  }, [type]);
 
   useEffect(() => {
     // Dismiss if the user leaves the Plan tab with this open, so coming back to
@@ -66,7 +82,7 @@ export default function SearchScreen() {
   }, [navigation]);
 
   useEffect(() => {
-    if (query.length < MIN_CHARS) {
+    if (query.trim().length < MIN_CHARS) {
       setSuggestions([]);
       return;
     }
@@ -126,44 +142,39 @@ export default function SearchScreen() {
     } catch {}
   }
 
-  const showSuggestions = query.length >= MIN_CHARS;
-  const hasFavorites = !!(favorites?.home || favorites?.work);
-  const hasRecent = recent.length > 0;
+  // Typing anything swaps the shortcuts out for Places results; clearing brings them back.
+  const isSearching = query.trim().length > 0;
+  // Don't offer the favorite currently being edited as a shortcut to itself.
+  const homeShortcut = type === 'home' ? null : favorites.home;
+  const workShortcut = type === 'work' ? null : favorites.work;
 
-  let items: ListItem[] = [];
+  const items: ListItem[] = [];
 
-  if (!showSuggestions) {
-    if (hasFavorites) {
-      if (favorites?.home) items.push({ id: 'fav-home', type: 'favorite-home', data: favorites.home });
-      if (favorites?.work) items.push({ id: 'fav-work', type: 'favorite-work', data: favorites.work });
+  if (isSearching) {
+    if (suggestions.length > 0) {
+      items.push({ id: 'header-suggested', type: 'header', data: 'Suggested Locations' });
+      suggestions.forEach((item) => {
+        items.push({ id: `suggestion-${item.placeId}`, type: 'suggestion', data: item });
+      });
     }
-    if (hasRecent) {
+  } else {
+    if (homeShortcut || workShortcut) {
+      items.push({ id: 'header-favorites', type: 'header', data: 'Favorites' });
+      if (homeShortcut) items.push({ id: 'fav-home', type: 'favorite-home', data: homeShortcut });
+      if (workShortcut) items.push({ id: 'fav-work', type: 'favorite-work', data: workShortcut });
+    }
+    if (recent.length > 0) {
+      items.push({ id: 'header-recent', type: 'header', data: 'Recent' });
       recent.forEach((item, i) => {
         items.push({ id: `recent-${i}`, type: 'recent', data: item });
       });
     }
-  } else {
-    suggestions.forEach((item) => {
-      items.push({ id: `suggestion-${item.placeId}`, type: 'suggestion', data: item });
-    });
   }
 
-  const renderHeader = () => {
-    if (!showSuggestions) {
-      if (hasFavorites) {
-        return <Text style={[styles.sectionHeader, { color: COLORS.textSecondary }]}>FAVORITES</Text>;
-      }
-      if (hasRecent) {
-        return <Text style={[styles.sectionHeader, { color: COLORS.textSecondary }]}>RECENT</Text>;
-      }
-    }
-    if (showSuggestions) {
-      return <Text style={[styles.sectionHeader, { color: COLORS.textSecondary }]}>SUGGESTED LOCATIONS</Text>;
-    }
-    return null;
-  };
-
   const renderItem = ({ item }: { item: ListItem }) => {
+    if (item.type === 'header') {
+      return <Text style={[styles.sectionHeader, { color: COLORS.textSecondary }]}>{item.data}</Text>;
+    }
     if (item.type === 'favorite-home') {
       return (
         <Pressable
@@ -254,9 +265,15 @@ export default function SearchScreen() {
         </View>
       )}
 
-      {!loading && showSuggestions && suggestions.length === 0 && (
+      {!loading && isSearching && suggestions.length === 0 && (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>No results found</Text>
+        </View>
+      )}
+
+      {!loading && !isSearching && items.length === 0 && (
+        <View style={styles.emptyContainer}>
+          <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>Start typing to search</Text>
         </View>
       )}
 
@@ -265,7 +282,6 @@ export default function SearchScreen() {
           data={items}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          ListHeaderComponent={renderHeader}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator
         />
