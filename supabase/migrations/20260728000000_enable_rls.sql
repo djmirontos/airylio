@@ -1,77 +1,26 @@
--- Row level security for all public tables.
+-- Row level security: desired end state for all public tables.
 --
--- Context: the calculate-trip edge function connects with the service role,
--- which bypasses RLS entirely, so none of this affects it. These policies only
--- constrain what the mobile client can reach with its anon key.
+-- Verified against the live database on 2026-07-28. RLS was already enabled on
+-- every table, and the ownership policies on trips, feedback, devices and
+-- calculation_events were already correct. This file records that state so it
+-- is version controlled and auditable, and closes three gaps found in review.
 --
--- The client touches exactly two tables directly (verified against the app
--- source): it SELECTs `trips` and INSERTs `feedback`. Every other table is
--- written only by the edge function, so RLS is enabled with no client policies,
--- which denies anon/authenticated access outright.
+-- The calculate-trip edge function connects with the service role, which
+-- bypasses RLS entirely. Nothing here affects it.
 --
--- Anonymous sign-in issues a JWT with role `authenticated`, so policies target
--- that role. auth.uid() is the anon user id, stored as trips.device_id.
+-- The client touches exactly two tables directly, verified against the app
+-- source: it SELECTs `trips` and INSERTs `feedback`. Nothing else.
 --
 -- Idempotent: safe to re-run.
 
 -- ---------------------------------------------------------------------------
--- trips: a user may read only their own. No client writes - the edge function
--- inserts with the service role.
+-- RLS switches. Already enabled in production; here so a fresh database
+-- (staging, local, a restored backup) starts correct rather than open.
 -- ---------------------------------------------------------------------------
-alter table public.trips enable row level security;
-
-drop policy if exists "trips_select_own" on public.trips;
-create policy "trips_select_own"
-  on public.trips
-  for select
-  to authenticated
-  using (device_id = (select auth.uid()));
-
--- ---------------------------------------------------------------------------
--- feedback: a user may submit feedback only for a trip they own. The ownership
--- check is done here rather than trusted from the client.
--- ---------------------------------------------------------------------------
-alter table public.feedback enable row level security;
-
-drop policy if exists "feedback_insert_own_trip" on public.feedback;
-create policy "feedback_insert_own_trip"
-  on public.feedback
-  for insert
-  to authenticated
-  with check (
-    exists (
-      select 1
-      from public.trips t
-      where t.id = trip_id
-        and t.device_id = (select auth.uid())
-    )
-  );
-
--- ---------------------------------------------------------------------------
--- devices: the client never queries this. Reading your own row is harmless and
--- useful for debugging; everything else is denied.
--- ---------------------------------------------------------------------------
-alter table public.devices enable row level security;
-
-drop policy if exists "devices_select_own" on public.devices;
-create policy "devices_select_own"
-  on public.devices
-  for select
-  to authenticated
-  using (id = (select auth.uid()));
-
--- ---------------------------------------------------------------------------
--- calculation_events: analytics, written by the edge function only. No client
--- access of any kind.
--- ---------------------------------------------------------------------------
-alter table public.calculation_events enable row level security;
-
--- ---------------------------------------------------------------------------
--- Service-role-only tables. RLS on with no policies = no client access.
---
--- route_cache matters most: without RLS a client could write cache rows and
--- poison the ETAs other users are served.
--- ---------------------------------------------------------------------------
+alter table public.trips                   enable row level security;
+alter table public.feedback                enable row level security;
+alter table public.devices                 enable row level security;
+alter table public.calculation_events      enable row level security;
 alter table public.route_cache             enable row level security;
 alter table public.city_profiles           enable row level security;
 alter table public.transport_profiles      enable row level security;
@@ -87,3 +36,83 @@ begin
   end if;
 end
 $$;
+
+-- ---------------------------------------------------------------------------
+-- Ownership policies. These already exist in production with these exact
+-- names; recreating them is a no-op that keeps the definitions in the repo.
+--
+-- Note the roles: production has these on `public`, which covers anon and
+-- authenticated. That is safe here because auth.uid() is null for anon, so
+-- every comparison below yields no rows. Kept as-is to match production.
+-- ---------------------------------------------------------------------------
+drop policy if exists "trips_select_own" on public.trips;
+create policy "trips_select_own"
+  on public.trips for select
+  using (auth.uid() = device_id);
+
+drop policy if exists "feedback_insert_own" on public.feedback;
+create policy "feedback_insert_own"
+  on public.feedback for insert
+  with check (
+    exists (
+      select 1 from public.trips t
+      where t.id = trip_id and t.device_id = auth.uid()
+    )
+  );
+
+drop policy if exists "feedback_select_own" on public.feedback;
+create policy "feedback_select_own"
+  on public.feedback for select
+  using (
+    exists (
+      select 1 from public.trips t
+      where t.id = trip_id and t.device_id = auth.uid()
+    )
+  );
+
+drop policy if exists "devices_select_own" on public.devices;
+create policy "devices_select_own"
+  on public.devices for select
+  using (auth.uid() = id);
+
+drop policy if exists "devices_insert_own" on public.devices;
+create policy "devices_insert_own"
+  on public.devices for insert
+  with check (auth.uid() = id);
+
+drop policy if exists "devices_update_own" on public.devices;
+create policy "devices_update_own"
+  on public.devices for update
+  using (auth.uid() = id);
+
+drop policy if exists "calculation_events_select_own" on public.calculation_events;
+create policy "calculation_events_select_own"
+  on public.calculation_events for select
+  using (auth.uid() = device_id);
+
+-- ---------------------------------------------------------------------------
+-- HARDENING - the three gaps found in review.
+--
+-- Each drop is independent. If you would rather keep one, delete that
+-- statement; nothing else depends on it.
+-- ---------------------------------------------------------------------------
+
+-- 1. Clients can currently insert their own trips. Nothing in the app does
+--    this - trips are written by the edge function under the service role.
+--    Left in place, a user can fabricate trip rows attributed to themselves,
+--    polluting their own history and any analytics aggregated from trips.
+drop policy if exists "trips_insert_own" on public.trips;
+
+-- 2. Same for analytics events: clients can insert calculation_events with
+--    their own device_id. The app never does. Left in place, the events table
+--    cannot be trusted as a measurement source.
+drop policy if exists "calculation_events_insert_own" on public.calculation_events;
+
+-- 3. These three tables are readable by anyone with the anon key
+--    (USING (true)). They hold the tuning that drives the recommendation:
+--    rush-hour windows, weather sensitivity, buffer configuration. No client
+--    code reads them - only the edge function does, via the service role - so
+--    exposing them buys nothing and publishes how the engine is calibrated.
+drop policy if exists "city_profiles_read_all"           on public.city_profiles;
+drop policy if exists "transport_profiles_read_all"      on public.transport_profiles;
+drop policy if exists "recommendation_versions_read_all" on public.recommendation_versions;

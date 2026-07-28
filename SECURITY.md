@@ -109,9 +109,33 @@ Required end state:
 The edge function uses the service role and bypasses RLS, so none of this
 affects it.
 
-**Status (2026-07-28):** RLS is enabled on all eight public tables. Policy
-definitions still need review — RLS being on does not help if a policy is
-`USING (true)`. Run section 2 of `verify-rls.sql`.
+**Status (2026-07-28): verified against the live database.**
+
+RLS is enabled on all eight public tables, and the ownership policies are
+correct:
+
+- `trips` — `SELECT USING (auth.uid() = device_id)`. Trip history is properly
+  scoped. **No data leak.**
+- `feedback` — INSERT and SELECT both gated on owning the referenced trip.
+  `feedback` has no `device_id` of its own, so the subquery through `trips` is
+  the correct mechanism.
+- `devices`, `calculation_events` — scoped to `auth.uid()`.
+- `route_cache` — RLS on with zero policies, i.e. deny-all. Cache poisoning is
+  not possible.
+
+Three gaps found, addressed in the migration:
+
+1. `trips_insert_own` let clients write their own trip rows. Nothing in the app
+   does — the edge function writes under the service role.
+2. `calculation_events_insert_own` — same, for analytics.
+3. `city_profiles`, `transport_profiles` and `recommendation_versions` had
+   `USING (true)` SELECT policies, exposing rush-hour windows, weather
+   sensitivity and buffer configuration to anyone with the anon key. No client
+   code reads these tables.
+
+When reading the "permissive policies" query, note that INSERT policies always
+show a null `USING` clause — that is expected, not a finding. They are
+constrained by `WITH CHECK`. Only `USING (true)` is a real exposure.
 
 **Open question:** `corridor_stats` did not appear in the public schema, but
 the edge function reads it ([calculate-trip/index.ts:157](functions/calculate-trip/index.ts))
