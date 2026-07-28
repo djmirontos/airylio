@@ -490,6 +490,7 @@ export default function App() {
             onPress={() =>
               navigation.navigate('Search', {
                 type: 'origin',
+                returnTo: 'PlanMain',
                 recentDestinations: recentOrigins,
                 favorites,
                 apiKey: GOOGLE_PLACES_API_KEY,
@@ -541,6 +542,7 @@ export default function App() {
             onPress={() => {
               navigation.navigate('Search', {
                 type: 'destination',
+                returnTo: 'PlanMain',
                 recentDestinations,
                 favorites,
                 apiKey: GOOGLE_PLACES_API_KEY,

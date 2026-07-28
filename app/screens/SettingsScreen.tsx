@@ -1,17 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Linking } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTheme } from '../context/ThemeContext';
-import DestinationAutocomplete from '../components/DestinationAutocomplete';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
 export default function SettingsScreen() {
   const { favorites, loaded, saveFavorite, clearFavorite } = useFavorites();
   const { colors: COLORS, isDark, toggleTheme } = useTheme();
-  const [editingFavorite, setEditingFavorite] = useState<'home' | 'work' | null>(null);
+  const navigation = useNavigation<any>();
+  const route = useRoute();
 
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.canvas },
@@ -32,7 +33,6 @@ export default function SettingsScreen() {
     divider: { height: 1, backgroundColor: COLORS.divider },
     editButton: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, backgroundColor: COLORS.accentTint, marginTop: 8, minHeight: 44 },
     editButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent, textAlign: 'center' },
-    autocompleteContainer: { marginTop: 8, marginBottom: 8 },
     emptyHint: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginTop: 8, paddingHorizontal: 16 },
     infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
     infoRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -42,9 +42,25 @@ export default function SettingsScreen() {
     linkLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginLeft: 12, flex: 1 },
   }), [COLORS]);
 
-  function handlePlaceSelect(type: 'home' | 'work', label: string, lat: number, lng: number) {
-    saveFavorite(type, { label, lat, lng });
-    setEditingFavorite(null);
+  useEffect(() => {
+    const params = route.params as
+      | { selectedPlace?: { label: string; lat: number; lng: number }; type?: string }
+      | undefined;
+    if (!params?.selectedPlace) return;
+    if (params.type === 'home' || params.type === 'work') {
+      saveFavorite(params.type, params.selectedPlace);
+    }
+    navigation.setParams({ selectedPlace: undefined, type: undefined });
+  }, [route.params]);
+
+  function editFavorite(type: 'home' | 'work') {
+    navigation.navigate('Search', {
+      type,
+      returnTo: 'SettingsMain',
+      recentDestinations: [],
+      apiKey: GOOGLE_PLACES_API_KEY,
+      placeholder: `Search ${type} address`,
+    });
   }
 
   function handleClear(type: 'home' | 'work') {
@@ -106,27 +122,14 @@ export default function SettingsScreen() {
             )}
           </View>
 
-          {editingFavorite === 'home' && (
-            <View style={styles.autocompleteContainer}>
-              <DestinationAutocomplete
-                apiKey={GOOGLE_PLACES_API_KEY}
-                recentDestinations={[]}
-                colors={{ accent: COLORS.accent, textPrimary: COLORS.textPrimary, textSecondary: COLORS.textSecondary, divider: COLORS.divider, card: COLORS.card, signalRisk: COLORS.signalRisk, ink: COLORS.ink }}
-                onSelect={(place) => handlePlaceSelect('home', place.label, place.lat, place.lng)}
-              />
-            </View>
-          )}
-
-          {editingFavorite !== 'home' && (
-            <Pressable
-              style={styles.editButton}
-              onPress={() => setEditingFavorite('home')}
-              accessibilityLabel={`${favorites.home ? 'Edit' : 'Set'} home location`}
-              accessibilityRole="button"
-            >
-              <Text style={styles.editButtonText}>{favorites.home ? 'Edit' : 'Set'}</Text>
-            </Pressable>
-          )}
+          <Pressable
+            style={styles.editButton}
+            onPress={() => editFavorite('home')}
+            accessibilityLabel={`${favorites.home ? 'Edit' : 'Set'} home location`}
+            accessibilityRole="button"
+          >
+            <Text style={styles.editButtonText}>{favorites.home ? 'Edit' : 'Set'}</Text>
+          </Pressable>
 
           <View style={styles.divider} />
 
@@ -148,27 +151,14 @@ export default function SettingsScreen() {
             )}
           </View>
 
-          {editingFavorite === 'work' && (
-            <View style={styles.autocompleteContainer}>
-              <DestinationAutocomplete
-                apiKey={GOOGLE_PLACES_API_KEY}
-                recentDestinations={[]}
-                colors={{ accent: COLORS.accent, textPrimary: COLORS.textPrimary, textSecondary: COLORS.textSecondary, divider: COLORS.divider, card: COLORS.card, signalRisk: COLORS.signalRisk, ink: COLORS.ink }}
-                onSelect={(place) => handlePlaceSelect('work', place.label, place.lat, place.lng)}
-              />
-            </View>
-          )}
-
-          {editingFavorite !== 'work' && (
-            <Pressable
-              style={styles.editButton}
-              onPress={() => setEditingFavorite('work')}
-              accessibilityLabel={`${favorites.work ? 'Edit' : 'Set'} work location`}
-              accessibilityRole="button"
-            >
-              <Text style={styles.editButtonText}>{favorites.work ? 'Edit' : 'Set'}</Text>
-            </Pressable>
-          )}
+          <Pressable
+            style={styles.editButton}
+            onPress={() => editFavorite('work')}
+            accessibilityLabel={`${favorites.work ? 'Edit' : 'Set'} work location`}
+            accessibilityRole="button"
+          >
+            <Text style={styles.editButtonText}>{favorites.work ? 'Edit' : 'Set'}</Text>
+          </Pressable>
         </View>
         {!favorites.home && !favorites.work && (
           <Text style={styles.emptyHint}>Tap Set to save your Home or Work location for quick access.</Text>

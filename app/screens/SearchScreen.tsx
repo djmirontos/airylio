@@ -19,9 +19,11 @@ interface Suggestion {
 }
 
 interface RouteParams {
-  type: 'origin' | 'destination';
-  recentDestinations: RecentDestination[];
-  favorites: { home: FavoritePlace | null; work: FavoritePlace | null };
+  type: 'origin' | 'destination' | 'home' | 'work';
+  /** Route to return the pick to: 'PlanMain' or 'SettingsMain'. */
+  returnTo: string;
+  recentDestinations?: RecentDestination[];
+  favorites?: { home: FavoritePlace | null; work: FavoritePlace | null };
   apiKey: string;
   placeholder: string;
 }
@@ -40,7 +42,8 @@ export default function SearchScreen() {
   const navigation = useNavigation<any>();
   const { colors: COLORS } = useTheme();
   const insets = useSafeAreaInsets();
-  const { type, recentDestinations, favorites, apiKey, placeholder } = route.params as RouteParams;
+  const { type, returnTo, recentDestinations, favorites, apiKey, placeholder } = route.params as RouteParams;
+  const recent = recentDestinations ?? [];
 
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -102,9 +105,9 @@ export default function SearchScreen() {
   }
 
   function returnWithPlace(place: { label: string; lat: number; lng: number }) {
-    // popTo, not navigate: in React Navigation 7 navigate pushes a fresh PlanMain
-    // instead of returning to the existing one, which resets the Plan screen's state.
-    navigation.popTo('PlanMain', { selectedPlace: place, type }, { merge: true });
+    // popTo, not navigate: in React Navigation 7 navigate pushes a fresh copy of the
+    // target instead of returning to the existing one, resetting that screen's state.
+    navigation.popTo(returnTo, { selectedPlace: place, type }, { merge: true });
   }
 
   async function selectSuggestion(item: Suggestion) {
@@ -125,7 +128,7 @@ export default function SearchScreen() {
 
   const showSuggestions = query.length >= MIN_CHARS;
   const hasFavorites = !!(favorites?.home || favorites?.work);
-  const hasRecent = recentDestinations.length > 0;
+  const hasRecent = recent.length > 0;
 
   let items: ListItem[] = [];
 
@@ -135,7 +138,7 @@ export default function SearchScreen() {
       if (favorites?.work) items.push({ id: 'fav-work', type: 'favorite-work', data: favorites.work });
     }
     if (hasRecent) {
-      recentDestinations.forEach((item, i) => {
+      recent.forEach((item, i) => {
         items.push({ id: `recent-${i}`, type: 'recent', data: item });
       });
     }

@@ -28,6 +28,21 @@ function PlanStackNavigator() {
   );
 }
 
+function SettingsStackNavigator() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="SettingsMain" component={SettingsScreen} />
+      <Stack.Group screenOptions={{ presentation: 'modal' }}>
+        <Stack.Screen name="Search" component={SearchScreen} />
+      </Stack.Group>
+    </Stack.Navigator>
+  );
+}
+
 export default function AppNavigator() {
   const { colors: COLORS } = useTheme();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -71,7 +86,7 @@ export default function AppNavigator() {
       <Tab.Screen name="Plan" component={PlanStackNavigator} />
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Settings" component={SettingsStackNavigator} />
     </Tab.Navigator>
   );
 }
