@@ -49,8 +49,11 @@ export default function SearchScreen() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [recent, setRecent] = useState<RecentDestination[]>([]);
   const [loading, setLoading] = useState(false);
+  /** Query the current `suggestions` belong to; '' when showing shortcuts. */
+  const [resultsFor, setResultsFor] = useState('');
   const inputRef = useRef<TextInput>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestQueryRef = useRef('');
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -82,12 +85,22 @@ export default function SearchScreen() {
   }, [navigation]);
 
   useEffect(() => {
-    if (query.trim().length < MIN_CHARS) {
+    const trimmed = query.trim();
+    latestQueryRef.current = trimmed;
+
+    if (trimmed.length < MIN_CHARS) {
+      // Box cleared: drop results so the shortcuts come back.
       setSuggestions([]);
+      setResultsFor('');
+      setLoading(false);
       return;
     }
+
+    // Note: suggestions are deliberately NOT cleared here. The previous results
+    // stay on screen through the debounce and the request, so the list never
+    // blanks out between keystrokes.
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => fetchSuggestions(query), DEBOUNCE_MS);
+    debounceRef.current = setTimeout(() => fetchSuggestions(trimmed), DEBOUNCE_MS);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
@@ -104,6 +117,11 @@ export default function SearchScreen() {
         body: JSON.stringify({ input: text, includedRegionCodes: ['ph'] }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        // Still falls through to an empty list, as before - just no longer silent.
+        console.warn('[SearchScreen] Places autocomplete returned', res.status, data);
+      }
+      if (latestQueryRef.current !== text) return; // superseded by a newer keystroke
       setSuggestions(
         (data.suggestions ?? [])
           .filter((s: any) => s.placePrediction)
@@ -113,10 +131,14 @@ export default function SearchScreen() {
             secondaryText: s.placePrediction.structuredFormat?.secondaryText?.text ?? '',
           }))
       );
-    } catch {
+      setResultsFor(text);
+    } catch (err) {
+      console.warn('[SearchScreen] Places autocomplete request failed:', err);
+      if (latestQueryRef.current !== text) return;
       setSuggestions([]);
+      setResultsFor(text);
     } finally {
-      setLoading(false);
+      if (latestQueryRef.current === text) setLoading(false);
     }
   }
 
@@ -138,19 +160,28 @@ export default function SearchScreen() {
           lat: data.location.latitude,
           lng: data.location.longitude,
         });
+      } else {
+        console.warn('[SearchScreen] Place details returned no location:', item.placeId, data);
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[SearchScreen] Place details request failed:', item.placeId, err);
+    }
   }
 
   // Typing anything swaps the shortcuts out for Places results; clearing brings them back.
-  const isSearching = query.trim().length > 0;
+  const trimmedQuery = query.trim();
+  const isSearching = trimmedQuery.length > 0;
+  // True once the results on screen correspond to what's currently typed. Until
+  // then we keep showing whatever is already there rather than an empty list.
+  const resultsAreCurrent = resultsFor === trimmedQuery;
+  const showShortcuts = !isSearching || (suggestions.length === 0 && !resultsAreCurrent);
   // Don't offer the favorite currently being edited as a shortcut to itself.
   const homeShortcut = type === 'home' ? null : favorites.home;
   const workShortcut = type === 'work' ? null : favorites.work;
 
   const items: ListItem[] = [];
 
-  if (isSearching) {
+  if (!showShortcuts) {
     if (suggestions.length > 0) {
       items.push({ id: 'header-suggested', type: 'header', data: 'Suggested Locations' });
       suggestions.forEach((item) => {
@@ -243,6 +274,23 @@ export default function SearchScreen() {
     return null;
   };
 
+  const renderEmpty = () => {
+    // Mid-request with nothing to fall back on: stay blank, the header spinner
+    // is the only signal. Never flash a message that contradicts what's typed.
+    let message: string | null = null;
+    if (isSearching && resultsAreCurrent && suggestions.length === 0) {
+      message = 'No results found';
+    } else if (!isSearching) {
+      message = 'Start typing to search';
+    }
+    if (!message) return null;
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>{message}</Text>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.container, { backgroundColor: COLORS.canvas }]}>
       <View style={[styles.header, { borderBottomColor: COLORS.divider, paddingTop: insets.top }]}>
@@ -257,35 +305,24 @@ export default function SearchScreen() {
           placeholderTextColor={COLORS.textSecondary}
           style={[styles.searchInput, { color: COLORS.textPrimary }]}
         />
+        {/* Inline, so the list below never has to make room for a spinner. */}
+        <ActivityIndicator
+          size="small"
+          color={COLORS.accent}
+          animating={loading}
+          style={[styles.headerSpinner, !loading && styles.headerSpinnerHidden]}
+        />
       </View>
 
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={COLORS.accent} />
-        </View>
-      )}
-
-      {!loading && isSearching && suggestions.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>No results found</Text>
-        </View>
-      )}
-
-      {!loading && !isSearching && items.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: COLORS.textSecondary }]}>Start typing to search</Text>
-        </View>
-      )}
-
-      {!loading && (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator
-        />
-      )}
+      <FlatList
+        style={styles.list}
+        data={items}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListEmptyComponent={renderEmpty}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
+      />
     </SafeAreaView>
   );
 }
@@ -301,8 +338,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     paddingHorizontal: 12,
   },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  // Reserves its slot whether or not it is spinning, so the input never shifts.
+  headerSpinner: { width: 20, marginLeft: 4 },
+  headerSpinnerHidden: { opacity: 0 },
+  list: { flex: 1 },
+  emptyContainer: { paddingTop: 48, alignItems: 'center' },
   emptyText: { fontFamily: 'Inter_400Regular', fontSize: 14 },
   sectionHeader: {
     fontFamily: 'Inter_600SemiBold',
