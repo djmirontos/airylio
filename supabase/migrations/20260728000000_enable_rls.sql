@@ -73,7 +73,17 @@ alter table public.calculation_events enable row level security;
 -- poison the ETAs other users are served.
 -- ---------------------------------------------------------------------------
 alter table public.route_cache             enable row level security;
-alter table public.corridor_stats          enable row level security;
 alter table public.city_profiles           enable row level security;
 alter table public.transport_profiles      enable row level security;
 alter table public.recommendation_versions enable row level security;
+
+-- corridor_stats is read by the edge function's fallback path but was not
+-- present in the public schema when this was written. Guarded so a missing
+-- table cannot fail the migration; see the note in SECURITY.md.
+do $$
+begin
+  if to_regclass('public.corridor_stats') is not null then
+    execute 'alter table public.corridor_stats enable row level security';
+  end if;
+end
+$$;

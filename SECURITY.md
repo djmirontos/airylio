@@ -109,6 +109,16 @@ Required end state:
 The edge function uses the service role and bypasses RLS, so none of this
 affects it.
 
+**Status (2026-07-28):** RLS is enabled on all eight public tables. Policy
+definitions still need review — RLS being on does not help if a policy is
+`USING (true)`. Run section 2 of `verify-rls.sql`.
+
+**Open question:** `corridor_stats` did not appear in the public schema, but
+the edge function reads it ([calculate-trip/index.ts:157](functions/calculate-trip/index.ts))
+in its fallback path when the Google Routes call fails. If the table is
+genuinely missing, that fallback can never produce an estimate and every
+Google failure becomes a 502 for the user. Worth confirming.
+
 `trips` rows hold `origin_lat/lng` and `destination_lat/lng` — effectively home
 and workplace coordinates. If RLS on `trips` is off or permissive, any
 anonymous user can read every user's movements. This is the single highest-risk
