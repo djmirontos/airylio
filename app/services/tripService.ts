@@ -14,13 +14,34 @@ export interface CalculateTripParams {
   destinationLabel: string;
 }
 
+// In-flight anonymous sign-in, shared by concurrent callers.
+//
+// Without this, two calculations started close together both observe "no
+// session" and each call signInAnonymously, producing two anonymous users. The
+// second session wins, so the first trip ends up owned by an identity the
+// device no longer holds - and disappears from history.
+let signInPromise: Promise<void> | null = null;
+
+async function ensureSession(): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) return;
+
+  if (!signInPromise) {
+    signInPromise = supabase.auth
+      .signInAnonymously()
+      .then(({ error }) => {
+        if (error) throw error;
+      })
+      .finally(() => {
+        signInPromise = null;
+      });
+  }
+  return signInPromise;
+}
+
 // Call the calculate-trip edge function to get route recommendations
 export async function calculateTrip(params: CalculateTripParams): Promise<TripResult> {
-  const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) {
-    const { error: authError } = await supabase.auth.signInAnonymously();
-    if (authError) throw authError;
-  }
+  await ensureSession();
 
   const { data, error: fnError } = await supabase.functions.invoke('calculate-trip', {
     body: {
@@ -65,11 +86,18 @@ export async function fetchTripHistory(): Promise<Trip[]> {
   return data || [];
 }
 
-// Submit feedback for a trip
+// Submit feedback for a trip.
+// The insert result was previously discarded, so a rejected write (RLS,
+// offline, bad trip id) still showed the user a success state.
 export async function submitFeedback(tripId: string, rating: 'accurate' | 'close' | 'late'): Promise<void> {
-  await supabase.from('feedback').insert({
+  const { error } = await supabase.from('feedback').insert({
     trip_id: tripId,
     rating,
     user_success: rating !== 'late',
   });
+
+  if (error) {
+    console.warn('[tripService] Feedback submission failed:', error.message);
+    throw new Error(sanitizeError(error.message));
+  }
 }

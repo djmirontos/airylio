@@ -5,15 +5,150 @@ import { buildCacheKey, roundToTimeBucket } from "../_shared/geo/cacheKey.ts";
 import { getRouteEta } from "../_shared/google/routesClient.ts";
 import { calculateDepartureTime } from "../_shared/engine/calculateDeparture.ts";
 
+// CORS is not an abuse control - a script or curl ignores it entirely. It only
+// constrains browsers. Set ALLOWED_ORIGIN if a web client is ever added; the
+// rate limit below is what actually protects the Google spend.
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Vary": "Origin",
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GOOGLE_API_KEY = Deno.env.get("GOOGLE_ROUTES_API_KEY")!;
 const CACHE_TTL_MS = 10 * 60 * 1000;
+
+// Abuse limits. Anonymous sign-up is open, so anyone can mint sessions; these
+// bound how much paid Google Routes traffic a single device can drive.
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX_PER_WINDOW = 10;
+const RATE_LIMIT_DAY_MS = 24 * 60 * 60 * 1000;
+const RATE_LIMIT_MAX_PER_DAY = 200;
+
+// Labels are free-form client input stored on every trip row. Unbounded, they
+// are a cheap way to write arbitrary volumes into the database.
+const MAX_LABEL_LENGTH = 200;
+// Guards against clock-skewed or junk timestamps reaching the engine.
+const MAX_TARGET_TIME_SKEW_MS = 365 * 24 * 60 * 60 * 1000;
+
+function isValidLatitude(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= -90 && value <= 90;
+}
+
+function isValidLongitude(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= -180 && value <= 180;
+}
+
+function sanitizeLabel(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  return trimmed.slice(0, MAX_LABEL_LENGTH);
+}
+
+/**
+ * Reads a cached Google response, returning null if the row is not shaped the
+ * way we expect. A malformed row is then treated as a miss and refetched,
+ * rather than throwing and 500-ing every request that hits that cache key
+ * until it expires.
+ */
+function parseCachedRoute(
+  cacheHit: any,
+): { durationSeconds: number; distanceMeters: number; encodedPolyline?: string } | null {
+  const route = cacheHit?.google_response?.routes?.[0];
+  if (!route) return null;
+
+  const durationSeconds = parseInt(String(route.duration ?? "").replace("s", ""), 10);
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return null;
+
+  const distanceMeters = Number(route.distanceMeters);
+  if (!Number.isFinite(distanceMeters)) return null;
+
+  return {
+    durationSeconds,
+    distanceMeters,
+    encodedPolyline: route.polyline?.encodedPolyline,
+  };
+}
+
+/**
+ * Counts a device's recent activity for the throttle.
+ *
+ * Prefers calculation_events: it records cache hits and Google failures as well
+ * as successes, so a caller who only ever triggers failures - which write no
+ * trip row - is still counted. Falls back to counting trips if that table or
+ * its created_at column is not queryable.
+ *
+ * Returns null if neither source can be counted, which the caller treats as
+ * "allow".
+ */
+async function countRecentActivity(
+  admin: any,
+  deviceId: string,
+  sinceIso: string,
+): Promise<number | null> {
+  const events = await admin
+    .from("calculation_events")
+    .select("calculation_id", { count: "exact", head: true })
+    .eq("device_id", deviceId)
+    .gte("created_at", sinceIso);
+
+  if (!events.error) return events.count ?? 0;
+
+  const trips = await admin
+    .from("trips")
+    .select("id", { count: "exact", head: true })
+    .eq("device_id", deviceId)
+    .gte("created_at", sinceIso);
+
+  if (!trips.error) {
+    console.warn("rate limit falling back to trips count", { message: events.error.message });
+    return trips.count ?? 0;
+  }
+
+  console.error("rate limit check failed on both sources", {
+    deviceId,
+    events: events.error.message,
+    trips: trips.error.message,
+  });
+  return null;
+}
+
+/**
+ * Per-device throttle.
+ *
+ * Fails open: if the counts cannot be read we let the request through rather
+ * than locking every user out of the app on a transient database problem. That
+ * is logged loudly, because a persistent failure here means the Google spend is
+ * effectively unprotected.
+ */
+async function isRateLimited(admin: any, deviceId: string): Promise<boolean> {
+  const minuteCount = await countRecentActivity(
+    admin,
+    deviceId,
+    new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString(),
+  );
+  if (minuteCount === null) return false;
+  if (minuteCount >= RATE_LIMIT_MAX_PER_WINDOW) {
+    console.warn("rate limit hit (per minute)", { deviceId, minuteCount });
+    return true;
+  }
+
+  const dayCount = await countRecentActivity(
+    admin,
+    deviceId,
+    new Date(Date.now() - RATE_LIMIT_DAY_MS).toISOString(),
+  );
+  if (dayCount === null) return false;
+  if (dayCount >= RATE_LIMIT_MAX_PER_DAY) {
+    console.warn("rate limit hit (per day)", { deviceId, dayCount });
+    return true;
+  }
+
+  return false;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -36,24 +171,69 @@ Deno.serve(async (req) => {
     const deviceId = userData.user.id;
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    await admin.from("devices").upsert({ id: deviceId }, { onConflict: "id" });
 
-    const body = await req.json();
+    const { error: deviceError } = await admin.from("devices").upsert({ id: deviceId }, { onConflict: "id" });
+    if (deviceError) {
+      // Not fatal - the calculation does not depend on it - but it should not
+      // fail silently the way it did before.
+      console.error("devices upsert failed", { deviceId, message: deviceError.message });
+    }
+
+    // Per-device throttle. Anonymous sign-up is open, so a caller can mint
+    // unlimited identities; this caps what any single one can spend against the
+    // paid Routes API. Counting trips (rather than calculation_events) keeps
+    // this dependent only on columns known to exist.
+    const rateLimited = await isRateLimited(admin, deviceId);
+    if (rateLimited) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests. Please wait a moment and try again." }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" },
+        },
+      );
+    }
+
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Request body must be valid JSON" }), { status: 400, headers: corsHeaders });
+    }
+
     const {
       originLat, originLng, destLat, destLng,
       targetTime, transportMode,
       planningMode = "arrive_by", // defensive default for older clients not yet updated
-      originLabel = "Unknown origin",
-      destinationLabel = "Unknown destination",
-    } = body;
-    if (
-      typeof originLat !== "number" || typeof originLng !== "number" ||
-      typeof destLat !== "number" || typeof destLng !== "number" ||
-      typeof targetTime !== "string" || typeof transportMode !== "string" ||
-      (planningMode !== "arrive_by" && planningMode !== "leave_at")
-    ) {
-      return new Response(JSON.stringify({ error: "Missing or invalid request fields" }), { status: 400, headers: corsHeaders });
+    } = body ?? {};
+
+    // typeof x === "number" alone accepts NaN and Infinity, both of which reach
+    // the geohasher and the Google request as garbage. Check finiteness and
+    // real-world bounds instead.
+    if (!isValidLatitude(originLat) || !isValidLongitude(originLng)) {
+      return new Response(JSON.stringify({ error: "Invalid origin coordinates" }), { status: 400, headers: corsHeaders });
     }
+    if (!isValidLatitude(destLat) || !isValidLongitude(destLng)) {
+      return new Response(JSON.stringify({ error: "Invalid destination coordinates" }), { status: 400, headers: corsHeaders });
+    }
+    if (typeof transportMode !== "string" || !transportMode || transportMode.length > 40) {
+      return new Response(JSON.stringify({ error: "Invalid transport mode" }), { status: 400, headers: corsHeaders });
+    }
+    if (planningMode !== "arrive_by" && planningMode !== "leave_at") {
+      return new Response(JSON.stringify({ error: "Invalid planning mode" }), { status: 400, headers: corsHeaders });
+    }
+    // An unparseable targetTime becomes NaN inside the engine and silently
+    // produces nonsense departure times rather than failing.
+    if (typeof targetTime !== "string") {
+      return new Response(JSON.stringify({ error: "Invalid target time" }), { status: 400, headers: corsHeaders });
+    }
+    const targetTimeMs = Date.parse(targetTime);
+    if (!Number.isFinite(targetTimeMs) || Math.abs(targetTimeMs - Date.now()) > MAX_TARGET_TIME_SKEW_MS) {
+      return new Response(JSON.stringify({ error: "Invalid target time" }), { status: 400, headers: corsHeaders });
+    }
+
+    const originLabel = sanitizeLabel(body?.originLabel, "Unknown origin");
+    const destinationLabel = sanitizeLabel(body?.destinationLabel, "Unknown destination");
     const originHash = encodeGeohash(originLat, originLng, 7);
     const destinationHash = encodeGeohash(destLat, destLng, 7);
 
@@ -103,7 +283,7 @@ Deno.serve(async (req) => {
         else if (code >= 80 || (code >= 51 && code <= 67)) weatherCondition = "rain";
       }
     } catch {
-      // Open-Meteo unavailable — silent fallback to 'clear'
+      // Open-Meteo unavailable ï¿½ silent fallback to 'clear'
     }
 
     const requestTime = new Date();
@@ -117,13 +297,24 @@ Deno.serve(async (req) => {
     let dataFreshness: "live" | "cached" | "estimated";
     const calculationId = crypto.randomUUID();
 
-    const { data: cacheHit } = await admin
+    const { data: cacheHit, error: cacheError } = await admin
       .from("route_cache").select("*").eq("cache_key", cacheKey)
       .gt("expires_at", new Date().toISOString()).maybeSingle();
-    if (cacheHit) {
-      durationSeconds = parseInt(String(cacheHit.google_response.routes[0].duration).replace("s", ""), 10);
-      encodedPolyline = cacheHit.google_response.routes[0].polyline?.encodedPolyline;
-      distanceMeters = cacheHit.google_response.routes[0].distanceMeters;
+    if (cacheError) {
+      console.error("route_cache lookup failed (treating as miss)", { cacheKey, message: cacheError.message });
+    }
+
+    // A cache row that is not shaped as expected is treated as a miss, so one
+    // bad row cannot 500 every request on that key until it expires.
+    const cachedRoute = cacheHit ? parseCachedRoute(cacheHit) : null;
+    if (cacheHit && !cachedRoute) {
+      console.warn("discarding malformed route_cache row", { cacheKey });
+    }
+
+    if (cachedRoute) {
+      durationSeconds = cachedRoute.durationSeconds;
+      distanceMeters = cachedRoute.distanceMeters;
+      encodedPolyline = cachedRoute.encodedPolyline;
       dataFreshness = "cached";
       await admin.from("calculation_events").insert({
         device_id: deviceId, calculation_id: calculationId, event_type: "cache_hit",
@@ -222,8 +413,18 @@ Deno.serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {
-    console.error("calculate-trip error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error", detail: err.message }), { status: 500, headers: corsHeaders });
+    // Detail stays server-side. It previously went out in the response body,
+    // which leaked Postgres constraint and table names to any caller.
+    const errorId = crypto.randomUUID();
+    console.error("calculate-trip error", {
+      errorId,
+      message: err?.message,
+      stack: err?.stack,
+    });
+    return new Response(
+      JSON.stringify({ error: "Internal server error", errorId }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });
 

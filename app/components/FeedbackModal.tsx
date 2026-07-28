@@ -24,7 +24,9 @@ export default function FeedbackModal({ visible, tripId, destLabel, onClose }: F
       await submitFeedback(tripId, rating);
       setSubmitted(true);
       setTimeout(onClose, 1500);
-    } catch {
+    } catch (err) {
+      // Close without the success state rather than claiming it worked.
+      console.warn('[FeedbackModal] Could not submit feedback:', err);
       onClose();
     } finally {
       setSubmitting(false);
