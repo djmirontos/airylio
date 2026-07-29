@@ -59,6 +59,7 @@ export default function MapScreen() {
   }), [COLORS]);
 
   useEffect(() => {
+    let fitTimer: ReturnType<typeof setTimeout> | undefined;
     if (currentTrip?.encodedPolyline) {
       setLoading(true);
       try {
@@ -69,7 +70,7 @@ export default function MapScreen() {
         }));
         setDecodedRoute(routeCoords);
 
-        setTimeout(() => {
+        fitTimer = setTimeout(() => {
           if (mapRef.current && routeCoords.length > 0) {
             mapRef.current.fitToCoordinates(routeCoords, {
               edgePadding: { top: 100, right: 50, bottom: 200, left: 50 },
@@ -83,6 +84,9 @@ export default function MapScreen() {
         setLoading(false);
       }
     }
+    return () => {
+      if (fitTimer) clearTimeout(fitTimer);
+    };
   }, [currentTrip?.encodedPolyline]);
 
   if (!currentTrip || !currentMeta) {

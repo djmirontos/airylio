@@ -16,7 +16,7 @@ import { useTripContext, PlanPrefill } from './context/TripContext';
 import { scheduleLeaveReminder, cancelLeaveReminder } from './hooks/useNotifications';
 import * as Notifications from 'expo-notifications';
 import { useTheme } from './context/ThemeContext';
-import { MIN_LOADING_MS, LEAVE_AT_GRACE_MS, DEFAULT_TIME_OFFSET_MS, MAX_RECENT_DESTINATIONS, RECENT_DESTINATIONS_KEY, RECENT_ORIGINS_KEY } from './constants/config';
+import { MIN_LOADING_MS, LEAVE_AT_GRACE_MS, DEFAULT_TIME_OFFSET_MS, MAX_RECENT_DESTINATIONS, RECENT_DESTINATIONS_KEY, RECENT_ORIGINS_KEY, WEATHER_FETCH_TIMEOUT_MS } from './constants/config';
 import { sanitizeError } from './utils/errors';
 import { TripResult } from './types/supabase';
 import { calculateTrip } from './services/tripService';
@@ -188,8 +188,9 @@ export default function App() {
       try {
         const stored = await AsyncStorage.getItem(RECENT_DESTINATIONS_KEY);
         if (stored) setRecentDestinations(JSON.parse(stored));
-      } catch {
-        // Non-critical: recent destinations are a convenience feature, fail silently.
+      } catch (err: any) {
+        // Non-critical, but logged: a systematically failing store was invisible.
+        console.warn('[Plan] Failed to load recent destinations:', err?.message ?? err);
       }
     })();
   }, []);
@@ -199,18 +200,24 @@ export default function App() {
       try {
         const stored = await AsyncStorage.getItem(RECENT_ORIGINS_KEY);
         if (stored) setRecentOrigins(JSON.parse(stored));
-      } catch {
-        // Non-critical: recent origins are a convenience feature, fail silently.
+      } catch (err: any) {
+        console.warn('[Plan] Failed to load recent origins:', err?.message ?? err);
       }
     })();
   }, []);
 
   useEffect(() => {
     if (!gpsCoords) return;
+    // Bounded so a hanging Open-Meteo request cannot leave the header weather
+    // pending indefinitely. WEATHER_FETCH_TIMEOUT_MS already existed but was
+    // never wired up.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), WEATHER_FETCH_TIMEOUT_MS);
     (async () => {
       try {
         const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${gpsCoords.lat}&longitude=${gpsCoords.lng}&current=weathercode&timezone=auto`
+          `https://api.open-meteo.com/v1/forecast?latitude=${gpsCoords.lat}&longitude=${gpsCoords.lng}&current=weathercode&timezone=auto`,
+          { signal: controller.signal }
         );
         if (res.ok) {
           const data = await res.json();
@@ -220,10 +227,19 @@ export default function App() {
           else if (code >= 80 || (code >= 51 && code <= 67)) setHeaderWeather('rain');
           else setHeaderWeather('clear');
         }
-      } catch {
-        // silent fallback to 'clear'
+      } catch (err: any) {
+        // Non-critical: the header just keeps its current icon.
+        if (err?.name !== 'AbortError') {
+          console.warn('[Plan] Header weather lookup failed:', err?.message ?? err);
+        }
+      } finally {
+        clearTimeout(timeout);
       }
     })();
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
   }, [gpsCoords]);
 
   async function addRecentDestination(item: RecentDestination) {
@@ -251,13 +267,15 @@ export default function App() {
 
   useEffect(() => {
     if (!prefillData) return;
+    originPickedRef.current = true;
     setOriginLabel(prefillData.originLabel);
     setOriginCoords({ lat: prefillData.originLat, lng: prefillData.originLng });
     setDestLabel(prefillData.destLabel);
     setDestCoords({ lat: prefillData.destLat, lng: prefillData.destLng });
     setPlanningMode(prefillData.planningMode);
-    setTimeout(() => setShowTimePicker(true), 300);
+    const timer = setTimeout(() => setShowTimePicker(true), 300);
     setPrefillData(null);
+    return () => clearTimeout(timer);
   }, [prefillData]);
 
   useEffect(() => {

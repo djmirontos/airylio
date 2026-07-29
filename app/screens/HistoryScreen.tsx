@@ -8,6 +8,7 @@ import { useTripContext } from '../context/TripContext';
 import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
 import { Trip, TripResult } from '../types/supabase';
 import { fetchTripHistory } from '../services/tripService';
+import { sanitizeError } from '../utils/errors';
 
 const TRANSPORT_MODES: Record<string, { label: string; icon: string }> = {
   drive: { label: 'Drive', icon: 'car' },
@@ -40,6 +41,7 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState<TripResult | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const confidenceColor = (score: number): string => {
     if (score >= CONFIDENCE_HIGH) return COLORS.signalGood;
@@ -50,11 +52,15 @@ export default function HistoryScreen() {
   const fetchTrips = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const data = await fetchTripHistory();
       setTrips(data);
     } catch (err: any) {
-      Alert.alert('Error', 'Failed to load trip history');
-      console.error(err);
+      // Inline rather than Alert.alert: this runs on every focus, so a failure
+      // (offline being the common one) used to throw a blocking dialog at the
+      // user each time they opened the tab.
+      console.warn('[HistoryScreen] Failed to load trip history:', err?.message ?? err);
+      setLoadError(sanitizeError(err?.message ?? ''));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -138,13 +144,27 @@ export default function HistoryScreen() {
     );
   };
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="time-outline" size={48} color={COLORS.signalWarn} />
-      <Text style={styles.emptyTitle}>No trips yet</Text>
-      <Text style={styles.emptySubtitle}>Your past trips will appear here after you calculate a route from the Plan tab.</Text>
-    </View>
-  );
+  const renderEmpty = () => {
+    if (loadError) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color={COLORS.signalRisk} />
+          <Text style={styles.emptyTitle}>Couldn't load history</Text>
+          <Text style={styles.emptySubtitle}>{loadError}</Text>
+          <Pressable style={styles.retryButton} onPress={fetchTrips} accessibilityRole="button" accessibilityLabel="Retry loading trip history">
+            <Text style={styles.retryButtonText}>Try again</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="time-outline" size={48} color={COLORS.signalWarn} />
+        <Text style={styles.emptyTitle}>No trips yet</Text>
+        <Text style={styles.emptySubtitle}>Your past trips will appear here after you calculate a route from the Plan tab.</Text>
+      </View>
+    );
+  };
 
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.canvas },
@@ -155,6 +175,8 @@ export default function HistoryScreen() {
     emptyContainer: { alignItems: 'center', justifyContent: 'center', padding: 32 },
     emptyTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
     emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22 },
+    retryButton: { marginTop: 16, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12, backgroundColor: COLORS.accentTint, minHeight: 44, justifyContent: 'center' },
+    retryButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
     tripCard: {
       flexDirection: 'row',
       alignItems: 'center',
