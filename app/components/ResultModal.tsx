@@ -17,8 +17,13 @@ interface ResultModalProps {
   selectedDateTime: Date;
   planningMode: PlanningMode;
   onClose: () => void;
+  /** History only: recalculate this trip against current traffic. */
   onRecalculate?: () => void;
+  /** Shown when the result carries a polyline. */
   onViewRoute?: () => void;
+  /** Plan only: schedule the leave reminder. Omit to hide the button. */
+  onSetReminder?: () => void;
+  reminderSet?: boolean;
 }
 
 function formatTime12h(iso: string): string {
@@ -48,6 +53,8 @@ export default function ResultModal({
   onClose,
   onRecalculate,
   onViewRoute,
+  onSetReminder,
+  reminderSet = false,
 }: ResultModalProps) {
   const { colors: COLORS } = useTheme();
   const [countdownText, setCountdownText] = useState<string | null>(null);
@@ -133,7 +140,7 @@ export default function ResultModal({
     resultContent: { flex: 1, paddingBottom: 0 },
     resultHero: { backgroundColor: COLORS.resultHero, paddingTop: 70, paddingBottom: 16, paddingHorizontal: 24, alignItems: 'flex-start' },
     // Hero row: the leave-time block on the left, confidence ring on the right.
-    heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, alignSelf: 'stretch' },
+    heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     heroTextCol: { flex: 1 },
     countdownText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: 'rgba(255,255,255,0.92)', marginTop: 4 },
     resultHeroLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.7)' },
@@ -155,13 +162,11 @@ export default function ResultModal({
     tripDetailLabel: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, flex: 1 },
     tripDetailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.textPrimary },
     // Vertical origin -> destination stack: a row per stop, joined by
-    // tripStackLine (1px wide, 8px tall). This was 'row', which laid the two
-    // stops out side by side; tripStackRow was referenced but never defined,
-    // so each stop fell back to a column and the whole block rendered wrong.
-    tripStack: { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 6, alignSelf: 'stretch' },
-    tripStackRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch' },
-    // 6px wide so its centre sits on tripStackLine's centre (marginLeft 2.5 + 0.5px).
-    tripDot: { width: 6, height: 6, borderRadius: 3 },
+    // tripStackLine. Values match the Plan screen's originals exactly so both
+    // entry points render identically.
+    tripStack: { marginBottom: 6 },
+    tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+    tripDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
     tripStackIcon: { marginTop: 2 },
     tripStackLine: { width: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
     tripText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.9)', flex: 1 },
@@ -174,6 +179,10 @@ export default function ResultModal({
     viewRouteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.signalGood, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 4, minHeight: 44 },
     viewRouteButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
     recalculateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 8, minHeight: 44 },
+    remindButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginTop: 8, marginBottom: 4, minHeight: 44 },
+    remindButtonActive: { borderColor: COLORS.signalGood, backgroundColor: 'rgba(18,184,134,0.08)' },
+    remindButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
+    remindButtonTextActive: { color: COLORS.signalGood },
     recalculateButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
     updatedText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 2 },
   }), [COLORS]);
@@ -308,6 +317,24 @@ export default function ResultModal({
               <Pressable style={styles.viewRouteButton} onPress={onViewRoute}>
                 <Ionicons name="map" size={16} color="#fff" />
                 <Text style={styles.viewRouteButtonText}>View Route on Map</Text>
+              </Pressable>
+            )}
+
+            {onSetReminder && (
+              <Pressable
+                style={[styles.remindButton, reminderSet && styles.remindButtonActive]}
+                onPress={reminderSet ? undefined : onSetReminder}
+                accessibilityLabel="Set leave reminder"
+                accessibilityRole="button"
+              >
+                <Ionicons
+                  name={reminderSet ? 'checkmark-circle' : 'notifications-outline'}
+                  size={16}
+                  color={reminderSet ? COLORS.signalGood : COLORS.accent}
+                />
+                <Text style={[styles.remindButtonText, reminderSet && styles.remindButtonTextActive]}>
+                  {reminderSet ? 'Reminder set' : "Remind me when it's time to leave"}
+                </Text>
               </Pressable>
             )}
 

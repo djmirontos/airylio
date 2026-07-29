@@ -11,6 +11,14 @@ export default {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff",
+      // Keyed off the OS appearance, which is all the native splash can know
+      // before JS starts - it cannot see the in-app theme toggle. Matches
+      // DARK_COLORS.canvas so a dark-mode launch does not flash white.
+      dark: {
+        image: "./assets/splash-icon.png",
+        resizeMode: "contain",
+        backgroundColor: "#0F1020",
+      },
     },
     ios: {
       supportsTablet: true,

@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Pressable, ActivityIndicator, ScrollView, Platform, Modal, Alert, Keyboard } from 'react-native';
+import { StyleSheet, Text, View, Pressable, ScrollView, Platform, Modal, Alert, Keyboard } from 'react-native';
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import TimePickerModal from './components/TimePickerModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import ConfidenceRing from './components/ConfidenceRing';
 import LoadingRecommendation from './components/LoadingRecommendation';
 import FeedbackModal from './components/FeedbackModal';
+import ResultModal from './components/ResultModal';
 import PlanHeader from './components/PlanHeader';
 import { supabase } from './lib/supabase';
 import { useTripContext, PlanPrefill } from './context/TripContext';
@@ -68,24 +68,6 @@ function combineDateAndTime(date: Date, time: Date): Date {
   return combined;
 }
 
-function formatTime12h(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-function formatTravelTime(leaveTime: string, arrivalTime: string): string {
-  const ms = new Date(arrivalTime).getTime() - new Date(leaveTime).getTime();
-  const totalMinutes = Math.round(ms / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  if (hours > 0) return `${hours} hr ${minutes} min`;
-  return `${minutes} min`;
-}
-
-function formatDistance(meters?: number): string | null {
-  if (meters === undefined) return null;
-  return `${(meters / 1000).toFixed(1)} km`;
-}
-
 export default function App() {
   const [gpsCoords, setGpsCoords] = useState<Coords | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -118,48 +100,6 @@ export default function App() {
   const { setCurrentTrip, prefillData, setPrefillData } = useTripContext();
   const { colors: COLORS, isDark } = useTheme();
   const navigation = useNavigation<any>();
-
-  const confidenceColor = (score: number): string => {
-    if (score >= 85) return COLORS.signalGood;
-    if (score >= 70) return COLORS.signalWarn;
-    return COLORS.signalRisk;
-  };
-
-  const freshnessLabel = (freshness: string): { text: string; color: string } => {
-    if (freshness === 'live') return { text: 'Live traffic', color: COLORS.signalGood };
-    if (freshness === 'cached') return { text: 'Recent data', color: COLORS.signalWarn };
-    return { text: 'Estimated', color: COLORS.textSecondary };
-  };
-
-  const reasonIcon = (reason: string): { name: string; color: string } => {
-    const lower = reason.toLowerCase();
-    if (lower.includes('rain') || lower.includes('storm') || lower.includes('weather')) {
-      return { name: 'rainy', color: '#4A90D9' };
-    }
-    if (lower.includes('rush') || lower.includes('traffic') || lower.includes('congestion')) {
-      return { name: 'car', color: COLORS.accent };
-    }
-    if (lower.includes('cached') || lower.includes('historical') || lower.includes('estimate')) {
-      return { name: 'stats-chart', color: COLORS.textSecondary };
-    }
-    if (lower.includes('buffer') || lower.includes('minute')) {
-      return { name: 'time', color: COLORS.signalWarn };
-    }
-    return { name: 'checkmark-circle', color: COLORS.signalGood };
-  };
-
-  const factorIcon = (type: 'weather' | 'rush_hour' | 'buffer_cap'): { name: string; color: string } => {
-    if (type === 'weather') return { name: 'rainy', color: '#4A90D9' };
-    if (type === 'rush_hour') return { name: 'car', color: COLORS.accent };
-    return { name: 'time', color: COLORS.signalWarn }; // buffer_cap
-  };
-
-  const weatherIndicator = (condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm'): { icon: string; label: string; color: string } => {
-    if (condition === 'storm') return { icon: 'thunderstorm', label: 'Storm', color: '#7B5EA7' };
-    if (condition === 'heavy_rain') return { icon: 'rainy', label: 'Heavy Rain', color: '#4A90D9' };
-    if (condition === 'rain') return { icon: 'rainy-outline', label: 'Rain', color: '#4A90D9' };
-    return { icon: 'sunny', label: 'Clear', color: COLORS.signalGood };
-  };
 
   useEffect(() => {
     (async () => {
@@ -385,15 +325,8 @@ export default function App() {
     }
   }
 
-  const freshness = result ? freshnessLabel(result.dataFreshness) : null;
-  // Read the mode from the result itself (echoed back by the engine), not the
-  // live toggle state - the toggle can't actually change while the result
-  // modal is open, but this is the more correct source of truth regardless.
-  const resultMode: PlanningMode = result?.recommendationExplanation?.planningMode ?? planningMode;
-
   const styles = useMemo(() => StyleSheet.create({
     root: { flex: 1, backgroundColor: COLORS.canvas },
-    fontLoadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
     card: { flex: 1, backgroundColor: COLORS.card, marginHorizontal: 16, marginBottom: 16, borderRadius: 24, padding: 20, shadowColor: COLORS.ink, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 4 },
     modeToggleRow: { flexDirection: 'row', gap: 6, backgroundColor: COLORS.accentTint, borderRadius: 16, padding: 4, marginBottom: 16 },
     modeToggleButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, minHeight: 44, minWidth: 44 },
@@ -407,7 +340,6 @@ export default function App() {
     fieldTextCol: { flex: 1 },
     fieldLabel: { fontFamily: 'Inter_500Medium', fontSize: 12, color: COLORS.accent, marginBottom: 2 },
     fieldValue: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.textPrimary },
-    sectionLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
     dateTimeSectionLabel: { fontFamily: 'Poppins_700Bold', fontSize: 15, color: COLORS.textPrimary, marginTop: 10, marginBottom: 6 },
     dateTimeCard: { flexDirection: 'row', backgroundColor: COLORS.accentTint, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginBottom: 4 },
     dateTimeHalf: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10 },
@@ -421,51 +353,26 @@ export default function App() {
     transportPillSelected: { backgroundColor: COLORS.accent, borderColor: COLORS.accent, borderWidth: 1 },
     transportPillText: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: COLORS.textPrimary, textAlign: 'center' },
     transportPillTextSelected: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: '#fff', textAlign: 'center' },
-    favoritesRow: { flexDirection: 'row', gap: 8, marginBottom: 8, marginTop: 4, paddingHorizontal: 4 },
-    favoriteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: COLORS.accentTint, borderWidth: 1, borderColor: 'rgba(76,79,158,0.2)' },
-    favoriteChipText: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.accent },
     calculateButton: { backgroundColor: COLORS.accent, paddingVertical: 16, borderRadius: 16, alignItems: 'center', marginTop: 12, minHeight: 44 },
     calculateButtonDisabled: { backgroundColor: '#9B9DC2' },
     calculateButtonText: { fontFamily: 'Inter_600SemiBold', color: '#fff', fontSize: 16 },
-    errorBox: { marginTop: 20, padding: 16, borderRadius: 16, backgroundColor: '#FDECEA', borderWidth: 1, borderColor: '#F4C6C0', flexDirection: 'row', alignItems: 'flex-start' },
+    // Tinted from signalRisk rather than a fixed pale pink: the hardcoded
+    // #FDECEA stayed light in dark mode, leaving light-grey body text on a
+    // near-white panel - unreadable on exactly the screen that reports a
+    // problem.
+    errorBox: {
+      marginTop: 20,
+      padding: 16,
+      borderRadius: 16,
+      backgroundColor: isDark ? 'rgba(232,93,81,0.14)' : '#FDECEA',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(232,93,81,0.4)' : '#F4C6C0',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
     errorTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.signalRisk, marginBottom: 4 },
-    errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary },
-    resultScreen: { flex: 1, backgroundColor: COLORS.card },
-    resultBackButton: { position: 'absolute', top: 32, left: 20, zIndex: 2, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-    resultHero: { backgroundColor: '#0D1021', paddingTop: 70, paddingBottom: 16, paddingHorizontal: 20 },
-    tripStack: { marginBottom: 6 },
-    tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-    tripDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
-    tripStackLine: { width: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
-    tripText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.95)', flex: 1 },
-    arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-    arrivalTargetText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.85)' },
-    tripDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-    tripDetailLabel: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
-    tripDetailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary },
-    viewRouteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.signalGood, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 4 },
-    viewRouteButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
-    updatedText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-    freshnessBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, alignSelf: 'flex-start', marginBottom: 10 },
-    freshnessDot: { width: 8, height: 8, borderRadius: 4 },
-    freshnessDivider: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 6 },
-    freshnessBadgeInline: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
-    heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    heroTextCol: { flex: 1 },
-    resultHeroLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.85)' },
-    resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 34, color: '#fff', marginTop: 2 },
-    resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 3 },
-    resultBody: { flex: 1, padding: 16 },
-    explanationSentence: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.textPrimary, marginBottom: 12, lineHeight: 20 },
-    divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 10 },
-    whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 8 },
-    reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
-    reasonText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, flex: 1 },
-    remindButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 16, borderWidth: 1.5, borderColor: COLORS.accent, marginTop: 8, marginBottom: 4 },
-    remindButtonActive: { borderColor: COLORS.signalGood, backgroundColor: 'rgba(18,184,134,0.08)' },
-    remindButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
-    remindButtonTextActive: { color: COLORS.signalGood },
-  }), [COLORS]);
+    errorText: { fontFamily: 'Inter_400Regular', fontSize: 13, color: isDark ? COLORS.textPrimary : COLORS.textSecondary },
+  }), [COLORS, isDark]);
 
   return (
     <View style={styles.root}>
@@ -689,150 +596,18 @@ export default function App() {
         <LoadingRecommendation />
       </Modal>
 
-      {/* Result modal - its own full-screen surface, not inline below the form */}
-      <Modal visible={!!result} animationType="slide">
-        {result && freshness && (
-          <View style={styles.resultScreen}>
-            <StatusBar style="light" />
-            <View style={styles.resultHero}>
-              <Pressable style={styles.resultBackButton} onPress={() => setResult(null)} accessibilityLabel="Go back" accessibilityRole="button">
-                <Ionicons name="arrow-back" size={22} color="#fff" />
-              </Pressable>
-
-              <View style={styles.tripStack}>
-                <View style={styles.tripStackRow}>
-                  <View style={[styles.tripDot, { backgroundColor: '#fff' }]} />
-                  <Text style={styles.tripText} numberOfLines={2}>{originLabel}</Text>
-                </View>
-                <View style={styles.tripStackLine} />
-                <View style={styles.tripStackRow}>
-                  <Ionicons name="location" size={13} color={COLORS.signalRisk} />
-                  <Text style={styles.tripText} numberOfLines={2}>{destLabel}</Text>
-                </View>
-              </View>
-
-              {/* Only shown for arrive_by: the deadline is a distinct piece of
-                  info from the computed leave time. For leave_at, the
-                  departure time IS the hero's "Leave at" line already -
-                  showing it again here would be redundant. */}
-              {resultMode === 'arrive_by' && (
-                <View style={styles.arrivalTargetRow}>
-                  <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.7)" />
-                  <Text style={styles.arrivalTargetText}>
-                    Target arrival {selectedDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.freshnessBadgeRow}>
-                <View style={[styles.freshnessDot, { backgroundColor: freshness.color }]} />
-                <Text style={styles.freshnessBadgeInline}>{freshness.text}</Text>
-                <View style={styles.freshnessDivider} />
-                {(() => { const w = weatherIndicator(result.weatherCondition); return (<><Ionicons name={w.icon as any} size={13} color={w.color} /><Text style={styles.freshnessBadgeInline}>{w.label}</Text></>); })()}
-              </View>
-
-              <View style={styles.heroLayout}>
-                <View style={styles.heroTextCol}>
-                  <Text style={styles.resultHeroLabel}>Leave at</Text>
-                  <Text style={styles.resultHeroTime}>
-                    {formatTime12h(result.recommendedLeaveTime)}
-                  </Text>
-                  <Text style={styles.resultArrivalInline}>
-                    {resultMode === 'arrive_by' ? 'Arrive by ' : 'Est. arrival '}
-                    {formatTime12h(result.predictedArrivalTime)}
-                  </Text>
-                </View>
-                  <ConfidenceRing
-                    progress={result.confidenceScore}
-                    color={confidenceColor(result.confidenceScore)}
-                    label={`${Math.round(result.confidenceScore)}%`}
-                    sublabel={result.confidenceScore >= 85 ? "High" : result.confidenceScore >= 70 ? "Moderate" : "Low"}
-                  />
-            </View>
-            </View>
-
-            <ScrollView style={styles.resultBody}>
-              {/* Mode-aware natural-language summary */}
-              <Text style={styles.explanationSentence}>
-                {resultMode === 'arrive_by'
-                  ? `Leave at ${formatTime12h(result.recommendedLeaveTime)} to arrive by ${formatTime12h(result.predictedArrivalTime)}.`
-                  : `If you leave at ${formatTime12h(result.recommendedLeaveTime)}, you'll arrive around ${formatTime12h(result.predictedArrivalTime)}.`}
-              </Text>
-
-              <Text style={styles.whyTitle}>Why this recommendation</Text>
-              {(() => {
-                const cleanReason = (r: string) => r.replace('heavy_rain', 'Heavy Rain').replace('_rain', ' Rain');
-                return result.confidenceReason.map((reason, i) => {
-                  const icon = reasonIcon(reason);
-                  return (
-                    <View key={i} style={styles.reasonRow}>
-                      <Ionicons name={icon.name as any} size={16} color={icon.color} style={{ marginTop: 1 }} />
-                      <Text style={styles.reasonText}>{cleanReason(reason)}</Text>
-                    </View>
-                  );
-                });
-              })()}
-
-              {!!result.recommendationExplanation?.factors?.length && (
-                <>
-                  <View style={styles.divider} />
-                  <Text style={styles.whyTitle}>Estimated impact</Text>
-                  {result.recommendationExplanation.factors.map((factor, i) => {
-                    const icon = factorIcon(factor.type);
-                    return (
-                      <View key={i} style={styles.reasonRow}>
-                        <Ionicons name={icon.name as any} size={16} color={icon.color} style={{ marginTop: 1 }} />
-                        <Text style={styles.reasonText}>{factor.label}</Text>
-                      </View>
-                    );
-                  })}
-                </>
-              )}
-
-              <View style={styles.divider} />
-
-              <Text style={styles.whyTitle}>Trip details</Text>
-              <View style={styles.tripDetailRow}>
-                <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
-                <Text style={styles.tripDetailLabel}>Travel time</Text>
-                <Text style={styles.tripDetailValue}>
-                  {formatTravelTime(result.recommendedLeaveTime, result.predictedArrivalTime)}
-                </Text>
-              </View>
-              {formatDistance(result.distanceMeters) && (
-                <View style={styles.tripDetailRow}>
-                  <Ionicons name="navigate-outline" size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.tripDetailLabel}>Distance</Text>
-                  <Text style={styles.tripDetailValue}>{formatDistance(result.distanceMeters)}</Text>
-                </View>
-              )}
-              <View style={styles.tripDetailRow}>
-                <Ionicons name="globe-outline" size={16} color={COLORS.textSecondary} />
-                <Text style={styles.tripDetailLabel}>Data source</Text>
-                <Text style={styles.tripDetailValue}>Google Routes</Text>
-              </View>
-              {result?.encodedPolyline && (
-                <Pressable style={styles.viewRouteButton} onPress={() => { setResult(null); navigation.navigate('Map'); }} accessibilityLabel="View route on map" accessibilityRole="button">
-                  <Ionicons name="map" size={16} color="#fff" />
-                  <Text style={styles.viewRouteButtonText}>View Route on Map</Text>
-                </Pressable>
-              )}
-              <Pressable
-                style={[styles.remindButton, reminderSet && styles.remindButtonActive]}
-                onPress={reminderSet ? undefined : handleSetReminder}
-                accessibilityLabel="Set leave reminder"
-                accessibilityRole="button"
-              >
-                <Ionicons name={reminderSet ? 'checkmark-circle' : 'notifications-outline'} size={16} color={reminderSet ? COLORS.signalGood : COLORS.accent} />
-                <Text style={[styles.remindButtonText, reminderSet && styles.remindButtonTextActive]}>
-                  {reminderSet ? 'Reminder set' : 'Remind me when it\'s time to leave'}
-                </Text>
-              </Pressable>
-              <Text style={styles.updatedText}>Updated just now</Text>
-            </ScrollView>
-          </View>
-        )}
-      </Modal>
+      {/* Single source of truth for the result UI, shared with History. */}
+      <ResultModal
+        result={result}
+        originLabel={originLabel}
+        destLabel={destLabel}
+        selectedDateTime={selectedDateTime}
+        planningMode={planningMode}
+        onClose={() => setResult(null)}
+        onViewRoute={() => { setResult(null); navigation.navigate('Map'); }}
+        onSetReminder={handleSetReminder}
+        reminderSet={reminderSet}
+      />
       <FeedbackModal
         visible={showFeedback}
         tripId={feedbackTripId}
