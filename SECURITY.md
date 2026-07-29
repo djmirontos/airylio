@@ -36,7 +36,11 @@ APIs & Services → Credentials → select the key:
 
 - **Application restrictions:** Android apps
   - Package name: `com.daryljm.airylio`
-  - SHA-1: the **release signing** fingerprint. With EAS-managed credentials:
+  - SHA-1 currently in use:
+    `38:8E:37:80:5E:6A:61:51:B3:19:38:29:21:91:82:6F:9C:18:12:77`
+    (a signing-certificate fingerprint is not a secret — it can be read from
+    any copy of the APK — so recording it here is safe)
+  - To re-derive it, or after a credential rotation:
     ```
     eas credentials --platform android
     ```
@@ -47,10 +51,25 @@ APIs & Services → Credentials → select the key:
 
 **Routes key — `GOOGLE_ROUTES_API_KEY`**
 
-Server-side, so Android restrictions do not apply.
-
-- **Application restrictions:** None (or IP, if Supabase egress IPs are stable)
+- **Application restrictions:** **None** (or IP, if Supabase egress IPs are stable)
 - **API restrictions:** Restrict key → **Routes API** only
+
+> ⚠️ **Never put Android restrictions on this key.** It is called by the edge
+> function, which is a server — it has no package name and no signing
+> certificate, so Google rejects every request:
+>
+> ```
+> 403 PERMISSION_DENIED
+> reason: API_KEY_ANDROID_APP_BLOCKED
+> "Requests from this Android client application <empty> are blocked."
+> ```
+>
+> Every trip calculation then fails with a 502. This happened on 2026-07-28
+> when the Android restriction intended for the Places key was applied to this
+> one as well.
+>
+> The rule: Android restrictions are correct for keys the **app** calls, and
+> always break keys the **server** calls.
 
 Never reuse one key for both. The client key must not be able to call Routes.
 
