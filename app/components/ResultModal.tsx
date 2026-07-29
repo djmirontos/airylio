@@ -103,8 +103,10 @@ export default function ResultModal({
       setCountdownText(null);
       return;
     }
+    // Captured after the guard: the narrowing above does not reach into tick().
+    const activeResult = result;
     function tick() {
-      const diffMs = new Date(result.recommendedLeaveTime).getTime() - Date.now();
+      const diffMs = new Date(activeResult.recommendedLeaveTime).getTime() - Date.now();
       const diffMin = Math.round(diffMs / 60000);
       const diffSec = Math.floor(diffMs / 1000);
       if (diffSec <= 0) {
@@ -130,6 +132,10 @@ export default function ResultModal({
     resultBackButton: { position: 'absolute', top: 32, left: 16, zIndex: 10, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
     resultContent: { flex: 1, paddingBottom: 0 },
     resultHero: { backgroundColor: COLORS.resultHero, paddingTop: 70, paddingBottom: 16, paddingHorizontal: 24, alignItems: 'flex-start' },
+    // Hero row: the leave-time block on the left, confidence ring on the right.
+    heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, alignSelf: 'stretch' },
+    heroTextCol: { flex: 1 },
+    countdownText: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: 'rgba(255,255,255,0.92)', marginTop: 4 },
     resultHeroLabel: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.7)' },
     resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 34, color: '#fff', marginTop: 2 },
     resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
@@ -148,7 +154,14 @@ export default function ResultModal({
     tripDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: COLORS.divider },
     tripDetailLabel: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, flex: 1 },
     tripDetailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.textPrimary },
-    tripStack: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
+    // Vertical origin -> destination stack: a row per stop, joined by
+    // tripStackLine (1px wide, 8px tall). This was 'row', which laid the two
+    // stops out side by side; tripStackRow was referenced but never defined,
+    // so each stop fell back to a column and the whole block rendered wrong.
+    tripStack: { flexDirection: 'column', alignItems: 'flex-start', marginBottom: 6, alignSelf: 'stretch' },
+    tripStackRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch' },
+    // 6px wide so its centre sits on tripStackLine's centre (marginLeft 2.5 + 0.5px).
+    tripDot: { width: 6, height: 6, borderRadius: 3 },
     tripStackIcon: { marginTop: 2 },
     tripStackLine: { width: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
     tripText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.9)', flex: 1 },
@@ -167,7 +180,7 @@ export default function ResultModal({
 
   return (
     <Modal visible={!!result} animationType="slide">
-      {result && freshness && (
+      {result && freshness && weather && (
         <View style={styles.resultScreen}>
           <StatusBar style="light" />
           <View style={styles.resultHero}>
@@ -256,7 +269,7 @@ export default function ResultModal({
               <>
                 <View style={styles.divider} />
                 <Text style={styles.whyTitle}>Estimated impact</Text>
-                {result.recommendationExplanation.factors.map((factor, i) => {
+                {(result.recommendationExplanation?.factors ?? []).map((factor, i) => {
                   const icon = factorIcon(factor.type);
                   return (
                     <View key={i} style={styles.reasonRow}>

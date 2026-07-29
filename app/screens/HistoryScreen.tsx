@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import ResultModal from '../components/ResultModal';
 import { useTripContext } from '../context/TripContext';
 import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
-import { TripResult } from '../types/supabase';
+import { Trip, TripResult } from '../types/supabase';
 import { fetchTripHistory } from '../services/tripService';
 
 const TRANSPORT_MODES: Record<string, { label: string; icon: string }> = {
@@ -15,22 +15,6 @@ const TRANSPORT_MODES: Record<string, { label: string; icon: string }> = {
   public_commute: { label: 'Commute', icon: 'bus' },
   walk: { label: 'Walk', icon: 'walk' },
 };
-
-interface Trip {
-  id: string;
-  transport_mode: string;
-  recommended_leave_time: string;
-  predicted_arrival_time: string;
-  confidence_score: number;
-  planning_mode: string;
-  created_at: string;
-  origin_label?: string;
-  destination_label?: string;
-  origin_lat?: number;
-  origin_lng?: number;
-  destination_lat?: number;
-  destination_lng?: number;
-}
 
 function formatTime12h(isoString: string): string {
   const date = new Date(isoString);

@@ -1,21 +1,32 @@
-// Trip record from Supabase
+/**
+ * A `trips` row as returned by `fetchTripHistory`.
+ *
+ * The fields here mirror that query's select list, so the two must be kept in
+ * step. It previously declared `user_id`, `distance_meters` and `updated_at` -
+ * none of which the query returns, and the first of which is not a column on
+ * the table at all (it is `device_id`) - while omitting four fields the history
+ * screen reads. Nullable columns are typed as such; the call sites already
+ * default them.
+ */
 export interface Trip {
   id: string;
-  user_id: string;
-  transport_mode: 'drive' | 'motorcycle_taxi' | 'public_commute' | 'walk';
-  planning_mode: 'arrive_by' | 'leave_at';
-  origin_label: string;
-  destination_label: string;
-  origin_lat: number;
-  origin_lng: number;
-  destination_lat: number;
-  destination_lng: number;
+  transport_mode: string;
+  planning_mode: string;
+  target_time: string;
   recommended_leave_time: string;
   predicted_arrival_time: string;
   confidence_score: number;
-  distance_meters: number;
+  confidence_reason: string[] | null;
+  recommendation_explanation: RecommendationExplanation | null;
+  data_freshness: string | null;
+  weather_condition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
+  origin_label: string | null;
+  destination_label: string | null;
+  origin_lat: number | null;
+  origin_lng: number | null;
+  destination_lat: number | null;
+  destination_lng: number | null;
   created_at: string;
-  updated_at: string;
 }
 
 // Feedback record from Supabase
@@ -51,10 +62,12 @@ export interface TripResult {
   distanceMeters?: number;
   weatherCondition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
   encodedPolyline?: string;
-  recommendationExplanation?: {
-    planningMode?: 'arrive_by' | 'leave_at';
-    factors: ExplanationFactor[];
-  };
+  recommendationExplanation?: RecommendationExplanation;
+}
+
+export interface RecommendationExplanation {
+  planningMode?: 'arrive_by' | 'leave_at';
+  factors: ExplanationFactor[];
 }
 
 export interface ExplanationFactor {
