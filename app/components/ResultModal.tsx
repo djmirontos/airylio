@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -73,6 +74,7 @@ export default function ResultModal({
   reminderSet = false,
 }: ResultModalProps) {
   const { colors: COLORS } = useTheme();
+  const insets = useSafeAreaInsets();
   const [countdownText, setCountdownText] = useState<string | null>(null);
 
   const origin = splitAddress(originLabel);
@@ -155,13 +157,16 @@ export default function ResultModal({
 
   const styles = useMemo(() => StyleSheet.create({
     resultScreen: { flex: 1, backgroundColor: COLORS.resultBody },
-    resultBackButton: { position: 'absolute', top: 32, left: 16, zIndex: 10, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-    resultContent: { flex: 1, paddingBottom: 0 },
+    resultBackButton: { position: 'absolute', top: insets.top, left: 16, zIndex: 10, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
     // No alignItems: 'flex-start' here. It shrink-wrapped every child, so the
     // trip stack collapsed to its content and tripText's flex: 1 had almost no
     // width to fill - addresses rendered one character per line. Children that
     // should not stretch set alignSelf themselves.
-    resultHero: { backgroundColor: COLORS.resultHero, paddingTop: 70, paddingBottom: 16, paddingHorizontal: 24 },
+    // The 70 here was not status-bar padding alone - it also reserved room for
+    // the absolutely positioned back button. Driving both from the real inset
+    // keeps the same spacing on a standard status bar while no longer running
+    // under a notch or a tall cutout.
+    resultHero: { backgroundColor: COLORS.resultHero, paddingTop: insets.top + 46, paddingBottom: 16, paddingHorizontal: 24 },
     // Hero row: the leave-time block on the left, confidence ring on the right.
     heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     heroTextCol: { flex: 1 },
@@ -170,9 +175,6 @@ export default function ResultModal({
     resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 34, color: '#fff', marginTop: 2 },
     resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
     resultBody: { flex: 1, padding: 16, backgroundColor: COLORS.resultBody },
-    confidenceContainer: { alignItems: 'center', gap: 4 },
-    confidenceLabel: { fontFamily: 'Inter_400Regular', fontSize: 11, color: 'rgba(255,255,255,0.7)' },
-    explanationSentence: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.textPrimary, marginBottom: 12, lineHeight: 20 },
     divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 10 },
     whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 8 },
     reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
@@ -181,16 +183,18 @@ export default function ResultModal({
     freshnessDot: { width: 8, height: 8, borderRadius: 4 },
     freshnessDivider: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.4)', marginHorizontal: 6 },
     freshnessBadgeInline: { fontFamily: 'Inter_600SemiBold', fontSize: 11, color: '#fff' },
-    tripDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: COLORS.divider },
-    tripDetailLabel: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, flex: 1 },
-    tripDetailValue: { fontFamily: 'Inter_600SemiBold', fontSize: 12, color: COLORS.textPrimary },
+    tripStatStrip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
+    tripStat: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+    tripStatValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, flexShrink: 1 },
+    tripStatSeparator: { width: 1, height: 14, backgroundColor: COLORS.divider },
+    actionRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+    actionButton: { flex: 1, marginTop: 0, marginBottom: 0, paddingHorizontal: 8 },
     // Vertical origin -> destination stack: a row per stop, joined by
     // tripStackLine. Values match the Plan screen's originals exactly so both
     // entry points render identically.
     tripStack: { marginBottom: 6 },
     tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
     tripDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
-    tripStackIcon: { marginTop: 2 },
     tripStackLine: { width: 1, minHeight: 16, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 3 },
     tripTextCol: { flex: 1, minWidth: 0 },
     tripText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
@@ -201,10 +205,6 @@ export default function ResultModal({
     tripPinIcon: { marginTop: 2 },
     arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, alignSelf: 'flex-start' },
     arrivalTargetText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
-    transportRow: { flexDirection: 'row', gap: 10, marginBottom: 12, marginTop: 8 },
-    transportPill: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center' },
-    transportPillText: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
-    transportPillTextSelected: { fontFamily: 'Inter_500Medium', fontSize: 10.5, color: '#fff', textAlign: 'center' },
     viewRouteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.signalGood, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 4, minHeight: 44 },
     viewRouteButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
     recalculateButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: 16, marginTop: 8, marginBottom: 8, minHeight: 44 },
@@ -213,8 +213,7 @@ export default function ResultModal({
     remindButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
     remindButtonTextActive: { color: COLORS.signalGood },
     recalculateButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
-    updatedText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 2 },
-  }), [COLORS]);
+  }), [COLORS, insets.top]);
 
   return (
     <Modal visible={!!result} animationType="slide">
@@ -296,13 +295,9 @@ export default function ResultModal({
             </View>
           </View>
 
+          {/* No restatement of the leave/arrive times here - the hero above
+              already shows both, in much larger type. */}
           <ScrollView style={styles.resultBody}>
-            <Text style={styles.explanationSentence}>
-              {resultMode === 'arrive_by'
-                ? `Leave at ${formatTime12h(result.recommendedLeaveTime)} to arrive by ${formatTime12h(result.predictedArrivalTime)}.`
-                : `If you leave at ${formatTime12h(result.recommendedLeaveTime)}, you'll arrive around ${formatTime12h(result.predictedArrivalTime)}.`}
-            </Text>
-
             {(result.confidenceReason?.length ?? 0) > 0 && (
               <>
                 <Text style={styles.whyTitle}>Why this recommendation</Text>
@@ -339,51 +334,67 @@ export default function ResultModal({
 
             <View style={styles.divider} />
 
-            <Text style={styles.whyTitle}>Trip details</Text>
-            <View style={styles.tripDetailRow}>
-              <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
-              <Text style={styles.tripDetailLabel}>Travel time</Text>
-              <Text style={styles.tripDetailValue}>
-                {formatTravelTime(result.recommendedLeaveTime, result.predictedArrivalTime)}
-              </Text>
-            </View>
-            {result.distanceMeters !== undefined && (
-              <View style={styles.tripDetailRow}>
-                <Ionicons name="navigate-outline" size={16} color={COLORS.textSecondary} />
-                <Text style={styles.tripDetailLabel}>Distance</Text>
-                <Text style={styles.tripDetailValue}>{formatDistance(result.distanceMeters)}</Text>
-              </View>
-            )}
-            <View style={styles.tripDetailRow}>
-              <Ionicons name="globe-outline" size={16} color={COLORS.textSecondary} />
-              <Text style={styles.tripDetailLabel}>Data source</Text>
-              <Text style={styles.tripDetailValue}>Google Routes</Text>
-            </View>
-
-            {onViewRoute && result?.encodedPolyline && (
-              <Pressable style={styles.viewRouteButton} onPress={onViewRoute}>
-                <Ionicons name="map" size={16} color="#fff" />
-                <Text style={styles.viewRouteButtonText}>View Route on Map</Text>
-              </Pressable>
-            )}
-
-            {onSetReminder && (
-              <Pressable
-                style={[styles.remindButton, reminderSet && styles.remindButtonActive]}
-                onPress={reminderSet ? undefined : onSetReminder}
-                accessibilityLabel="Set leave reminder"
-                accessibilityRole="button"
-              >
-                <Ionicons
-                  name={reminderSet ? 'checkmark-circle' : 'notifications-outline'}
-                  size={16}
-                  color={reminderSet ? COLORS.signalGood : COLORS.accent}
-                />
-                <Text style={[styles.remindButtonText, reminderSet && styles.remindButtonTextActive]}>
-                  {reminderSet ? 'Reminder set' : "Remind me when it's time to leave"}
+            {/* One strip instead of three bordered rows with their own heading:
+                same facts, a fraction of the height. */}
+            <View style={styles.tripStatStrip}>
+              <View style={styles.tripStat}>
+                <Ionicons name="time-outline" size={15} color={COLORS.textSecondary} />
+                <Text style={styles.tripStatValue}>
+                  {formatTravelTime(result.recommendedLeaveTime, result.predictedArrivalTime)}
                 </Text>
-              </Pressable>
-            )}
+              </View>
+              {result.distanceMeters !== undefined && (
+                <>
+                  <View style={styles.tripStatSeparator} />
+                  <View style={styles.tripStat}>
+                    <Ionicons name="navigate-outline" size={15} color={COLORS.textSecondary} />
+                    <Text style={styles.tripStatValue}>{formatDistance(result.distanceMeters)}</Text>
+                  </View>
+                </>
+              )}
+              <View style={styles.tripStatSeparator} />
+              <View style={styles.tripStat}>
+                <Ionicons name="globe-outline" size={15} color={COLORS.textSecondary} />
+                <Text style={styles.tripStatValue} numberOfLines={1}>Google Routes</Text>
+              </View>
+            </View>
+
+            {/* Side by side: two full-width stacked buttons cost twice the
+                height for no added clarity. */}
+            <View style={styles.actionRow}>
+              {onViewRoute && result?.encodedPolyline && (
+                <Pressable
+                  style={[styles.viewRouteButton, styles.actionButton]}
+                  onPress={onViewRoute}
+                  accessibilityLabel="View route on map"
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="map" size={16} color="#fff" />
+                  <Text style={styles.viewRouteButtonText} numberOfLines={1}>Map</Text>
+                </Pressable>
+              )}
+
+              {onSetReminder && (
+                <Pressable
+                  style={[styles.remindButton, styles.actionButton, reminderSet && styles.remindButtonActive]}
+                  onPress={reminderSet ? undefined : onSetReminder}
+                  accessibilityLabel="Set leave reminder"
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name={reminderSet ? 'checkmark-circle' : 'notifications-outline'}
+                    size={16}
+                    color={reminderSet ? COLORS.signalGood : COLORS.accent}
+                  />
+                  <Text
+                    style={[styles.remindButtonText, reminderSet && styles.remindButtonTextActive]}
+                    numberOfLines={1}
+                  >
+                    {reminderSet ? 'Reminder set' : 'Remind me'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
 
             {onRecalculate && (
               <Pressable style={styles.recalculateButton} onPress={onRecalculate} accessibilityLabel="Recalculate with current traffic" accessibilityRole="button">
