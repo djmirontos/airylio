@@ -37,6 +37,26 @@ interface ListItem {
 const MIN_CHARS = 1;
 const DEBOUNCE_MS = 200;
 
+/**
+ * Session token for Places autocomplete billing.
+ *
+ * Without one, Google bills every keystroke's autocomplete request separately
+ * and then the Place Details call at full rate. With one, the autocomplete
+ * requests bundle with the details call as a single session.
+ *
+ * Must be a UUID v4 - verified against the live API. The token is validated as
+ * a URL/filename-safe base64 string, which the hex-and-dashes UUID form
+ * satisfies; a malformed value is rejected by Place Details with
+ * "session_token: must be a URL and filename safe base64 string".
+ */
+function generateSessionToken(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export default function SearchScreen() {
   const route = useRoute();
   const navigation = useNavigation<any>();
@@ -55,6 +75,10 @@ export default function SearchScreen() {
   const inputRef = useRef<TextInput>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestQueryRef = useRef('');
+  // Lazily initialised: useRef(generateSessionToken()) would rebuild a token on
+  // every render - and this screen re-renders on every keystroke - only to
+  // discard it.
+  const sessionTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Focus when the push animation ends, not on a timer. Raising the keyboard
@@ -112,6 +136,12 @@ export default function SearchScreen() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
+  /** Current session token, created on first use and rotated after a selection. */
+  function currentSessionToken(): string {
+    if (!sessionTokenRef.current) sessionTokenRef.current = generateSessionToken();
+    return sessionTokenRef.current;
+  }
+
   async function fetchSuggestions(text: string) {
     setLoading(true);
     try {
@@ -122,7 +152,11 @@ export default function SearchScreen() {
           'X-Goog-Api-Key': apiKey,
           'X-Goog-FieldMask': 'suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat',
         },
-        body: JSON.stringify({ input: text, includedRegionCodes: ['ph'] }),
+        body: JSON.stringify({
+          input: text,
+          includedRegionCodes: ['ph'],
+          sessionToken: currentSessionToken(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -157,11 +191,23 @@ export default function SearchScreen() {
   }
 
   async function selectSuggestion(item: Suggestion) {
+    // The session token has to travel on this request too - that is what ties
+    // the preceding autocomplete calls to this lookup and bills them as one
+    // session. Sending it only on autocomplete would change nothing.
+    const token = currentSessionToken();
+    // Rotate immediately: whatever happens next, those autocomplete requests
+    // belong to a session that ends here.
+    sessionTokenRef.current = null;
+
     try {
-      const res = await fetch(`https://places.googleapis.com/v1/places/${item.placeId}`, {
-        headers: { 'X-Goog-Api-Key': apiKey, 'X-Goog-FieldMask': 'location,formattedAddress' },
-      });
+      const res = await fetch(
+        `https://places.googleapis.com/v1/places/${item.placeId}?sessionToken=${encodeURIComponent(token)}`,
+        { headers: { 'X-Goog-Api-Key': apiKey, 'X-Goog-FieldMask': 'location,formattedAddress' } }
+      );
       const data = await res.json();
+      if (!res.ok) {
+        console.warn('[SearchScreen] Place details returned', res.status, data);
+      }
       if (data.location) {
         returnWithPlace({
           label: data.formattedAddress ?? item.mainText,
