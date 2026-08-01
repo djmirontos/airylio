@@ -44,6 +44,22 @@ function formatDistance(meters?: number): string | null {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+/**
+ * Splits a Google formatted address into a place name and the rest.
+ *
+ * "SM Megamall, Ortigas Center, Mandaluyong" -> name "SM Megamall",
+ * detail "Ortigas Center, Mandaluyong". Labels without a comma - "Current
+ * Location" - return an empty detail and render as a single line.
+ */
+function splitAddress(label: string): { name: string; detail: string } {
+  const raw = (label ?? '').trim();
+  // Dropping empty segments keeps a stray leading comma from producing an empty
+  // name and repeating the same text on both lines.
+  const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return { name: raw, detail: '' };
+  return { name: parts[0], detail: parts.slice(1).join(', ') };
+}
+
 export default function ResultModal({
   result,
   originLabel,
@@ -58,6 +74,9 @@ export default function ResultModal({
 }: ResultModalProps) {
   const { colors: COLORS } = useTheme();
   const [countdownText, setCountdownText] = useState<string | null>(null);
+
+  const origin = splitAddress(originLabel);
+  const destination = splitAddress(destLabel);
 
   function confidenceColor(score: number): string {
     if (score >= CONFIDENCE_HIGH) return COLORS.signalGood;
@@ -138,7 +157,11 @@ export default function ResultModal({
     resultScreen: { flex: 1, backgroundColor: COLORS.resultBody },
     resultBackButton: { position: 'absolute', top: 32, left: 16, zIndex: 10, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
     resultContent: { flex: 1, paddingBottom: 0 },
-    resultHero: { backgroundColor: COLORS.resultHero, paddingTop: 70, paddingBottom: 16, paddingHorizontal: 24, alignItems: 'flex-start' },
+    // No alignItems: 'flex-start' here. It shrink-wrapped every child, so the
+    // trip stack collapsed to its content and tripText's flex: 1 had almost no
+    // width to fill - addresses rendered one character per line. Children that
+    // should not stretch set alignSelf themselves.
+    resultHero: { backgroundColor: COLORS.resultHero, paddingTop: 70, paddingBottom: 16, paddingHorizontal: 24 },
     // Hero row: the leave-time block on the left, confidence ring on the right.
     heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     heroTextCol: { flex: 1 },
@@ -168,9 +191,15 @@ export default function ResultModal({
     tripStackRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
     tripDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
     tripStackIcon: { marginTop: 2 },
-    tripStackLine: { width: 1, height: 8, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 2 },
-    tripText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: 'rgba(255,255,255,0.9)', flex: 1 },
-    arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+    tripStackLine: { width: 1, minHeight: 16, backgroundColor: 'rgba(255,255,255,0.3)', marginLeft: 2.5, marginVertical: 3 },
+    tripTextCol: { flex: 1, minWidth: 0 },
+    tripText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
+    // The hero panel is dark in both themes (COLORS.resultHero), so this is a
+    // white alpha rather than COLORS.textSecondary - that would be dark-on-dark
+    // in light mode.
+    tripTextSub: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.62)', marginTop: 1 },
+    tripPinIcon: { marginTop: 2 },
+    arrivalTargetRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, alignSelf: 'flex-start' },
     arrivalTargetText: { fontFamily: 'Inter_400Regular', fontSize: 12, color: 'rgba(255,255,255,0.7)' },
     transportRow: { flexDirection: 'row', gap: 10, marginBottom: 12, marginTop: 8 },
     transportPill: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center' },
@@ -200,12 +229,30 @@ export default function ResultModal({
             <View style={styles.tripStack}>
               <View style={styles.tripStackRow}>
                 <View style={[styles.tripDot, { backgroundColor: '#fff' }]} />
-                <Text style={styles.tripText} numberOfLines={2}>{originLabel}</Text>
+                <View style={styles.tripTextCol}>
+                  <Text style={styles.tripText} numberOfLines={1} ellipsizeMode="tail">
+                    {origin.name}
+                  </Text>
+                  {!!origin.detail && (
+                    <Text style={styles.tripTextSub} numberOfLines={2} ellipsizeMode="tail">
+                      {origin.detail}
+                    </Text>
+                  )}
+                </View>
               </View>
               <View style={styles.tripStackLine} />
               <View style={styles.tripStackRow}>
-                <Ionicons name="location" size={13} color={COLORS.signalRisk} />
-                <Text style={styles.tripText} numberOfLines={2}>{destLabel}</Text>
+                <Ionicons name="location" size={13} color={COLORS.signalRisk} style={styles.tripPinIcon} />
+                <View style={styles.tripTextCol}>
+                  <Text style={styles.tripText} numberOfLines={1} ellipsizeMode="tail">
+                    {destination.name}
+                  </Text>
+                  {!!destination.detail && (
+                    <Text style={styles.tripTextSub} numberOfLines={2} ellipsizeMode="tail">
+                      {destination.detail}
+                    </Text>
+                  )}
+                </View>
               </View>
             </View>
 
