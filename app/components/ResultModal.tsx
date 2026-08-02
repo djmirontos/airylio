@@ -7,7 +7,6 @@ import { useTheme } from '../context/ThemeContext';
 import ConfidenceRing from './ConfidenceRing';
 import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
 import { TripResult, ExplanationFactor } from '../types/supabase';
-import { splitAddress } from '../utils/address';
 
 type PlanningMode = 'arrive_by' | 'leave_at';
 type ColorScheme = ReturnType<typeof import('../context/ThemeContext').useTheme>['colors'];
@@ -44,6 +43,22 @@ function formatTravelTime(leaveTime: string, arrivalTime: string): string {
 function formatDistance(meters?: number): string | null {
   if (meters === undefined) return null;
   return `${(meters / 1000).toFixed(1)} km`;
+}
+
+/**
+ * Splits a Google formatted address into a place name and the rest.
+ *
+ * "SM Megamall, Ortigas Center, Mandaluyong" -> name "SM Megamall",
+ * detail "Ortigas Center, Mandaluyong". Labels without a comma - "Current
+ * Location" - return an empty detail and render as a single line.
+ */
+function splitAddress(label: string): { name: string; detail: string } {
+  const raw = (label ?? '').trim();
+  // Dropping empty segments keeps a stray leading comma from producing an empty
+  // name and repeating the same text on both lines.
+  const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return { name: raw, detail: '' };
+  return { name: parts[0], detail: parts.slice(1).join(', ') };
 }
 
 export default function ResultModal({
