@@ -201,10 +201,14 @@
 | 6 - High | Post-trip Feedback | ✅ | Rating modal (accurate/close/late) with Supabase integration |
 | 7 - Medium | Bottom Navigation | ✅ | Plan / History / Map / Settings tabs, keyboard-aware visibility |
 | 8 - Medium | Dark Mode | ✅ | Full theme system with light/dark color palettes, AsyncStorage persistence |
-| 9 - Low | Leave Now shortcut | ⏳ | Target = now, instant calculation |
-| 10 - Low | Flexible Arrival window | ⏳ | Arrive between 8:00-8:30 |
-| 11 - Low | EAS Build / App Store | 🔄 | Submitted to closed testing. Investigating startup crash on production build. |
-| 12 - Low | Real user testing | ⏳ | 10-20 PH commuters for real feedback |
+| 9 - High | SearchScreen (Origin/Destination) | ✅ | Full-screen search replacing the inline dropdown. Favorites + Recent when empty, Places suggestions from the first character |
+| 10 - High | Security audit (Phases 1 & 2) | ✅ | RLS verified and hardened, input validation, error hardening, cache safety, per-device rate limiting. Deployed 2026-08-01 |
+| 11 - High | Google API key restrictions | ✅ | Places key restricted to `com.daryljm.airylio` + SHA-1; Routes key server-side only, no Android restriction |
+| 12 - Low | Leave Now shortcut | ⏳ | Target = now, instant calculation |
+| 13 - Low | Flexible Arrival window | ⏳ | Arrive between 8:00-8:30 |
+| 14 - Low | EAS Build / App Store | ⏳ | AAB built (versionCode 8). Pending Play Store upload and release |
+| 15 - Low | Real user testing | ⏳ | 10-20 PH commuters for real feedback |
+| 16 - Low | CI/CD pipeline | ⏳ | When ready to deploy regularly |
 
 **Before Production:**
 - ✅ Remove nowPST() time-forcing mechanism — DONE (Weeks 1-2)
@@ -434,6 +438,9 @@ airylio/
 | Post-trip feedback timing | Medium | `feedback` table exists but UI prompt removed (premature). No proper trigger yet |
 | Tunnel testing blocked on ship WiFi | Low | Ship content filter blocks `*.exp.direct`. Use mobile data for Expo Go testing |
 | `recentOrigins` empty until user searches | Info | Expected behavior, not a bug. First launch shows no recent origins |
+| `corridor_stats` table does not exist | Medium | The Edge Function reads it when the Google Routes call fails, so the historical-estimate fallback has never produced a result — every Google failure surfaces as a 502 instead of degrading to an "estimated" recommendation. Create the table or remove the dead path |
+| Edge Function rate limits are untuned | Low | 10/min and 200/day per device are estimates chosen without usage data. Verified working; revisit once real traffic exists |
+| Rate limiting fails open | Low | If both `calculation_events` and `trips` become unqueryable, throttling silently stops. Logged loudly but nothing alerts on it |
 
 ---
 
@@ -525,6 +532,29 @@ airylio/
 - Geohash-based caching (precision 7, 10-minute TTL)
 - City detection (8 PH cities, bounding-box + priority)
 
+
+### 2026-08-03
+- Implemented full-screen SearchScreen for Origin/Destination (replaces inline dropdown)
+- Fixed Google Places API session token (UUID v4 format for billing optimization)
+- Fixed Google Maps not rendering in development builds (app.config.js dynamic key injection)
+- Fixed ResultModal address display (two-line layout, no truncation)
+- Removed stray root app.json and eas.json files
+- Applied Supabase RLS policy hardening (removed overly permissive policies)
+- Verified cross-device data isolation (RLS confirmed blocking unauthorized access)
+- Restricted Google API keys to Android app package + SHA-1 fingerprint
+- Set up Google Cloud budget alerts
+- Deployed Phase 1 & 2 security audit fixes
+- Reverted Edge Function to stable version (Phase 2 caused EarlyDrop crash)
+- Set up development build with expo-dev-client@6.0.21
+- Converted app.json to app.config.js for dynamic environment variable injection
+- Added GOOGLE_MAPS_API_KEY to .env and EAS secrets
+
+### 2026-07-28
+- Phase 1 security audit: RLS migration, scoped history query, notification handler fix
+- Phase 2 security audit: input validation, error hardening, cache safety, rate limiting
+- Removed deprecated SafeAreaView, replaced with react-native-safe-area-context
+- Fixed SearchScreen navigation: back button, item selection, state management
+- Added @react-navigation/native-stack for SearchScreen
 ---
 
 ## 15. Next Recommended Tasks
@@ -568,6 +598,53 @@ airylio/
 2. **Performance** — AsyncStorage race conditions fixed, header component extracted
 3. **Reliability** — Error boundaries prevent full-app crashes, countdown timer works globally
 4. **Architecture** — Monolithic component refactored, unused dependencies removed
+
+---
+
+## 17. Security Audit Summary
+
+**Conducted:** 2026-07-28 to 2026-08-01
+
+### Completed
+- ✅ RLS enabled and verified on all Supabase tables
+- ✅ Cross-device data isolation verified (users cannot access other `device_id` trips)
+- ✅ Overly permissive policies removed (`city_profiles`, `transport_profiles`, `recommendation_versions`)
+- ✅ Client-side insert policies removed (`trips`, `calculation_events` written by Edge Function only)
+- ✅ Google API keys restricted to `com.daryljm.airylio` + SHA-1 fingerprint
+- ✅ Google Cloud budget alerts configured
+- ✅ Session token added to Places API for billing optimization
+- ✅ Notification handler updated (`shouldShowBanner` + `shouldShowList`)
+- ✅ Feedback error handling fixed (failures no longer silently succeed)
+
+### Phase 2 hardening — deployed and verified
+
+Deployed 2026-08-01 and confirmed live against the running function:
+
+- ✅ **Input validation** — `Number.isFinite` plus coordinate bounds, parseable `targetTime` within a year, transport mode length cap, 200-char label cap. Verified: `null` latitude, latitude 999, unparseable `targetTime`, invalid planning mode and malformed JSON each return `400`
+- ✅ **Rate limiting** — 10/min and 200/day per device. Verified: calls 1–10 returned `200`, calls 11–12 returned `429` with `Retry-After`
+- ✅ **Error ID system** — internal detail no longer sent to clients; a generated `errorId` is returned instead and the detail is logged server-side
+- ✅ **Cache safety** — malformed `route_cache` rows are treated as a miss and refetched rather than 500-ing every request on that key
+
+**Note on the 2026-08-03 changelog entry:** the Edge Function revert was made while diagnosing trip failures, but Phase 2 was not the cause. The Google **Routes** key had been given Android application restrictions, which a server cannot satisfy — Google rejected every request with `API_KEY_ANDROID_APP_BLOCKED`, and the fallback then returned 502. The failure reproduced identically on the pre-Phase-2 function. Phase 2 was restored and redeployed once the key restriction was corrected.
+
+### RLS hardening — before and after
+
+Measured as an anonymous user holding only the public anon key:
+
+| Check | Before | After |
+|---|---|---|
+| `GET city_profiles` | rows returned | `[]` |
+| `GET transport_profiles` | rows returned | `[]` |
+| `GET recommendation_versions` | `buffer_config` exposed | `[]` |
+| `POST trips` (fabricated) | `23502` — RLS permitted the write | `403` / `42501` |
+| `POST calculation_events` | `23502` — RLS permitted the write | `403` / `42501` |
+
+The write results are the meaningful ones: those inserts previously failed only on a missing column, meaning RLS was allowing them. Trip calculation and history read-back were re-tested afterwards and both still work, confirming the Edge Function's service role is unaffected.
+
+### Remaining
+- ⏳ Add the Play App Signing SHA-1 to the Places key after upload — Google re-signs the AAB, so the current restriction will not match the delivered app
+- ⏳ Crash reporting (e.g. Sentry) — no production visibility today
+- ⏳ Database schema DDL not in version control (RLS policies are, table definitions are not)
 
 
 
