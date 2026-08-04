@@ -20,6 +20,7 @@ import { MIN_LOADING_MS, LEAVE_AT_GRACE_MS, DEFAULT_TIME_OFFSET_MS, MAX_RECENT_D
 import { sanitizeError } from './utils/errors';
 import { TripResult } from './types/supabase';
 import { calculateTrip } from './services/tripService';
+import { captureEvent } from './lib/posthog';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
@@ -288,6 +289,11 @@ export default function App() {
     setError(null);
     setResult(null);
     const loadingStartedAt = Date.now();
+
+    captureEvent('calculation_triggered', {
+      planning_mode: planningMode,
+      transport_mode: selectedMode,
+    });
 
     try {
       const data = await calculateTrip({

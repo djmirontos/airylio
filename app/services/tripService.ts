@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { TripResult, Trip } from '../types/supabase';
 import { sanitizeError } from '../utils/errors';
 import { setSentryUser } from '../lib/sentry';
+import { identifyUser } from '../lib/posthog';
 
 export interface CalculateTripParams {
   originLat: number;
@@ -29,6 +30,7 @@ async function ensureSession(): Promise<void> {
     // Tags crash reports with the anonymous device identity, so a Sentry issue
     // can be traced back to that device's trips.
     setSentryUser(data.session.user.id);
+    identifyUser(data.session.user.id);
     return;
   }
 
@@ -37,7 +39,10 @@ async function ensureSession(): Promise<void> {
       .signInAnonymously()
       .then(({ data: signInData, error }) => {
         if (error) throw error;
-        if (signInData.session) setSentryUser(signInData.session.user.id);
+        if (signInData.session) {
+          setSentryUser(signInData.session.user.id);
+          identifyUser(signInData.session.user.id);
+        }
       })
       .finally(() => {
         signInPromise = null;
@@ -85,6 +90,7 @@ export async function fetchTripHistory(): Promise<Trip[]> {
   // Also tag here: a user who only opens History never calls ensureSession(),
   // so their crashes would otherwise be unattributed.
   setSentryUser(deviceId);
+  identifyUser(deviceId);
 
   const { data, error } = await supabase
     .from('trips')

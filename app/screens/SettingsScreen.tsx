@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Linking } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTheme } from '../context/ThemeContext';
+import { captureEvent } from '../lib/posthog';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
@@ -13,6 +14,14 @@ export default function SettingsScreen() {
   const { colors: COLORS, isDark, toggleTheme } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute();
+
+  // On focus rather than mount: the tab stays mounted once visited, so a mount
+  // effect would fire only the first time.
+  useFocusEffect(
+    useCallback(() => {
+      captureEvent('settings_viewed');
+    }, [])
+  );
 
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.canvas },

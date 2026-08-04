@@ -9,6 +9,7 @@ import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
 import { Trip, TripResult } from '../types/supabase';
 import { fetchTripHistory } from '../services/tripService';
 import { sanitizeError } from '../utils/errors';
+import { captureEvent } from '../lib/posthog';
 
 const TRANSPORT_MODES: Record<string, { label: string; icon: string }> = {
   drive: { label: 'Drive', icon: 'car' },
@@ -69,6 +70,7 @@ export default function HistoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      captureEvent('history_viewed');
       fetchTrips();
     }, [fetchTrips])
   );

@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import ConfidenceRing from './ConfidenceRing';
 import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
 import { TripResult, ExplanationFactor } from '../types/supabase';
+import { captureEvent } from '../lib/posthog';
 
 type PlanningMode = 'arrive_by' | 'leave_at';
 type ColorScheme = ReturnType<typeof import('../context/ThemeContext').useTheme>['colors'];
@@ -153,6 +154,17 @@ export default function ResultModal({
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
+  }, [result]);
+
+  useEffect(() => {
+    if (!result) return;
+    captureEvent('result_viewed', {
+      confidence_score: result.confidenceScore,
+      data_freshness: result.dataFreshness,
+      // resultMode rather than the raw explanation field: it falls back to the
+      // planningMode prop, so it is never undefined.
+      planning_mode: resultMode,
+    });
   }, [result]);
 
   const styles = useMemo(() => StyleSheet.create({

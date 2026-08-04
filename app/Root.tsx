@@ -8,9 +8,11 @@ import { TripProvider } from './context/TripContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { initSentry, Sentry } from './lib/sentry';
+import { initPostHog } from './lib/posthog';
 
 // Before anything else, so a crash during setup below is still reported.
 initSentry();
+initPostHog();
 
 // Suppress non-critical RN text rendering warnings in dev mode
 const originalWarn = console.error.bind(console.error);

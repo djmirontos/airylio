@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { submitFeedback } from '../services/tripService';
+import { captureEvent } from '../lib/posthog';
 
 interface FeedbackModalProps {
   visible: boolean;
@@ -22,6 +23,8 @@ export default function FeedbackModal({ visible, tripId, destLabel, onClose }: F
     setSubmitting(true);
     try {
       await submitFeedback(tripId, rating);
+      // After the await, so a failed submission is not counted as submitted.
+      captureEvent('feedback_submitted', { rating });
       setSubmitted(true);
       setTimeout(onClose, 1500);
     } catch (err) {

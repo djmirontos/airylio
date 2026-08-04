@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, Pressable, Linking, ActivityIndicator } from 'r
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import { decode } from '@mapbox/polyline';
+import { useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useTripContext } from '../context/TripContext';
+import { captureEvent } from '../lib/posthog';
 
 interface RouteCoord {
   latitude: number;
@@ -35,6 +38,14 @@ export default function MapScreen() {
   const [decodedRoute, setDecodedRoute] = useState<RouteCoord[]>([]);
   const [loading, setLoading] = useState(false);
   const mapRef = useRef<MapView>(null);
+
+  // On focus rather than mount: the tab stays mounted once visited, so a mount
+  // effect would fire only the first time.
+  useFocusEffect(
+    useCallback(() => {
+      captureEvent('map_viewed');
+    }, [])
+  );
 
   const styles = useMemo(() => StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.canvas },
