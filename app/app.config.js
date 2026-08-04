@@ -53,6 +53,13 @@ export default {
           color: "#4C4F9E",
         },
       ],
+      [
+        "@sentry/react-native/expo",
+        {
+          organization: "airylio",
+          project: "react-native",
+        },
+      ],
     ],
     extra: {
       eas: {

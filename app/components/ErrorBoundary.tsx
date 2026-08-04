@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LIGHT_COLORS, DARK_COLORS } from '../context/ThemeContext';
 import { THEME_KEY } from '../constants/config';
+import { Sentry } from '../lib/sentry';
 
 interface State {
   hasError: boolean;
@@ -37,6 +38,9 @@ export default class ErrorBoundary extends React.Component<{ children: React.Rea
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('ErrorBoundary caught:', error, info);
+    Sentry.captureException(error, {
+      extra: { componentStack: info.componentStack },
+    });
   }
 
   render() {

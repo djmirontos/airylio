@@ -7,6 +7,10 @@ import AppNavigator from './navigation/AppNavigator';
 import { TripProvider } from './context/TripContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { initSentry, Sentry } from './lib/sentry';
+
+// Before anything else, so a crash during setup below is still reported.
+initSentry();
 
 // Suppress non-critical RN text rendering warnings in dev mode
 const originalWarn = console.error.bind(console.error);
@@ -15,7 +19,7 @@ console.error = (msg: any, ...args: any[]) => {
   originalWarn(msg, ...args);
 };
 
-export default function Root() {
+function Root() {
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
     Poppins_700Bold,
@@ -72,4 +76,7 @@ function ThemedNavigation() {
     </NavigationContainer>
   );
 }
+
+// Wraps the component registered in index.ts, so Sentry sees the whole tree.
+export default Sentry.wrap(Root);
 

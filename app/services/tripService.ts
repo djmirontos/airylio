@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { TripResult, Trip } from '../types/supabase';
 import { sanitizeError } from '../utils/errors';
+import { setSentryUser } from '../lib/sentry';
 
 export interface CalculateTripParams {
   originLat: number;
@@ -24,13 +25,19 @@ let signInPromise: Promise<void> | null = null;
 
 async function ensureSession(): Promise<void> {
   const { data } = await supabase.auth.getSession();
-  if (data.session) return;
+  if (data.session) {
+    // Tags crash reports with the anonymous device identity, so a Sentry issue
+    // can be traced back to that device's trips.
+    setSentryUser(data.session.user.id);
+    return;
+  }
 
   if (!signInPromise) {
     signInPromise = supabase.auth
       .signInAnonymously()
-      .then(({ error }) => {
+      .then(({ data: signInData, error }) => {
         if (error) throw error;
+        if (signInData.session) setSentryUser(signInData.session.user.id);
       })
       .finally(() => {
         signInPromise = null;
