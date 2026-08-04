@@ -646,6 +646,28 @@ The write results are the meaningful ones: those inserts previously failed only 
 - ⏳ Crash reporting (e.g. Sentry) — no production visibility today
 - ⏳ Database schema DDL not in version control (RLS policies are, table definitions are not)
 
+---
+
+## 18. Tester Feedback & Feature Roadmap Notes
+
+**Feedback received:** 2026-08-04
+**Source:** Closed testing group (Google Play Store)
+
+### Requested Features — Assessment
+
+| Feature | Tester Request | Assessment | Priority |
+|---|---|---|---|
+| Save Favorite Routes | Save frequently used routes | Partially built — Home/Work favorites exist. Extend to named arbitrary routes. High retention impact. | Next sprint |
+| Alternate Routes | Suggest alternates when confidence is low | Google Routes API supports it. Better UX framing: auto-adjust departure time rather than showing route options. | Post-launch |
+| Calendar Integration | Auto-read calendar events, suggest departure | High value but high complexity — OAuth, Apple/Google Calendar APIs, timezone edge cases. Build after traction. | Post-traction |
+| Traffic Trend Predictions | Historical data-based predictions | This is the long-term moat. corridor_stats + trips tables are the foundation. Need data volume first. Architecture already supports it. | Future |
+| Widgets | Home screen widget for departure reminders | iOS App Groups + Android SharedPreferences required. Good for Play Store featuring. | Post-launch |
+
+### Principles for Feature Decisions
+- Do not chase feature requests before v1 is stable and in the hands of real daily commuters
+- Every trip calculated today is data investment toward the Traffic Trend Predictions moat
+- Favorites extension is the only near-term addition — everything else is post-public-launch
+
 
 
 
