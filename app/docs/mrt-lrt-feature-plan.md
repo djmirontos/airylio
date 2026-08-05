@@ -308,7 +308,10 @@ Return to client with breakdown in response
 - [ ] Seed LRT-2 (13 stations + 12 segments)
 - [ ] Seed transfer nodes (4 interchanges)
 - [ ] Seed peak hour queue penalties (major stations)
-- [ ] Enable RLS on all new tables
+- [ ] Enable RLS on all new tables (service role read only —
+      no client-level policies; matches city_profiles and
+      transport_profiles pattern from 2026-08-01 security audit.
+      Do NOT add USING (true) read policy for authenticated/anon roles)
 - [ ] Verify data with test queries
 **Estimated effort:** 1 day
 
@@ -324,6 +327,8 @@ Return to client with breakdown in response
 - [ ] Route comparison logic (pick fastest)
 - [ ] Pass railRoute metadata to engine
 - [ ] Log rail detection events to calculation_events
+- [ ] Add PostHog events: rail_route_detected, rail_route_selected,
+      ground_transit_selected, hybrid_route_selected
 **Estimated effort:** 3-4 days
 
 ### Sprint 3 — Engine + API Response
