@@ -698,12 +698,15 @@ No immediate enforcement risk at current scale.
 |---|---|---|
 | Consent banner (first launch) | 🔴 High | Check AsyncStorage flag before initPostHog() + initSentry() in Root.tsx. Show Accept/Decline on first open. |
 | Privacy Policy update | 🔴 High | Add PostHog + Sentry disclosure, data retention period, right to erasure |
-| Delete my data button | 🟠 Medium | Settings screen button → Supabase function deletes all rows where device_id = auth.uid() across trips, feedback, devices tables |
+| Delete my data button | 🟢 Quick Win | RLS already scopes everything to device_id. One Supabase function + Settings button. ~1 hour of work. Add to next sprint. |
 | Data retention pg_cron | 🟡 Low | Auto-delete trips older than 12 months, calculation_events older than 90 days |
 | Landing page cookie banner | 🟡 Low | Only needed if landing page adds tracking scripts |
 
-**Trigger to implement:** When app is marketed outside the Philippines
-or when EU users appear in PostHog analytics.
+**Trigger to implement:** When app is marketed outside the Philippines.
+Note: Do NOT wait for EU users to appear in PostHog — by that point
+their data is already being collected without consent. Consider adding
+a region check at first launch to skip initPostHog() for non-PH
+devices as an interim measure.
 
 
 
