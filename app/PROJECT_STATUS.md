@@ -533,6 +533,23 @@ airylio/
 - City detection (8 PH cities, bounding-box + priority)
 
 
+### 2026-08-04
+- **Sentry + PostHog Analytics Integration**
+- Installed `@sentry/react-native` ~7.2.0 and `posthog-react-native` ^4.61.4
+- Created `app/lib/sentry.ts` — initSentry(), setSentryUser(), Sentry.wrap()
+- Created `app/lib/posthog.ts` — initPostHog(), identifyUser(), captureEvent()
+- Integrated both tools in `Root.tsx` — initialized before font loading, Sentry wraps the root component
+- Added `captureException` to `components/ErrorBoundary.tsx`
+- Added `setSentryUser()` + `identifyUser()` to `services/tripService.ts` on all three identity paths (existing session, fresh sign-in, History load)
+- Wired six PostHog events: `calculation_triggered` (App.tsx), `result_viewed` (ResultModal), `feedback_submitted` (FeedbackModal), `history_viewed` (HistoryScreen), `map_viewed` (MapScreen), `settings_viewed` (SettingsScreen)
+- Added `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`, `EXPO_PUBLIC_POSTHOG_HOST` to `.env` and EAS secrets (preview + production)
+- Added `SENTRY_AUTH_TOKEN` (org:ci scope) to EAS secrets (preview + production) for sourcemap uploads
+- Both tools disabled in `__DEV__` mode to avoid polluting production data
+- **corridor_stats table created** in Supabase — fixes 502 errors on Google Routes failure
+- Dropped stale materialized view, recreated as proper table with RLS, service role read policy, `refresh_corridor_stats()` aggregation function (min. 3 trips per corridor), and two indexes
+- Added `SENTRY_AUTH_TOKEN` EAS secret after first preview build failed at sourcemap upload step
+- Updated EAS CLI from 21.4.0 to 21.5.0
+
 ### 2026-08-03
 - Implemented full-screen SearchScreen for Origin/Destination (replaces inline dropdown)
 - Fixed Google Places API session token (UUID v4 format for billing optimization)
