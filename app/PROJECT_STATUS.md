@@ -685,6 +685,26 @@ The write results are the meaningful ones: those inserts previously failed only 
 - Every trip calculated today is data investment toward the Traffic Trend Predictions moat
 - Favorites extension is the only near-term addition — everything else is post-public-launch
 
+### GDPR & Privacy Compliance — Deferred
+
+**Decision date:** 2026-08-05
+**Reason for deferral:** Current user base is Philippines-only.
+Philippine Data Privacy Act (DPA) is less strict than GDPR.
+No immediate enforcement risk at current scale.
+
+**To implement before any international marketing or EU user acquisition:**
+
+| Item | Priority | Notes |
+|---|---|---|
+| Consent banner (first launch) | 🔴 High | Check AsyncStorage flag before initPostHog() + initSentry() in Root.tsx. Show Accept/Decline on first open. |
+| Privacy Policy update | 🔴 High | Add PostHog + Sentry disclosure, data retention period, right to erasure |
+| Delete my data button | 🟠 Medium | Settings screen button → Supabase function deletes all rows where device_id = auth.uid() across trips, feedback, devices tables |
+| Data retention pg_cron | 🟡 Low | Auto-delete trips older than 12 months, calculation_events older than 90 days |
+| Landing page cookie banner | 🟡 Low | Only needed if landing page adds tracking scripts |
+
+**Trigger to implement:** When app is marketed outside the Philippines
+or when EU users appear in PostHog analytics.
+
 
 
 
