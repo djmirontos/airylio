@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Linking }
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import * as Application from 'expo-application';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTheme } from '../context/ThemeContext';
 import { captureEvent } from '../lib/posthog';
@@ -228,7 +229,7 @@ export default function SettingsScreen() {
               <Text style={styles.infoLabel}>Version</Text>
             </View>
             <Text style={styles.infoValue}>
-              {Constants.expoConfig?.version ?? '1.0.0'} ({Constants.expoConfig?.android?.versionCode ?? 'N/A'})
+              {Constants.expoConfig?.version ?? '1.0.0'} ({Application.nativeBuildVersion ?? 'N/A'})
             </Text>
           </View>
           <View style={styles.divider} />
