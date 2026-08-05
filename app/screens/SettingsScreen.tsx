@@ -227,7 +227,9 @@ export default function SettingsScreen() {
               <Ionicons name="phone-portrait-outline" size={20} color={COLORS.accent} />
               <Text style={styles.infoLabel}>Version</Text>
             </View>
-            <Text style={styles.infoValue}>{Constants.expoConfig?.version ?? '1.0.0'}</Text>
+            <Text style={styles.infoValue}>
+              {Constants.expoConfig?.version ?? '1.0.0'} ({Constants.expoConfig?.android?.versionCode ?? 'N/A'})
+            </Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
