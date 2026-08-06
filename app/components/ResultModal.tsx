@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
-import { Modal, View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
+import { Modal, View, Text, Pressable, ScrollView, StyleSheet, Platform, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +44,15 @@ function formatTravelTime(leaveTime: string, arrivalTime: string): string {
 function formatDistance(meters?: number): string | null {
   if (meters === undefined) return null;
   return `${(meters / 1000).toFixed(1)} km`;
+}
+
+function buildTransitMapUrl(
+  originLat: number,
+  originLng: number,
+  destLat: number,
+  destLng: number,
+): string {
+  return `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destLat},${destLng}&travelmode=transit`;
 }
 
 /**
@@ -494,17 +503,31 @@ export default function ResultModal({
             {/* Side by side: two full-width stacked buttons cost twice the
                 height for no added clarity. */}
             <View style={styles.actionRow}>
-              {onViewRoute && result?.encodedPolyline && (
+              {(onViewRoute && result?.encodedPolyline) || result?.commuteBreakdown ? (
                 <Pressable
                   style={[styles.viewRouteButton, styles.actionButton]}
-                  onPress={onViewRoute}
+                  onPress={() => {
+                    if (result?.commuteBreakdown) {
+                      const url = buildTransitMapUrl(
+                        result.originLat ?? 0,
+                        result.originLng ?? 0,
+                        result.destLat ?? 0,
+                        result.destLng ?? 0,
+                      );
+                      Linking.openURL(url).catch((err) => {
+                        console.warn('[ResultModal] Could not open Google Maps:', err?.message ?? err);
+                      });
+                    } else {
+                      onViewRoute?.();
+                    }
+                  }}
                   accessibilityLabel="View route on map"
                   accessibilityRole="button"
                 >
                   <Ionicons name="map" size={16} color="#fff" />
                   <Text style={styles.viewRouteButtonText} numberOfLines={1}>Map</Text>
                 </Pressable>
-              )}
+              ) : null}
 
               {onSetReminder && (
                 <Pressable

@@ -111,6 +111,10 @@ export default function HistoryScreen() {
         planningMode: trip.planning_mode as 'arrive_by' | 'leave_at',
         factors: [],
       },
+      originLat: trip.origin_lat ?? undefined,
+      originLng: trip.origin_lng ?? undefined,
+      destLat: trip.destination_lat ?? undefined,
+      destLng: trip.destination_lng ?? undefined,
     };
     setSelectedTrip(result);
   };

@@ -71,6 +71,12 @@ export interface TripResult {
     totalSeconds: number;
   } | null;
   commuteBreakdown?: CommuteBreakdown | null;
+  // Carried on the result so the map button can deep-link a transit route.
+  // The Edge Function does not return these; they are attached client-side.
+  originLat?: number;
+  originLng?: number;
+  destLat?: number;
+  destLng?: number;
 }
 
 export interface RecommendationExplanation {

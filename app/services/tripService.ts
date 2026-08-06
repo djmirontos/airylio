@@ -75,7 +75,16 @@ export async function calculateTrip(params: CalculateTripParams): Promise<TripRe
     throw new Error(sanitizeError(message));
   }
 
-  return data;
+  // The Edge Function does not echo the coordinates back, so attach them here.
+  // The result screen needs them to deep-link a transit route into Google Maps
+  // for rail journeys, which carry no polyline.
+  return {
+    ...data,
+    originLat: params.originLat,
+    originLng: params.originLng,
+    destLat: params.destLat,
+    destLng: params.destLng,
+  };
 }
 
 // Fetch user's trip history from database.
