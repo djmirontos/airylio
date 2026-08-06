@@ -533,6 +533,28 @@ airylio/
 - City detection (8 PH cities, bounding-box + priority)
 
 
+### 2026-08-06
+- **MRT/LRT Rail Integration — Sprints 1-4**
+- Sprint 1: Created rail station tables in Supabase — train_stations
+  (51 stations across MRT3, LRT1, LRT2), train_segments (48 segments),
+  train_transfers (6 interchange walk times), train_queue_penalties
+  (15 peak hour entries). GPS coordinates from OpenStreetMap verified data.
+- Sprint 2: Built railDetector.ts — two-stage proximity detection
+  (1.2km pre-filter + 15min walk limit), same-line and transfer route
+  evaluation, legs array with breakdown, rail bypass in Edge Function.
+  Fixed RLS policies on rail tables (service role read only).
+  Fixed UTF-8 encoding bug in calculateDeparture.ts (em-dashes).
+  Added rail_route_detected exclusion from rate limiter.
+- Sprint 3: Wired rail ETA into engine — rail routes use totalSeconds
+  instead of Google ETA, confidence score boosted to 88 (rail baseline),
+  weather penalty still applies on top, commuteBreakdown added to
+  API response.
+- Sprint 4: Added journey breakdown UI to ResultModal — leg-by-leg
+  display (walk/wait/ride/transfer), queue penalty row, total minutes,
+  distance row hidden for rail routes, data source shows line name
+  instead of Google Routes.
+- Preview build triggered for testing.
+
 ### 2026-08-04
 - **Sentry + PostHog Analytics Integration**
 - Installed `@sentry/react-native` ~7.2.0 and `posthog-react-native` ^4.61.4
