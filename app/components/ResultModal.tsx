@@ -77,6 +77,7 @@ export default function ResultModal({
   const { colors: COLORS } = useTheme();
   const insets = useSafeAreaInsets();
   const [countdownText, setCountdownText] = useState<string | null>(null);
+  const [breakdownExpanded, setBreakdownExpanded] = useState(true);
 
   const origin = splitAddress(originLabel);
   const destination = splitAddress(destLabel);
@@ -360,34 +361,59 @@ export default function ResultModal({
             {result.commuteBreakdown && (
               <>
                 <View style={styles.divider} />
-                <Text style={styles.whyTitle}>Your commute via {result.commuteBreakdown.via}</Text>
-                {result.commuteBreakdown.legs.map((leg, i) => {
-                  const icon = legIcon(leg.type, leg.line);
-                  const minutes = Math.round(leg.seconds / 60);
-                  return (
-                    <View key={i} style={styles.reasonRow}>
-                      <Ionicons name={icon.name as any} size={16} color={icon.color} style={{ marginTop: 1 }} />
-                      <Text style={[styles.reasonText, { flex: 1 }]}>{leg.label}</Text>
-                      <Text style={[styles.reasonText, { textAlign: 'right' }]}>
-                        {minutes < 1 ? '< 1 min' : `${minutes} min`}
+                <Pressable
+                  onPress={() => setBreakdownExpanded(prev => !prev)}
+                  accessibilityRole="button"
+                  accessibilityLabel={breakdownExpanded ? 'Collapse commute breakdown' : 'Expand commute breakdown'}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}
+                >
+                  <Text style={styles.whyTitle}>
+                    Your commute via {result.commuteBreakdown.via}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {!breakdownExpanded && (
+                      <Text style={[styles.reasonText, { color: COLORS.textSecondary }]}>
+                        {result.commuteBreakdown.totalMinutes} min
+                      </Text>
+                    )}
+                    <Ionicons
+                      name={breakdownExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={COLORS.textSecondary}
+                    />
+                  </View>
+                </Pressable>
+                {breakdownExpanded && (
+                  <>
+                    {result.commuteBreakdown.legs.map((leg, i) => {
+                      const icon = legIcon(leg.type, leg.line);
+                      const minutes = Math.round(leg.seconds / 60);
+                      return (
+                        <View key={i} style={styles.reasonRow}>
+                          <Ionicons name={icon.name as any} size={16} color={icon.color} style={{ marginTop: 1 }} />
+                          <Text style={[styles.reasonText, { flex: 1 }]}>{leg.label}</Text>
+                          <Text style={[styles.reasonText, { textAlign: 'right' }]}>
+                            {minutes < 1 ? '< 1 min' : `${minutes} min`}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                    {result.commuteBreakdown.queuePenaltySeconds > 0 && (
+                      <View style={styles.reasonRow}>
+                        <Ionicons name="people" size={16} color={COLORS.signalWarn} style={{ marginTop: 1 }} />
+                        <Text style={styles.reasonText}>
+                          Rush hour queue added: +{Math.round(result.commuteBreakdown.queuePenaltySeconds / 60)} min
+                        </Text>
+                      </View>
+                    )}
+                    <View style={[styles.reasonRow, { marginTop: 4 }]}>
+                      <Ionicons name="checkmark-circle" size={16} color={COLORS.signalGood} style={{ marginTop: 1 }} />
+                      <Text style={[styles.reasonText, { fontFamily: 'Inter_600SemiBold', color: COLORS.textPrimary }]}>
+                        Total: {result.commuteBreakdown.totalMinutes} min
                       </Text>
                     </View>
-                  );
-                })}
-                {result.commuteBreakdown.queuePenaltySeconds > 0 && (
-                  <View style={styles.reasonRow}>
-                    <Ionicons name="people" size={16} color={COLORS.signalWarn} style={{ marginTop: 1 }} />
-                    <Text style={styles.reasonText}>
-                      Rush hour queue added: +{Math.round(result.commuteBreakdown.queuePenaltySeconds / 60)} min
-                    </Text>
-                  </View>
+                  </>
                 )}
-                <View style={[styles.reasonRow, { marginTop: 4 }]}>
-                  <Ionicons name="checkmark-circle" size={16} color={COLORS.signalGood} style={{ marginTop: 1 }} />
-                  <Text style={[styles.reasonText, { fontFamily: 'Inter_600SemiBold', color: COLORS.textPrimary }]}>
-                    Total: {result.commuteBreakdown.totalMinutes} min
-                  </Text>
-                </View>
               </>
             )}
 

@@ -226,7 +226,7 @@ export async function detectRailRoute(
           const legs: RailLeg[] = [
             { type: "walk", label: `Walk to ${board.station.name}`, seconds: board.walkSeconds },
             { type: "wait", label: "Wait for train", seconds: WAIT_SECONDS + queuePenaltySeconds },
-            { type: "ride", label: `${boardLine} → ${alight.station.name}`, seconds: rideSeconds, line: board.station.line },
+            { type: "ride", label: `${board.station.name} → ${alight.station.name}`, seconds: rideSeconds, line: board.station.line },
             { type: "walk", label: "Walk to destination", seconds: alight.walkSeconds },
           ];
           candidates.push({
@@ -269,10 +269,10 @@ export async function detectRailRoute(
             const legs: RailLeg[] = [
               { type: "walk", label: `Walk to ${board.station.name}`, seconds: board.walkSeconds },
               { type: "wait", label: "Wait for train", seconds: WAIT_SECONDS + queuePenaltySeconds },
-              { type: "ride", label: `${boardLine} → ${exit.name}`, seconds: firstRide, line: board.station.line },
+              { type: "ride", label: `${board.station.name} → ${exit.name}`, seconds: firstRide, line: board.station.line },
               { type: "transfer", label: `Transfer at ${exit.name}`, seconds: transfer.walk_seconds },
               { type: "wait", label: "Wait for next train", seconds: WAIT_SECONDS },
-              { type: "ride", label: `${alightLine} → ${alight.station.name}`, seconds: secondRide, line: alight.station.line },
+              { type: "ride", label: `${enter.name} → ${alight.station.name}`, seconds: secondRide, line: alight.station.line },
               { type: "walk", label: "Walk to destination", seconds: alight.walkSeconds },
             ];
             candidates.push({
