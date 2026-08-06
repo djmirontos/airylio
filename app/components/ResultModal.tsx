@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
-import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Modal, View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -81,6 +81,13 @@ export default function ResultModal({
 
   const origin = splitAddress(originLabel);
   const destination = splitAddress(destLabel);
+
+  // A React Native Modal on Android is laid out below the status bar already,
+  // but useSafeAreaInsets reports the root window's insets - so adding
+  // insets.top here counted the status bar twice and pushed the back arrow
+  // well clear of it. iOS modals do cover the notch, so the inset still
+  // applies there.
+  const topInset = Platform.OS === 'android' ? 0 : insets.top;
 
   function confidenceColor(score: number): string {
     if (score >= CONFIDENCE_HIGH) return COLORS.signalGood;
@@ -178,7 +185,9 @@ export default function ResultModal({
 
   const styles = useMemo(() => StyleSheet.create({
     resultScreen: { flex: 1, backgroundColor: COLORS.resultBody },
-    resultBackButton: { position: 'absolute', top: insets.top, left: 16, zIndex: 10, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+    // 44x44 touch target retained; +4 puts the glyph's centre near Material's
+    // 28dp app-bar mark without the button crowding the status bar.
+    resultBackButton: { position: 'absolute', top: topInset + 4, left: 16, zIndex: 10, width: 44, height: 44, minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
     // No alignItems: 'flex-start' here. It shrink-wrapped every child, so the
     // trip stack collapsed to its content and tripText's flex: 1 had almost no
     // width to fill - addresses rendered one character per line. Children that
@@ -187,7 +196,8 @@ export default function ResultModal({
     // the absolutely positioned back button. Driving both from the real inset
     // keeps the same spacing on a standard status bar while no longer running
     // under a notch or a tall cutout.
-    resultHero: { backgroundColor: COLORS.resultHero, paddingTop: insets.top + 46, paddingBottom: 16, paddingHorizontal: 24 },
+    // Clears the absolutely positioned back button above (4 + 44 + 4).
+    resultHero: { backgroundColor: COLORS.resultHero, paddingTop: topInset + 52, paddingBottom: 16, paddingHorizontal: 24 },
     // Hero row: the leave-time block on the left, confidence ring on the right.
     heroLayout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     heroTextCol: { flex: 1 },
@@ -239,10 +249,17 @@ export default function ResultModal({
     remindButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
     remindButtonTextActive: { color: COLORS.signalGood },
     recalculateButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
-  }), [COLORS, insets.top]);
+  }), [COLORS, topInset]);
 
   return (
-    <Modal visible={!!result} animationType="slide">
+    <Modal
+      visible={!!result}
+      animationType="slide"
+      // Routes the Android hardware back button to the same handler as the
+      // top-left arrow. React Native binds this for the modal's lifetime only,
+      // so it cannot swallow back presses once the modal is closed.
+      onRequestClose={onClose}
+    >
       {result && freshness && weather && (
         <View style={styles.resultScreen}>
           <StatusBar style="light" />
