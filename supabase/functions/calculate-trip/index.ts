@@ -4,6 +4,7 @@ import { detectCity } from "../_shared/geo/detectCity.ts";
 import { buildCacheKey, roundToTimeBucket } from "../_shared/geo/cacheKey.ts";
 import { getRouteEta } from "../_shared/google/routesClient.ts";
 import { calculateDepartureTime } from "../_shared/engine/calculateDeparture.ts";
+import { detectRailRoute, RailRoute } from "../_shared/rail/railDetector.ts";
 
 // CORS is not an abuse control - a script or curl ignores it entirely. It only
 // constrains browsers. Set ALLOWED_ORIGIN if a web client is ever added; the
@@ -269,6 +270,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unsupported transport mode" }), { status: 400, headers: corsHeaders });
     }
 
+    let railRoute: RailRoute | null = null;
+
     // Fetch real weather from Open-Meteo (falls back to 'clear' on any failure)
     let weatherCondition: "clear" | "rain" | "heavy_rain" | "storm" = "clear";
     try {
@@ -295,6 +298,35 @@ Deno.serve(async (req) => {
     let encodedPolyline: string | undefined;
     let dataFreshness: "live" | "cached" | "estimated";
     const calculationId = crypto.randomUUID();
+
+    // Rail route detection for commute mode. Placed here rather than beside the
+    // transport_profiles lookup because it needs requestTime, which is declared
+    // above. Still ahead of the cache and Google lookups, as intended.
+    // Returns null on any failure, so it cannot break the existing path.
+    if (transportMode === "public_commute") {
+      railRoute = await detectRailRoute(
+        admin,
+        originLat, originLng,
+        destLat, destLng,
+        requestTime,
+      );
+    }
+
+    if (railRoute) {
+      durationSeconds = railRoute.totalSeconds;
+      distanceMeters = 0;
+      dataFreshness = "live";
+      await admin.from("calculation_events").insert({
+        device_id: deviceId,
+        calculation_id: calculationId,
+        event_type: "rail_route_detected",
+        metadata: {
+          via: railRoute.via,
+          routeType: railRoute.routeType,
+          totalSeconds: railRoute.totalSeconds,
+        },
+      });
+    } else {
 
     const { data: cacheHit, error: cacheError } = await admin
       .from("route_cache").select("*").eq("cache_key", cacheKey)
@@ -362,6 +394,8 @@ Deno.serve(async (req) => {
       }
     }
 
+    } // end of the non-rail path
+
     const { data: versionRow, error: versionError } = await admin
       .from("recommendation_versions").select("*").eq("is_active", true).single();
     if (versionError || !versionRow) throw new Error("No active recommendation_versions row found");
@@ -409,6 +443,12 @@ Deno.serve(async (req) => {
       weatherCondition,
       distanceMeters,
       encodedPolyline,
+      railRoute: railRoute ? {
+        legs: railRoute.legs,
+        via: railRoute.via,
+        routeType: railRoute.routeType,
+        queuePenaltySeconds: railRoute.queuePenaltySeconds,
+      } : null,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err: any) {

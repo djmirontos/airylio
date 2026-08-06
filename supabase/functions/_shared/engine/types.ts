@@ -65,3 +65,18 @@ export interface CalculateDepartureResult {
     factors: ExplanationFactor[];
   };
 }
+
+export interface RailLeg {
+  type: 'walk' | 'wait' | 'ride' | 'transfer';
+  label: string;
+  seconds: number;
+  line?: string;
+}
+
+export interface RailRoute {
+  legs: RailLeg[];
+  totalSeconds: number;
+  queuePenaltySeconds: number;
+  via: string;
+  routeType: 'rail' | 'hybrid';
+}
