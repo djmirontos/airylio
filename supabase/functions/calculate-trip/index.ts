@@ -404,7 +404,9 @@ Deno.serve(async (req) => {
     const engineResult = calculateDepartureTime({
       originHash, destinationHash, cityCode, transportMode,
       planningMode, targetTime, calculationTime: requestTime.toISOString(),
-      weatherCondition, rawGoogleEtaSeconds: durationSeconds, dataFreshness,
+      weatherCondition,
+      rawGoogleEtaSeconds: railRoute ? railRoute.totalSeconds : durationSeconds,
+      dataFreshness: railRoute ? 'live' : dataFreshness,
       recommendationVersion: versionRow.buffer_config,
       cityProfile: {
         cityCode: cityProfileRow.city_code,
@@ -413,6 +415,24 @@ Deno.serve(async (req) => {
         weatherSensitivity: cityProfileRow.weather_sensitivity,
       },
     });
+
+    // Rail routes get a higher confidence baseline than ground transit.
+    // 88 = rail baseline (fixed route, predictable headways).
+    // We clamp to 100 and preserve any penalties the engine already applied
+    // (e.g. weather still reduces confidence on rail routes).
+    if (railRoute) {
+      const railBoost = 88 - 75; // rail baseline minus ground transit baseline
+      engineResult.confidenceScore = Math.min(
+        100,
+        engineResult.confidenceScore + railBoost
+      );
+      engineResult.confidenceReason = [
+        ...engineResult.confidenceReason.filter(
+          (r: string) => !r.toLowerCase().includes('ground transit')
+        ),
+        'Rail route — fixed path and predictable headways',
+      ];
+    }
 
     const { data: tripRow, error: tripError } = await admin.from("trips").insert({
       id: calculationId, device_id: deviceId,
@@ -449,6 +469,13 @@ Deno.serve(async (req) => {
         via: railRoute.via,
         routeType: railRoute.routeType,
         queuePenaltySeconds: railRoute.queuePenaltySeconds,
+        totalSeconds: railRoute.totalSeconds,
+      } : null,
+      commuteBreakdown: railRoute ? {
+        legs: railRoute.legs,
+        via: railRoute.via,
+        queuePenaltySeconds: railRoute.queuePenaltySeconds,
+        totalMinutes: Math.round(railRoute.totalSeconds / 60),
       } : null,
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
