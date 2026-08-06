@@ -94,7 +94,8 @@ async function countRecentActivity(
     .from("calculation_events")
     .select("calculation_id", { count: "exact", head: true })
     .eq("device_id", deviceId)
-    .gte("created_at", sinceIso);
+    .gte("created_at", sinceIso)
+    .neq("event_type", "rail_route_detected");
 
   if (!events.error) return events.count ?? 0;
 
