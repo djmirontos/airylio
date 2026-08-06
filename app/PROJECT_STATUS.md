@@ -446,6 +446,68 @@ airylio/
 
 ## 14. Changelog
 
+### 2026-08-06
+- **MRT/LRT Rail Integration — Sprints 1-4**
+- Sprint 1: Created rail station tables in Supabase — train_stations
+  (51 stations across MRT3, LRT1, LRT2), train_segments (48 segments),
+  train_transfers (6 interchange walk times), train_queue_penalties
+  (15 peak hour entries). GPS coordinates from OpenStreetMap verified data.
+- Sprint 2: Built railDetector.ts — two-stage proximity detection
+  (1.2km pre-filter + 15min walk limit), same-line and transfer route
+  evaluation, legs array with breakdown, rail bypass in Edge Function.
+  Fixed RLS policies on rail tables (service role read only).
+  Fixed UTF-8 encoding bug in calculateDeparture.ts (em-dashes).
+  Added rail_route_detected exclusion from rate limiter.
+- Sprint 3: Wired rail ETA into engine — rail routes use totalSeconds
+  instead of Google ETA, confidence score boosted to 88 (rail baseline),
+  weather penalty still applies on top, commuteBreakdown added to
+  API response.
+- Sprint 4: Added journey breakdown UI to ResultModal — leg-by-leg
+  display (walk/wait/ride/transfer), queue penalty row, total minutes,
+  distance row hidden for rail routes, data source shows line name
+  instead of Google Routes.
+- Preview build triggered for testing.
+
+### 2026-08-04
+- **Sentry + PostHog Analytics Integration**
+- Installed `@sentry/react-native` ~7.2.0 and `posthog-react-native` ^4.61.4
+- Created `app/lib/sentry.ts` — initSentry(), setSentryUser(), Sentry.wrap()
+- Created `app/lib/posthog.ts` — initPostHog(), identifyUser(), captureEvent()
+- Integrated both tools in `Root.tsx` — initialized before font loading, Sentry wraps the root component
+- Added `captureException` to `components/ErrorBoundary.tsx`
+- Added `setSentryUser()` + `identifyUser()` to `services/tripService.ts` on all three identity paths (existing session, fresh sign-in, History load)
+- Wired six PostHog events: `calculation_triggered` (App.tsx), `result_viewed` (ResultModal), `feedback_submitted` (FeedbackModal), `history_viewed` (HistoryScreen), `map_viewed` (MapScreen), `settings_viewed` (SettingsScreen)
+- Added `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`, `EXPO_PUBLIC_POSTHOG_HOST` to `.env` and EAS secrets (preview + production)
+- Added `SENTRY_AUTH_TOKEN` (org:ci scope) to EAS secrets (preview + production) for sourcemap uploads
+- Both tools disabled in `__DEV__` mode to avoid polluting production data
+- **corridor_stats table created** in Supabase — fixes 502 errors on Google Routes failure
+- Dropped stale materialized view, recreated as proper table with RLS, service role read policy, `refresh_corridor_stats()` aggregation function (min. 3 trips per corridor), and two indexes
+- Added `SENTRY_AUTH_TOKEN` EAS secret after first preview build failed at sourcemap upload step
+- Updated EAS CLI from 21.4.0 to 21.5.0
+
+### 2026-08-03
+- Implemented full-screen SearchScreen for Origin/Destination (replaces inline dropdown)
+- Fixed Google Places API session token (UUID v4 format for billing optimization)
+- Fixed Google Maps not rendering in development builds (app.config.js dynamic key injection)
+- Fixed ResultModal address display (two-line layout, no truncation)
+- Removed stray root app.json and eas.json files
+- Applied Supabase RLS policy hardening (removed overly permissive policies)
+- Verified cross-device data isolation (RLS confirmed blocking unauthorized access)
+- Restricted Google API keys to Android app package + SHA-1 fingerprint
+- Set up Google Cloud budget alerts
+- Deployed Phase 1 & 2 security audit fixes
+- Reverted Edge Function to stable version (Phase 2 caused EarlyDrop crash)
+- Set up development build with expo-dev-client@6.0.21
+- Converted app.json to app.config.js for dynamic environment variable injection
+- Added GOOGLE_MAPS_API_KEY to .env and EAS secrets
+
+### 2026-07-28
+- Phase 1 security audit: RLS migration, scoped history query, notification handler fix
+- Phase 2 security audit: input validation, error hardening, cache safety, rate limiting
+- Removed deprecated SafeAreaView, replaced with react-native-safe-area-context
+- Fixed SearchScreen navigation: back button, item selection, state management
+- Added @react-navigation/native-stack for SearchScreen
+
 ### 2026-07-17
 - **EAS Build Configuration & Play Store Submission**
 - Pinned Node version to 20.18.0 in both preview and production build profiles for consistent environment
@@ -533,67 +595,6 @@ airylio/
 - City detection (8 PH cities, bounding-box + priority)
 
 
-### 2026-08-06
-- **MRT/LRT Rail Integration — Sprints 1-4**
-- Sprint 1: Created rail station tables in Supabase — train_stations
-  (51 stations across MRT3, LRT1, LRT2), train_segments (48 segments),
-  train_transfers (6 interchange walk times), train_queue_penalties
-  (15 peak hour entries). GPS coordinates from OpenStreetMap verified data.
-- Sprint 2: Built railDetector.ts — two-stage proximity detection
-  (1.2km pre-filter + 15min walk limit), same-line and transfer route
-  evaluation, legs array with breakdown, rail bypass in Edge Function.
-  Fixed RLS policies on rail tables (service role read only).
-  Fixed UTF-8 encoding bug in calculateDeparture.ts (em-dashes).
-  Added rail_route_detected exclusion from rate limiter.
-- Sprint 3: Wired rail ETA into engine — rail routes use totalSeconds
-  instead of Google ETA, confidence score boosted to 88 (rail baseline),
-  weather penalty still applies on top, commuteBreakdown added to
-  API response.
-- Sprint 4: Added journey breakdown UI to ResultModal — leg-by-leg
-  display (walk/wait/ride/transfer), queue penalty row, total minutes,
-  distance row hidden for rail routes, data source shows line name
-  instead of Google Routes.
-- Preview build triggered for testing.
-
-### 2026-08-04
-- **Sentry + PostHog Analytics Integration**
-- Installed `@sentry/react-native` ~7.2.0 and `posthog-react-native` ^4.61.4
-- Created `app/lib/sentry.ts` — initSentry(), setSentryUser(), Sentry.wrap()
-- Created `app/lib/posthog.ts` — initPostHog(), identifyUser(), captureEvent()
-- Integrated both tools in `Root.tsx` — initialized before font loading, Sentry wraps the root component
-- Added `captureException` to `components/ErrorBoundary.tsx`
-- Added `setSentryUser()` + `identifyUser()` to `services/tripService.ts` on all three identity paths (existing session, fresh sign-in, History load)
-- Wired six PostHog events: `calculation_triggered` (App.tsx), `result_viewed` (ResultModal), `feedback_submitted` (FeedbackModal), `history_viewed` (HistoryScreen), `map_viewed` (MapScreen), `settings_viewed` (SettingsScreen)
-- Added `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`, `EXPO_PUBLIC_POSTHOG_HOST` to `.env` and EAS secrets (preview + production)
-- Added `SENTRY_AUTH_TOKEN` (org:ci scope) to EAS secrets (preview + production) for sourcemap uploads
-- Both tools disabled in `__DEV__` mode to avoid polluting production data
-- **corridor_stats table created** in Supabase — fixes 502 errors on Google Routes failure
-- Dropped stale materialized view, recreated as proper table with RLS, service role read policy, `refresh_corridor_stats()` aggregation function (min. 3 trips per corridor), and two indexes
-- Added `SENTRY_AUTH_TOKEN` EAS secret after first preview build failed at sourcemap upload step
-- Updated EAS CLI from 21.4.0 to 21.5.0
-
-### 2026-08-03
-- Implemented full-screen SearchScreen for Origin/Destination (replaces inline dropdown)
-- Fixed Google Places API session token (UUID v4 format for billing optimization)
-- Fixed Google Maps not rendering in development builds (app.config.js dynamic key injection)
-- Fixed ResultModal address display (two-line layout, no truncation)
-- Removed stray root app.json and eas.json files
-- Applied Supabase RLS policy hardening (removed overly permissive policies)
-- Verified cross-device data isolation (RLS confirmed blocking unauthorized access)
-- Restricted Google API keys to Android app package + SHA-1 fingerprint
-- Set up Google Cloud budget alerts
-- Deployed Phase 1 & 2 security audit fixes
-- Reverted Edge Function to stable version (Phase 2 caused EarlyDrop crash)
-- Set up development build with expo-dev-client@6.0.21
-- Converted app.json to app.config.js for dynamic environment variable injection
-- Added GOOGLE_MAPS_API_KEY to .env and EAS secrets
-
-### 2026-07-28
-- Phase 1 security audit: RLS migration, scoped history query, notification handler fix
-- Phase 2 security audit: input validation, error hardening, cache safety, rate limiting
-- Removed deprecated SafeAreaView, replaced with react-native-safe-area-context
-- Fixed SearchScreen navigation: back button, item selection, state management
-- Added @react-navigation/native-stack for SearchScreen
 ---
 
 ## 15. Next Recommended Tasks
