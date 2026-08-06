@@ -206,6 +206,7 @@ export default function ResultModal({
     resultHeroTime: { fontFamily: 'Poppins_700Bold', fontSize: 34, color: '#fff', marginTop: 2 },
     resultArrivalInline: { fontFamily: 'Inter_400Regular', fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 3 },
     resultBody: { flex: 1, padding: 16, backgroundColor: COLORS.resultBody },
+    resultBodyContent: { paddingBottom: 16 },
     divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 10 },
     whyTitle: { fontFamily: 'Inter_600SemiBold', fontSize: 15, color: COLORS.textPrimary, marginBottom: 8 },
     reasonRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
@@ -223,7 +224,18 @@ export default function ResultModal({
       fontSize: 13,
       color: COLORS.textPrimary
     },
-    actionRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+    // Sits above the Android navigation/gesture area: insets.bottom clears the
+    // system bar, and the +12 keeps the buttons from sitting flush against it.
+    // The +12 also guarantees breathing room on devices that report 0.
+    stickyActionBar: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: insets.bottom + 12,
+      backgroundColor: COLORS.resultBody,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: COLORS.divider,
+    },
+    actionRow: { flexDirection: 'row', gap: 10 },
     actionButton: { flex: 1, marginTop: 0, marginBottom: 0, paddingHorizontal: 8 },
     // Vertical origin -> destination stack: a row per stop, joined by
     // tripStackLine. Values match the Plan screen's originals exactly so both
@@ -249,7 +261,7 @@ export default function ResultModal({
     remindButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.accent },
     remindButtonTextActive: { color: COLORS.signalGood },
     recalculateButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
-  }), [COLORS, topInset]);
+  }), [COLORS, topInset, insets.bottom]);
 
   return (
     <Modal
@@ -340,7 +352,7 @@ export default function ResultModal({
 
           {/* No restatement of the leave/arrive times here - the hero above
               already shows both, in much larger type. */}
-          <ScrollView style={styles.resultBody}>
+          <ScrollView style={styles.resultBody} contentContainerStyle={styles.resultBodyContent}>
             {(result.confidenceReason?.length ?? 0) > 0 && (
               <>
                 <Text style={styles.whyTitle}>Why this recommendation</Text>
@@ -467,6 +479,18 @@ export default function ResultModal({
               </View>
             </View>
 
+            {onRecalculate && (
+              <Pressable style={styles.recalculateButton} onPress={onRecalculate} accessibilityLabel="Recalculate with current traffic" accessibilityRole="button">
+                <Ionicons name="refresh" size={16} color="#fff" />
+                <Text style={styles.recalculateButtonText}>Recalculate with current traffic</Text>
+              </Pressable>
+            )}
+          </ScrollView>
+
+          {/* Sticky action bar. A flex sibling of the ScrollView rather than an
+              absolute overlay, so it can never cover the last of the scrolled
+              content - the list simply ends above it. */}
+          <View style={styles.stickyActionBar}>
             {/* Side by side: two full-width stacked buttons cost twice the
                 height for no added clarity. */}
             <View style={styles.actionRow}>
@@ -503,16 +527,7 @@ export default function ResultModal({
                 </Pressable>
               )}
             </View>
-
-            {onRecalculate && (
-              <Pressable style={styles.recalculateButton} onPress={onRecalculate} accessibilityLabel="Recalculate with current traffic" accessibilityRole="button">
-                <Ionicons name="refresh" size={16} color="#fff" />
-                <Text style={styles.recalculateButtonText}>Recalculate with current traffic</Text>
-              </Pressable>
-            )}
-
-            
-          </ScrollView>
+          </View>
         </View>
       )}
     </Modal>
