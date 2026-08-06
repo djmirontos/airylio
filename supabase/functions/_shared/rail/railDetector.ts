@@ -170,21 +170,17 @@ export async function detectRailRoute(
     const { data: stationRows, error: stationError } = await admin
       .from("train_stations")
       .select("id, line, name, sequence, lat, lng, is_transfer_station");
-    console.log('[rail] stations fetched:', stationRows?.length ?? 0);
     if (stationError || !stationRows?.length) return null;
 
     const stations = stationRows as Station[];
     const originNearby = findNearby(stations, originLat, originLng);
-    console.log('[rail] origin nearby:', originNearby.length, originNearby.map(n => n.station.name));
     const destNearby = findNearby(stations, destLat, destLng);
-    console.log('[rail] dest nearby:', destNearby.length, destNearby.map(n => n.station.name));
     if (!originNearby.length || !destNearby.length) return null;
 
     const { data: segmentRows } = await admin
       .from("train_segments")
       .select("from_station_id, to_station_id, avg_seconds");
     const segments = (segmentRows ?? []) as Segment[];
-    console.log('[rail] segments fetched:', segments.length);
     if (!segments.length) return null;
 
     const peakType = peakTypeFor(requestTime);
@@ -291,7 +287,6 @@ export async function detectRailRoute(
       }
     }
 
-    console.log('[rail] candidates found:', candidates.length);
     if (!candidates.length) return null;
 
     const best = candidates.reduce((a, b) => (b.totalSeconds < a.totalSeconds ? b : a));
