@@ -1,10 +1,10 @@
 // =============================================================================
-// Airylio Recommendation Engine — calculateDepartureTime()
+// Airylio Recommendation Engine â€” calculateDepartureTime()
 //
 // Design contract (approved):
 //   - Pure function: no database calls, no Google API calls, no side effects.
 //   - All config (recommendation version, city profile) is passed in, not
-//     fetched here — this is what makes the function unit-testable with
+//     fetched here â€” this is what makes the function unit-testable with
 //     fake inputs and fully reproducible given the same arguments.
 //   - Output shape maps directly onto the `trips` table columns.
 //
@@ -16,7 +16,7 @@
 //     future time the user picks). recommendedLeaveTime just echoes it
 //     back; buffer is ADDED on top of travel time to get predicted arrival.
 //     Rush-hour detection uses targetTime (the actual departure moment),
-//     NOT calculationTime — unlike arrive_by mode, where departure is
+//     NOT calculationTime â€” unlike arrive_by mode, where departure is
 //     usually soon after calculation so calculationTime is a reasonable
 //     proxy, a leave_at departure could be hours away.
 //
@@ -24,15 +24,15 @@
 //   1. Rush-hour detection uses wall-clock hour in the CITY'S timezone
 //      (via Intl.DateTimeFormat), not the server's local timezone. This
 //      was a real bug caught via regression testing (server UTC+3, city
-//      UTC+8 — see engine.test.ts "timezone regression guard").
+//      UTC+8 â€” see engine.test.ts "timezone regression guard").
 //   2. Confidence penalties for cached/estimated data freshness are fixed
-//      heuristics (-5 / -15), not derived from historical accuracy —
+//      heuristics (-5 / -15), not derived from historical accuracy â€”
 //      intentional per "heuristics, not product truths."
 //   3. Per-factor breakdown (`factors`) isolates each factor's marginal
 //      contribution against the base buffer (holding other factors
 //      neutral). Because the real formula is multiplicative
-//      (base × weather × rush), these contributions do NOT sum exactly
-//      to totalBufferMinutes — there's a cross-term the isolated view
+//      (base Ã— weather Ã— rush), these contributions do NOT sum exactly
+//      to totalBufferMinutes â€” there's a cross-term the isolated view
 //      can't capture. This is intentionally an illustrative approximation
 //      for UI purposes ("rain added ~8 min"), not an exact ledger.
 // =============================================================================
@@ -156,7 +156,7 @@ export function calculateDepartureTime(
     confidenceReason.push('Using recently cached traffic data');
   } else {
     confidenceScore -= 15;
-    confidenceReason.push('Live traffic unavailable — using historical estimate');
+    confidenceReason.push('Live traffic unavailable â€” using historical estimate');
   }
 
   if (weatherCondition !== 'clear') {
@@ -166,7 +166,7 @@ export function calculateDepartureTime(
     confidenceReason.push('Rush hour traffic expected');
   }
   if (bufferWasCapped) {
-    confidenceReason.push('Extreme conditions detected — buffer capped at maximum for this mode');
+    confidenceReason.push('Extreme conditions detected â€” buffer capped at maximum for this mode');
   }
 
   confidenceScore = Math.max(0, Math.min(100, Math.round(confidenceScore * 10) / 10));
