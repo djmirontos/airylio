@@ -503,7 +503,8 @@ export default function ResultModal({
             {/* Side by side: two full-width stacked buttons cost twice the
                 height for no added clarity. */}
             <View style={styles.actionRow}>
-              {(onViewRoute && result?.encodedPolyline) || result?.commuteBreakdown ? (
+              {(onViewRoute && result?.encodedPolyline) ||
+              (result?.commuteBreakdown && result?.originLat && result?.destLat) ? (
                 <Pressable
                   style={[styles.viewRouteButton, styles.actionButton]}
                   onPress={() => {
