@@ -63,6 +63,14 @@ export interface TripResult {
   weatherCondition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
   encodedPolyline?: string;
   recommendationExplanation?: RecommendationExplanation;
+  railRoute?: {
+    legs: RailLeg[];
+    via: string;
+    routeType: string;
+    queuePenaltySeconds: number;
+    totalSeconds: number;
+  } | null;
+  commuteBreakdown?: CommuteBreakdown | null;
 }
 
 export interface RecommendationExplanation {
@@ -74,4 +82,18 @@ export interface ExplanationFactor {
   type: 'weather' | 'rush_hour' | 'buffer_cap';
   label: string;
   minutesAdded: number;
+}
+
+export interface RailLeg {
+  type: 'walk' | 'wait' | 'ride' | 'transfer';
+  label: string;
+  seconds: number;
+  line?: string;
+}
+
+export interface CommuteBreakdown {
+  legs: RailLeg[];
+  via: string;
+  queuePenaltySeconds: number;
+  totalMinutes: number;
 }

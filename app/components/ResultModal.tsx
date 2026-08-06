@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import ConfidenceRing from './ConfidenceRing';
 import { CONFIDENCE_HIGH, CONFIDENCE_MODERATE } from '../constants/config';
-import { TripResult, ExplanationFactor } from '../types/supabase';
+import { TripResult, ExplanationFactor, RailLeg } from '../types/supabase';
 import { captureEvent } from '../lib/posthog';
 
 type PlanningMode = 'arrive_by' | 'leave_at';
@@ -123,6 +123,14 @@ export default function ResultModal({
     return { icon: 'sunny', label: 'Clear', color: COLORS.signalGood };
   }
 
+  function legIcon(type: RailLeg['type'], line?: string): { name: string; color: string } {
+    if (type === 'walk') return { name: 'walk', color: COLORS.textSecondary };
+    if (type === 'wait') return { name: 'time-outline', color: COLORS.textSecondary };
+    if (type === 'transfer') return { name: 'swap-horizontal', color: COLORS.accent };
+    // ride
+    return { name: 'train', color: COLORS.accent };
+  }
+
   const resultMode: PlanningMode = result?.recommendationExplanation?.planningMode ?? planningMode;
   const freshness = result ? freshnessLabel(result.dataFreshness ?? 'cached') : null;
   const weather = result ? weatherIndicator(result.weatherCondition) : null;
@@ -199,6 +207,11 @@ export default function ResultModal({
     tripStat: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
     tripStatValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, flexShrink: 1 },
     tripStatSeparator: { width: 1, height: 14, backgroundColor: COLORS.divider },
+    breakdownTotal: {
+      fontFamily: 'Inter_600SemiBold',
+      fontSize: 13,
+      color: COLORS.textPrimary
+    },
     actionRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
     actionButton: { flex: 1, marginTop: 0, marginBottom: 0, paddingHorizontal: 8 },
     // Vertical origin -> destination stack: a row per stop, joined by
@@ -344,6 +357,40 @@ export default function ResultModal({
               </>
             )}
 
+            {result.commuteBreakdown && (
+              <>
+                <View style={styles.divider} />
+                <Text style={styles.whyTitle}>Your commute via {result.commuteBreakdown.via}</Text>
+                {result.commuteBreakdown.legs.map((leg, i) => {
+                  const icon = legIcon(leg.type, leg.line);
+                  const minutes = Math.round(leg.seconds / 60);
+                  return (
+                    <View key={i} style={styles.reasonRow}>
+                      <Ionicons name={icon.name as any} size={16} color={icon.color} style={{ marginTop: 1 }} />
+                      <Text style={[styles.reasonText, { flex: 1 }]}>{leg.label}</Text>
+                      <Text style={[styles.reasonText, { textAlign: 'right' }]}>
+                        {minutes < 1 ? '< 1 min' : `${minutes} min`}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {result.commuteBreakdown.queuePenaltySeconds > 0 && (
+                  <View style={styles.reasonRow}>
+                    <Ionicons name="people" size={16} color={COLORS.signalWarn} style={{ marginTop: 1 }} />
+                    <Text style={styles.reasonText}>
+                      Rush hour queue added: +{Math.round(result.commuteBreakdown.queuePenaltySeconds / 60)} min
+                    </Text>
+                  </View>
+                )}
+                <View style={[styles.reasonRow, { marginTop: 4 }]}>
+                  <Ionicons name="checkmark-circle" size={16} color={COLORS.signalGood} style={{ marginTop: 1 }} />
+                  <Text style={[styles.reasonText, { fontFamily: 'Inter_600SemiBold', color: COLORS.textPrimary }]}>
+                    Total: {result.commuteBreakdown.totalMinutes} min
+                  </Text>
+                </View>
+              </>
+            )}
+
             <View style={styles.divider} />
 
             {/* One strip instead of three bordered rows with their own heading:
@@ -355,7 +402,7 @@ export default function ResultModal({
                   {formatTravelTime(result.recommendedLeaveTime, result.predictedArrivalTime)}
                 </Text>
               </View>
-              {result.distanceMeters !== undefined && (
+              {result.distanceMeters !== undefined && !result.commuteBreakdown && (
                 <>
                   <View style={styles.tripStatSeparator} />
                   <View style={styles.tripStat}>
@@ -366,8 +413,14 @@ export default function ResultModal({
               )}
               <View style={styles.tripStatSeparator} />
               <View style={styles.tripStat}>
-                <Ionicons name="globe-outline" size={15} color={COLORS.textSecondary} />
-                <Text style={styles.tripStatValue} numberOfLines={1}>Google Routes</Text>
+                <Ionicons
+                  name={result.commuteBreakdown ? 'train-outline' : 'globe-outline'}
+                  size={15}
+                  color={COLORS.textSecondary}
+                />
+                <Text style={styles.tripStatValue} numberOfLines={1}>
+                  {result.commuteBreakdown ? result.commuteBreakdown.via : 'Google Routes'}
+                </Text>
               </View>
             </View>
 
