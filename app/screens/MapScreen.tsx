@@ -189,7 +189,10 @@ export default function MapScreen() {
                 <Text style={styles.detailLabel}>Travel time</Text>
                 <Text style={styles.detailValue}>{formatTravelTime(currentTrip.recommendedLeaveTime, currentTrip.predictedArrivalTime)}</Text>
               </View>
-              {currentTrip.distanceMeters && (
+              {/* Coerced to a boolean: rail routes report 0 metres, and a bare
+                  0 renders as text - "Text strings must be rendered within a
+                  <Text> component". */}
+              {!!currentTrip.distanceMeters && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Distance</Text>
                   <Text style={styles.detailValue}>{formatDistance(currentTrip.distanceMeters)}</Text>

@@ -410,8 +410,8 @@ export default function ResultModal({
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     {!breakdownExpanded && (
-                      <Text style={[styles.reasonText, { color: COLORS.textSecondary }]}>
-                        {result.commuteBreakdown.totalMinutes} min
+                      <Text style={[styles.reasonText, { color: COLORS.textSecondary, fontSize: 11 }]}>
+                        Tap to expand
                       </Text>
                     )}
                     <Ionicons
