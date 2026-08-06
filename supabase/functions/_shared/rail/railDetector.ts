@@ -67,13 +67,13 @@ function haversineMeters(
   lng2: number,
 ): number {
   const R = 6371000;
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function walkSecondsFor(meters: number): number {
@@ -105,7 +105,7 @@ function findNearby(stations: Station[], lat: number, lng: number): NearbyStatio
       station,
       meters: haversineMeters(lat, lng, Number(station.lat), Number(station.lng)),
     }))
-    .filter((candidate) => candidate.meters <= MAX_STATION_DISTANCE_M)
+    .filter((candidate) => candidate.meters < MAX_STATION_DISTANCE_M)
     .map((candidate) => ({
       station: candidate.station,
       walkSeconds: walkSecondsFor(candidate.meters),
@@ -169,7 +169,7 @@ export async function detectRailRoute(
   try {
     const { data: stationRows, error: stationError } = await admin
       .from("train_stations")
-      .select("id, line, name, sequence, lat, lng");
+      .select("id, line, name, sequence, lat, lng, is_transfer_station");
     if (stationError || !stationRows?.length) return null;
 
     const stations = stationRows as Station[];
@@ -195,97 +195,93 @@ export async function detectRailRoute(
       return data?.penalty_seconds ?? 0;
     };
 
+    const { data: transferRows } = await admin
+      .from("train_transfers")
+      .select("from_station_id, to_station_id, walk_seconds");
+    const transfers = (transferRows ?? []) as Transfer[];
+    const stationById = new Map(stations.map((s) => [s.id, s]));
+
     const stationsByLine = (line: string) => stations.filter((s) => s.line === line);
     const candidates: Candidate[] = [];
 
-    // --- Same-line routes -------------------------------------------------
+    // Every boarding/alighting pair is evaluated - same-line and transfer
+    // alike - and the lowest total wins.
     for (const board of originNearby) {
       for (const alight of destNearby) {
-        if (board.station.line !== alight.station.line) continue;
         if (board.station.id === alight.station.id) continue;
 
-        const rideSeconds = rideSecondsBetween(
-          board.station,
-          alight.station,
-          stationsByLine(board.station.line),
-          segments,
-        );
-        if (rideSeconds === null) continue;
-
         const queuePenaltySeconds = await queuePenaltyFor(board.station.id);
-        const line = formatLine(board.station.line);
-        const legs: RailLeg[] = [
-          { type: "walk", label: `Walk to ${board.station.name}`, seconds: board.walkSeconds },
-          { type: "wait", label: "Wait for train", seconds: WAIT_SECONDS + queuePenaltySeconds },
-          { type: "ride", label: `${line} → ${alight.station.name}`, seconds: rideSeconds, line: board.station.line },
-          { type: "walk", label: "Walk to destination", seconds: alight.walkSeconds },
-        ];
-        candidates.push({
-          legs,
-          totalSeconds: legs.reduce((sum, leg) => sum + leg.seconds, 0),
-          queuePenaltySeconds,
-          via: line,
-        });
-      }
-    }
+        const boardLine = formatLine(board.station.line);
 
-    // --- Transfer routes --------------------------------------------------
-    if (!candidates.length) {
-      const { data: transferRows } = await admin
-        .from("train_transfers")
-        .select("from_station_id, to_station_id, walk_seconds");
-      const transfers = (transferRows ?? []) as Transfer[];
-      const stationById = new Map(stations.map((s) => [s.id, s]));
+        // --- Same line ----------------------------------------------------
+        if (board.station.line === alight.station.line) {
+          const rideSeconds = rideSecondsBetween(
+            board.station,
+            alight.station,
+            stationsByLine(board.station.line),
+            segments,
+          );
+          if (rideSeconds === null) continue;
 
-      for (const board of originNearby) {
-        for (const alight of destNearby) {
-          if (board.station.line === alight.station.line) continue;
+          const legs: RailLeg[] = [
+            { type: "walk", label: `Walk to ${board.station.name}`, seconds: board.walkSeconds },
+            { type: "wait", label: "Wait for train", seconds: WAIT_SECONDS + queuePenaltySeconds },
+            { type: "ride", label: `${boardLine} → ${alight.station.name}`, seconds: rideSeconds, line: board.station.line },
+            { type: "walk", label: "Walk to destination", seconds: alight.walkSeconds },
+          ];
+          candidates.push({
+            legs,
+            totalSeconds: legs.reduce((sum, leg) => sum + leg.seconds, 0),
+            queuePenaltySeconds,
+            via: boardLine,
+          });
+          continue;
+        }
 
-          for (const transfer of transfers) {
-            // The record may be stored in either direction.
-            for (const [fromId, toId] of [
-              [transfer.from_station_id, transfer.to_station_id],
-              [transfer.to_station_id, transfer.from_station_id],
-            ]) {
-              const exit = stationById.get(fromId);
-              const enter = stationById.get(toId);
-              if (!exit || !enter) continue;
-              if (exit.line !== board.station.line) continue;
-              if (enter.line !== alight.station.line) continue;
+        // --- Different lines: one transfer --------------------------------
+        for (const transfer of transfers) {
+          // The record may be stored in either direction.
+          for (const [fromId, toId] of [
+            [transfer.from_station_id, transfer.to_station_id],
+            [transfer.to_station_id, transfer.from_station_id],
+          ]) {
+            const exit = stationById.get(fromId);
+            const enter = stationById.get(toId);
+            if (!exit || !enter) continue;
+            if (exit.line !== board.station.line) continue;
+            if (enter.line !== alight.station.line) continue;
 
-              const firstRide = rideSecondsBetween(
-                board.station,
-                exit,
-                stationsByLine(board.station.line),
-                segments,
-              );
-              const secondRide = rideSecondsBetween(
-                enter,
-                alight.station,
-                stationsByLine(alight.station.line),
-                segments,
-              );
-              if (firstRide === null || secondRide === null) continue;
+            const firstRide = rideSecondsBetween(
+              board.station,
+              exit,
+              stationsByLine(board.station.line),
+              segments,
+            );
+            const secondRide = rideSecondsBetween(
+              enter,
+              alight.station,
+              stationsByLine(alight.station.line),
+              segments,
+            );
+            if (firstRide === null || secondRide === null) continue;
 
-              const queuePenaltySeconds = await queuePenaltyFor(board.station.id);
-              const firstLine = formatLine(board.station.line);
-              const secondLine = formatLine(alight.station.line);
-              const legs: RailLeg[] = [
-                { type: "walk", label: `Walk to ${board.station.name}`, seconds: board.walkSeconds },
-                { type: "wait", label: "Wait for train", seconds: WAIT_SECONDS + queuePenaltySeconds },
-                { type: "ride", label: `${firstLine} → ${exit.name}`, seconds: firstRide, line: board.station.line },
-                { type: "transfer", label: `Transfer at ${exit.name}`, seconds: transfer.walk_seconds },
-                { type: "wait", label: "Wait for next train", seconds: WAIT_SECONDS },
-                { type: "ride", label: `${secondLine} → ${alight.station.name}`, seconds: secondRide, line: alight.station.line },
-                { type: "walk", label: "Walk to destination", seconds: alight.walkSeconds },
-              ];
-              candidates.push({
-                legs,
-                totalSeconds: legs.reduce((sum, leg) => sum + leg.seconds, 0),
-                queuePenaltySeconds,
-                via: `${firstLine} + ${secondLine}`,
-              });
-            }
+            const alightLine = formatLine(alight.station.line);
+            const legs: RailLeg[] = [
+              { type: "walk", label: `Walk to ${board.station.name}`, seconds: board.walkSeconds },
+              { type: "wait", label: "Wait for train", seconds: WAIT_SECONDS + queuePenaltySeconds },
+              { type: "ride", label: `${boardLine} → ${exit.name}`, seconds: firstRide, line: board.station.line },
+              { type: "transfer", label: `Transfer at ${exit.name}`, seconds: transfer.walk_seconds },
+              { type: "wait", label: "Wait for next train", seconds: WAIT_SECONDS },
+              { type: "ride", label: `${alightLine} → ${alight.station.name}`, seconds: secondRide, line: alight.station.line },
+              { type: "walk", label: "Walk to destination", seconds: alight.walkSeconds },
+            ];
+            candidates.push({
+              legs,
+              totalSeconds: legs.reduce((sum, leg) => sum + leg.seconds, 0),
+              queuePenaltySeconds,
+              // Origin line first.
+              via: `${boardLine} + ${alightLine}`,
+            });
           }
         }
       }
