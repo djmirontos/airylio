@@ -14,13 +14,6 @@ import { initPostHog } from './lib/posthog';
 initSentry();
 initPostHog();
 
-// Suppress non-critical RN text rendering warnings in dev mode
-const originalWarn = console.error.bind(console.error);
-console.error = (msg: any, ...args: any[]) => {
-  if (typeof msg === 'string' && msg.includes('Text strings must be rendered')) return;
-  originalWarn(msg, ...args);
-};
-
 function Root() {
   const [fontsLoaded] = useFonts({
     Poppins_600SemiBold,
