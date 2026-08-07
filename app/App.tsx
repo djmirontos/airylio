@@ -8,13 +8,11 @@ import TimePickerModal from './components/TimePickerModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import LoadingRecommendation from './components/LoadingRecommendation';
-import FeedbackModal from './components/FeedbackModal';
 import ResultModal from './components/ResultModal';
 import PlanHeader from './components/PlanHeader';
 import { supabase } from './lib/supabase';
 import { useTripContext, PlanPrefill } from './context/TripContext';
 import { scheduleLeaveReminder, cancelLeaveReminder } from './hooks/useNotifications';
-import * as Notifications from 'expo-notifications';
 import { useTheme } from './context/ThemeContext';
 import { MIN_LOADING_MS, LEAVE_AT_GRACE_MS, DEFAULT_TIME_OFFSET_MS, MAX_RECENT_DESTINATIONS, RECENT_DESTINATIONS_KEY, RECENT_ORIGINS_KEY, WEATHER_FETCH_TIMEOUT_MS } from './constants/config';
 import { sanitizeError } from './utils/errors';
@@ -92,9 +90,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TripResult | null>(null);
   const [reminderSet, setReminderSet] = useState(false);
-  const [feedbackTripId, setFeedbackTripId] = useState<string | null>(null);
-  const [feedbackDestLabel, setFeedbackDestLabel] = useState('');
-  const [showFeedback, setShowFeedback] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
@@ -244,17 +239,10 @@ export default function App() {
     navigation.setParams({ selectedPlace: undefined, type: undefined });
   }, [route.params]);
 
-  useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data;
-      if (data?.type === 'feedback' && data?.tripId) {
-        setFeedbackTripId(data.tripId as string);
-        setFeedbackDestLabel(destLabel);
-        setShowFeedback(true);
-      }
-    });
-    return () => subscription.remove();
-  }, [destLabel]);
+  // The feedback notification is handled in AppNavigator, which sits inside
+  // TripProvider and stays mounted whichever tab is open. Handling it here as
+  // well opened two modals on one tap, and used whatever destination happened
+  // to be typed rather than the one the trip was for.
 
   function useCurrentLocation() {
     if (!gpsCoords) return;
@@ -613,12 +601,6 @@ export default function App() {
         onViewRoute={() => { setResult(null); navigation.navigate('Map'); }}
         onSetReminder={handleSetReminder}
         reminderSet={reminderSet}
-      />
-      <FeedbackModal
-        visible={showFeedback}
-        tripId={feedbackTripId}
-        destLabel={feedbackDestLabel}
-        onClose={() => setShowFeedback(false)}
       />
     </View>
   );

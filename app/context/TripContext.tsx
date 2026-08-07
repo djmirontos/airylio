@@ -37,12 +37,19 @@ export interface PlanPrefill {
   planningMode: 'arrive_by' | 'leave_at';
 }
 
+export interface PendingFeedback {
+  tripId: string;
+  destLabel: string;
+}
+
 interface TripContextValue {
   currentTrip: TripResult | null;
   currentMeta: TripMeta | null;
   setCurrentTrip: (trip: TripResult | null, meta: TripMeta | null) => void;
   prefillData: PlanPrefill | null;
   setPrefillData: (data: PlanPrefill | null) => void;
+  pendingFeedback: PendingFeedback | null;
+  setPendingFeedback: (feedback: PendingFeedback | null) => void;
 }
 
 const TripContext = createContext<TripContextValue>({
@@ -51,12 +58,15 @@ const TripContext = createContext<TripContextValue>({
   setCurrentTrip: () => {},
   prefillData: null,
   setPrefillData: () => {},
+  pendingFeedback: null,
+  setPendingFeedback: () => {},
 });
 
 export function TripProvider({ children }: { children: ReactNode }) {
   const [currentTrip, setTrip] = useState<TripResult | null>(null);
   const [currentMeta, setMeta] = useState<TripMeta | null>(null);
   const [prefillData, setPrefill] = useState<PlanPrefill | null>(null);
+  const [pendingFeedback, setPendingFeedbackState] = useState<PendingFeedback | null>(null);
 
   function setCurrentTrip(trip: TripResult | null, meta: TripMeta | null) {
     setTrip(trip);
@@ -67,8 +77,20 @@ export function TripProvider({ children }: { children: ReactNode }) {
     setPrefill(data);
   }
 
+  function setPendingFeedback(feedback: PendingFeedback | null) {
+    setPendingFeedbackState(feedback);
+  }
+
   return (
-    <TripContext.Provider value={{ currentTrip, currentMeta, setCurrentTrip, prefillData, setPrefillData }}>
+    <TripContext.Provider value={{
+      currentTrip,
+      currentMeta,
+      setCurrentTrip,
+      prefillData,
+      setPrefillData,
+      pendingFeedback,
+      setPendingFeedback,
+    }}>
       {children}
     </TripContext.Provider>
   );

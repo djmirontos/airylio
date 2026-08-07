@@ -57,7 +57,7 @@ export async function scheduleLeaveReminder(
         title: '🏁 Did you arrive on time?',
         body: `How was your trip to ${destLabel}? Tap to rate it.`,
         sound: false,
-        data: { tripId, type: 'feedback' },
+        data: { tripId, type: 'feedback', destLabel },
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,

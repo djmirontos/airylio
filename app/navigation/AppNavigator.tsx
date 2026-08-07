@@ -2,7 +2,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect } from 'react';
+import * as Notifications from 'expo-notifications';
 import { useTheme } from '../context/ThemeContext';
+import { useTripContext } from '../context/TripContext';
+import FeedbackModal from '../components/FeedbackModal';
 import PlanScreen from '../App';
 import HistoryScreen from '../screens/HistoryScreen';
 import MapScreen from '../screens/MapScreen';
@@ -52,8 +56,36 @@ function SettingsStackNavigator() {
 
 export default function AppNavigator() {
   const { colors: COLORS } = useTheme();
+  const { pendingFeedback, setPendingFeedback } = useTripContext();
+
+  // Lives here rather than in Root: TripProvider wraps this component, so
+  // useTripContext above ThemedNavigation would read the default context and
+  // setPendingFeedback would be a no-op. This also stays mounted whichever tab
+  // is open, so the tap works from anywhere in the app.
+  useEffect(() => {
+    function handle(response: Notifications.NotificationResponse | null) {
+      if (!response) return;
+      const data = response.notification.request.content.data;
+      if (data?.type === 'feedback' && data?.tripId) {
+        setPendingFeedback({
+          tripId: data.tripId as string,
+          destLabel: (data.destLabel as string) ?? 'your destination',
+        });
+      }
+    }
+
+    // Tapped while the app is running.
+    const subscription = Notifications.addNotificationResponseReceivedListener(handle);
+    // Tapped while the app was closed - the response is waiting at startup.
+    Notifications.getLastNotificationResponseAsync().then(handle).catch((err) => {
+      console.warn('[AppNavigator] Could not read last notification response:', err?.message ?? err);
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   return (
+    <>
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
@@ -93,6 +125,14 @@ export default function AppNavigator() {
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Settings" component={SettingsStackNavigator} />
     </Tab.Navigator>
+
+    <FeedbackModal
+      visible={!!pendingFeedback}
+      tripId={pendingFeedback?.tripId ?? null}
+      destLabel={pendingFeedback?.destLabel ?? 'your destination'}
+      onClose={() => setPendingFeedback(null)}
+    />
+    </>
   );
 }
 
