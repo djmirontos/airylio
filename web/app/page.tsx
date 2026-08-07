@@ -53,6 +53,21 @@ function legIcon(type: string): string {
   return '🚇';
 }
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Good morning! ☀️';
+  if (h >= 12 && h < 18) return 'Good afternoon! 🌤';
+  if (h >= 18 && h < 21) return 'Good evening! 🌆';
+  return 'Good night! 🌙';
+}
+
+function getLottieFile(): string {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 8) return 'sunrise.json';
+  if (h >= 8 && h < 18) return 'sunny.json';
+  return 'night.json';
+}
+
 const TRANSPORT_OPTIONS: { value: TransportMode; label: string; icon: string }[] = [
   { value: 'drive', label: 'Drive', icon: '🚗' },
   { value: 'public_commute', label: 'Commute', icon: '🚌' },
@@ -70,13 +85,15 @@ interface AddressInputProps {
   sessionToken: string;
   placeholder: string;
   icon: string;
+  isConfirmed?: boolean;
 }
 
 function AddressInput({
-  label, value, onChange, onSelect, sessionToken, placeholder, icon,
+  label, value, onChange, onSelect, sessionToken, placeholder, icon, isConfirmed,
 }: AddressInputProps) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [open, setOpen] = useState(false);
+  const [lookupFailed, setLookupFailed] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -94,8 +111,16 @@ function AddressInput({
     onChange(s.description);
     setOpen(false);
     setSuggestions([]);
+    setLookupFailed(false);
     const details = await fetchPlaceDetails(s.placeId, sessionToken);
-    if (details) onSelect(details);
+    if (details) {
+      onSelect(details);
+    } else {
+      // Without this the address sits in the box looking selected while the
+      // coordinates are still null, and Calculate stays disabled with nothing
+      // on screen explaining why.
+      setLookupFailed(true);
+    }
   }
 
   return (
@@ -116,13 +141,13 @@ function AddressInput({
         value={value}
         onChange={handleChange}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={() => setTimeout(() => setOpen(false), 300)}
         placeholder={placeholder}
         style={{
           width: '100%',
           padding: '12px 16px',
           borderRadius: 12,
-          border: '1.5px solid var(--border)',
+          border: `1.5px solid ${isConfirmed ? 'var(--signal-green)' : 'var(--border)'}`,
           background: 'var(--bg)',
           color: 'var(--text-primary)',
           fontSize: 15,
@@ -134,9 +159,20 @@ function AddressInput({
           (e.target as HTMLInputElement).style.borderColor = 'var(--primary)';
         }}
         onBlurCapture={e => {
-          (e.target as HTMLInputElement).style.borderColor = 'var(--border)';
+          // Restore the confirmed colour, not the neutral one - this handler
+          // writes borderColor directly and would otherwise clear the green.
+          (e.target as HTMLInputElement).style.borderColor =
+            isConfirmed ? 'var(--signal-green)' : 'var(--border)';
         }}
       />
+      {lookupFailed && (
+        <p style={{
+          fontSize: 12, color: 'var(--signal-risk)',
+          fontFamily: 'var(--font-body)', marginTop: 6,
+        }}>
+          Could not look up that address. Please pick another suggestion.
+        </p>
+      )}
       {open && (
         <div style={{
           position: 'absolute',
@@ -223,6 +259,11 @@ export default function HomePage() {
   const [isDark, setIsDark] = useState(false);
   const [sessionToken, setSessionToken] = useState('');
   const [authToken, setAuthToken] = useState<string | null>(null);
+  // Both depend on the current hour. Computed on mount rather than during
+  // render: this page is statically prerendered, so rendering them directly
+  // would bake the build machine's time into the HTML and mismatch on hydration.
+  const [greeting, setGreeting] = useState('');
+  const [lottieFile, setLottieFile] = useState('sunny.json');
 
   // Form state
   const [originLabel, setOriginLabel] = useState('');
@@ -257,6 +298,9 @@ export default function HomePage() {
     // initialiser so it is not also produced during server rendering and
     // thrown away.
     setSessionToken(crypto.randomUUID());
+    // Time-of-day content
+    setGreeting(getGreeting());
+    setLottieFile(getLottieFile());
     // Auth
     getOrCreateSession().then(setAuthToken);
   }, []);
@@ -354,79 +398,117 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
-      {/* Nav */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'var(--card)',
+      {/* Header with background image and lottie */}
+      <header style={{
+        position: 'relative',
+        overflow: 'hidden',
+        background: isDark
+          ? 'linear-gradient(135deg, #0A0C1E 0%, #12153D 100%)'
+          : 'linear-gradient(135deg, #F4F6FF 0%, #E8EAFF 100%)',
+        padding: '48px 24px 32px',
         borderBottom: '1px solid var(--border)',
-        boxShadow: '0 1px 8px var(--shadow)',
       }}>
+        {/* Background image - top right like mobile app */}
+        <img
+          src="/main_bg.png"
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 40,
+            right: -20,
+            width: 180,
+            height: 150,
+            objectFit: 'contain',
+            opacity: isDark ? 0.15 : 0.25,
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Lottie animation - weather based */}
         <div style={{
-          maxWidth: 480, margin: '0 auto',
-          padding: '12px 20px',
+          position: 'absolute',
+          top: 44,
+          right: 90,
+          width: 70,
+          height: 70,
+          opacity: 0.7,
+          pointerEvents: 'none',
+        }}>
+          <iframe
+            src={`/lottie-player.html?file=${lottieFile}`}
+            style={{ width: '100%', height: '100%', border: 'none', background: 'transparent' }}
+            title="weather animation"
+          />
+        </div>
+
+        {/* Logo row */}
+        <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          marginBottom: 20,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: 'var(--primary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18,
-            }}>✈</div>
+            <img
+              src="/icon-192.png"
+              alt="Airylio"
+              style={{ width: 40, height: 40, borderRadius: 10 }}
+            />
             <span style={{
               fontFamily: 'var(--font-display)',
-              fontWeight: 700, fontSize: 18,
+              fontWeight: 700, fontSize: 20,
               color: 'var(--text-primary)',
-            }}>Airylio</span>
+            }}>
+              Airylio
+            </span>
           </div>
           <button
             onClick={toggleTheme}
             style={{
-              background: 'var(--bg)',
+              background: 'var(--card)',
               border: '1px solid var(--border)',
-              borderRadius: 8, padding: '6px 10px',
+              borderRadius: 10, padding: '8px 12px',
               cursor: 'pointer', fontSize: 16,
-              color: 'var(--text-secondary)',
+              boxShadow: '0 2px 8px var(--shadow)',
             }}
             aria-label="Toggle theme"
           >
             {isDark ? '☀️' : '🌙'}
           </button>
         </div>
-      </nav>
 
-      {/* Main content */}
-      <main style={{ maxWidth: 480, margin: '0 auto', padding: '24px 20px 48px' }}>
-
-        {/* Header */}
-        <div style={{ marginBottom: 28, textAlign: 'center' }}>
+        {/* Greeting */}
+        <div>
           <h1 style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(1.6rem, 5vw, 2.2rem)',
+            fontSize: 'clamp(1.4rem, 4vw, 1.8rem)',
             fontWeight: 700,
             color: 'var(--text-primary)',
-            lineHeight: 1.2,
-            marginBottom: 8,
+            marginBottom: 4,
+            minHeight: '1.2em',
           }}>
-            When should you leave?
+            {greeting}
           </h1>
           <p style={{
             fontSize: 14,
             color: 'var(--text-secondary)',
             fontFamily: 'var(--font-body)',
           }}>
-            Enter your trip details and get an exact departure time.
+            Where are you headed today?
           </p>
         </div>
+      </header>
+
+      {/* Main content */}
+      <main style={{ maxWidth: 480, margin: '0 auto', padding: '24px 20px 48px' }}>
 
         {/* Plan card */}
         <div style={{
           background: 'var(--card)',
           borderRadius: 20,
           padding: 24,
-          boxShadow: '0 4px 24px var(--shadow)',
+          boxShadow: '0 8px 32px var(--shadow)',
           border: '1px solid var(--border)',
           marginBottom: 20,
         }}>
@@ -466,6 +548,7 @@ export default function HomePage() {
             onChange={v => { setOriginLabel(v); setOriginCoords(null); }}
             onSelect={p => { setOriginCoords(p); setOriginLabel(p.label); }}
             sessionToken={sessionToken}
+            isConfirmed={!!originCoords}
           />
 
           {/* Destination */}
@@ -477,6 +560,7 @@ export default function HomePage() {
             onChange={v => { setDestLabel(v); setDestCoords(null); }}
             onSelect={p => { setDestCoords(p); setDestLabel(p.label); }}
             sessionToken={sessionToken}
+            isConfirmed={!!destCoords}
           />
 
           {/* Date/Time */}
@@ -566,13 +650,16 @@ export default function HomePage() {
             style={{
               width: '100%', padding: '16px',
               borderRadius: 14, border: 'none',
-              background: canCalculate ? 'var(--primary)' : 'var(--border)',
+              background: canCalculate
+                ? 'linear-gradient(135deg, #4C4F9E 0%, #7B7FD4 100%)'
+                : 'var(--border)',
               color: canCalculate ? '#fff' : 'var(--text-secondary)',
               fontFamily: 'var(--font-display)',
               fontWeight: 700, fontSize: 16,
               cursor: canCalculate ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s',
               letterSpacing: '0.01em',
+              boxShadow: canCalculate ? '0 4px 16px rgba(76,79,158,0.4)' : 'none',
             }}
           >
             {loading ? 'Calculating...' : 'Calculate Departure'}

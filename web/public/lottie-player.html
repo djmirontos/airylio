@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { background: transparent; overflow: hidden; }
+    dotlottie-player { width: 100%; height: 100vh; }
+  </style>
+</head>
+<body>
+  <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('file') || 'sunny.json';
+    // Only ever load one of the known animations. The value arrives from the
+    // query string, so without this an arbitrary path could be injected.
+    const allowed = ['sunny.json', 'sunrise.json', 'night.json', 'rain.json', 'storm.json'];
+    const file = allowed.includes(raw) ? raw : 'sunny.json';
+
+    const player = document.createElement('dotlottie-player');
+    player.setAttribute('src', '/lottie/' + file);
+    player.setAttribute('autoplay', '');
+    player.setAttribute('loop', '');
+    player.style.width = '100%';
+    player.style.height = '100vh';
+    document.body.appendChild(player);
+  </script>
+</body>
+</html>
