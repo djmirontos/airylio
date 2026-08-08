@@ -70,6 +70,8 @@ export interface TripResult {
     routeType: string;
     queuePenaltySeconds: number;
     totalSeconds: number;
+    boardingStation?: { name: string; lat: number; lng: number };
+    alightingStation?: { name: string; lat: number; lng: number };
   } | null;
   commuteBreakdown?: CommuteBreakdown | null;
   // Carried on the result so the map button can deep-link a transit route.

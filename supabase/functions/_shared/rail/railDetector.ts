@@ -156,6 +156,8 @@ interface Candidate {
   totalSeconds: number;
   queuePenaltySeconds: number;
   via: string;
+  boardingStation: { name: string; lat: number; lng: number };
+  alightingStation: { name: string; lat: number; lng: number };
 }
 
 export async function detectRailRoute(
@@ -234,6 +236,16 @@ export async function detectRailRoute(
             totalSeconds: legs.reduce((sum, leg) => sum + leg.seconds, 0),
             queuePenaltySeconds,
             via: boardLine,
+            boardingStation: {
+              name: board.station.name,
+              lat: Number(board.station.lat),
+              lng: Number(board.station.lng),
+            },
+            alightingStation: {
+              name: alight.station.name,
+              lat: Number(alight.station.lat),
+              lng: Number(alight.station.lng),
+            },
           });
           continue;
         }
@@ -281,6 +293,16 @@ export async function detectRailRoute(
               queuePenaltySeconds,
               // Origin line first.
               via: `${boardLine} + ${alightLine}`,
+              boardingStation: {
+                name: board.station.name,
+                lat: Number(board.station.lat),
+                lng: Number(board.station.lng),
+              },
+              alightingStation: {
+                name: alight.station.name,
+                lat: Number(alight.station.lat),
+                lng: Number(alight.station.lng),
+              },
             });
           }
         }
@@ -296,6 +318,8 @@ export async function detectRailRoute(
       queuePenaltySeconds: best.queuePenaltySeconds,
       via: best.via,
       routeType: "rail",
+      boardingStation: best.boardingStation,
+      alightingStation: best.alightingStation,
     };
   } catch (err) {
     console.error("rail detection failed (falling back to Google Transit)", {

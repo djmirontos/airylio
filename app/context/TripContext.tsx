@@ -10,6 +10,17 @@ export interface TripResult {
   distanceMeters?: number;
   weatherCondition?: 'clear' | 'rain' | 'heavy_rain' | 'storm';
   encodedPolyline?: string;
+  // Needed by MapScreen to draw the rail journey. This interface duplicates
+  // TripResult in types/supabase.ts; the two have to be kept in step by hand.
+  railRoute?: {
+    legs: any[];
+    via: string;
+    routeType: string;
+    queuePenaltySeconds: number;
+    totalSeconds: number;
+    boardingStation?: { name: string; lat: number; lng: number };
+    alightingStation?: { name: string; lat: number; lng: number };
+  } | null;
   recommendationExplanation?: {
     planningMode?: 'arrive_by' | 'leave_at';
     factors: any[];

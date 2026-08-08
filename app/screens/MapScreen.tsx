@@ -37,6 +37,27 @@ export default function MapScreen() {
   const { currentTrip, currentMeta } = useTripContext();
   const [decodedRoute, setDecodedRoute] = useState<RouteCoord[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const board = currentTrip?.railRoute?.boardingStation;
+  const alight = currentTrip?.railRoute?.alightingStation;
+  // Both ends are needed to draw anything: the walk legs run origin -> board
+  // and alight -> destination.
+  const isRailTrip = !!board && !!alight;
+
+  const railSegments = isRailTrip && currentMeta ? {
+    walkToStation: [
+      { latitude: currentMeta.originLat, longitude: currentMeta.originLng },
+      { latitude: board!.lat, longitude: board!.lng },
+    ],
+    railLine: [
+      { latitude: board!.lat, longitude: board!.lng },
+      { latitude: alight!.lat, longitude: alight!.lng },
+    ],
+    walkFromStation: [
+      { latitude: alight!.lat, longitude: alight!.lng },
+      { latitude: currentMeta.destLat, longitude: currentMeta.destLng },
+    ],
+  } : null;
   const mapRef = useRef<MapView>(null);
 
   // On focus rather than mount: the tab stays mounted once visited, so a mount
@@ -97,6 +118,26 @@ export default function MapScreen() {
     };
   }, [currentTrip?.encodedPolyline]);
 
+  // Rail journeys carry no polyline, so the effect above never runs for them
+  // and the map would stay at its default region. Fit to the four points of
+  // the journey instead: origin, both stations, destination.
+  useEffect(() => {
+    if (!railSegments || !currentMeta) return;
+    const allCoords = [
+      { latitude: currentMeta.originLat, longitude: currentMeta.originLng },
+      railSegments.walkToStation[1],
+      railSegments.railLine[1],
+      { latitude: currentMeta.destLat, longitude: currentMeta.destLng },
+    ];
+    const timer = setTimeout(() => {
+      mapRef.current?.fitToCoordinates(allCoords, {
+        edgePadding: { top: 80, right: 40, bottom: 200, left: 40 },
+        animated: true,
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [board?.lat, board?.lng, alight?.lat, alight?.lng, currentMeta?.originLat, currentMeta?.destLat]);
+
   if (!currentTrip || !currentMeta) {
     return (
       <View style={[styles.container, {
@@ -129,7 +170,12 @@ export default function MapScreen() {
   }
 
   const handleOpenGoogleMaps = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${currentMeta.originLat},${currentMeta.originLng}&destination=${currentMeta.destLat},${currentMeta.destLng}&travelmode=driving`;
+    // Transit for rail journeys so Google shows the same kind of trip.
+    // TripMeta carries planningMode (arrive_by / leave_at), not the transport
+    // mode, so a walking trip cannot be distinguished here - everything
+    // non-rail opens as driving, as it did before.
+    const travelMode = isRailTrip ? 'transit' : 'driving';
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${currentMeta.originLat},${currentMeta.originLng}&destination=${currentMeta.destLat},${currentMeta.destLng}&travelmode=${travelMode}`;
     Linking.openURL(url);
   };
 
@@ -183,6 +229,68 @@ export default function MapScreen() {
                 strokeWidth={4}
               />
             )}
+
+            {/* Rail journey segments */}
+            {railSegments && (
+              <>
+                {/* Walking path: origin → boarding station */}
+                <Polyline
+                  coordinates={railSegments.walkToStation}
+                  strokeColor="#8B90B8"
+                  strokeWidth={2}
+                  lineDashPattern={[8, 6]}
+                />
+
+                {/* Rail line: boarding → alighting station */}
+                <Polyline
+                  coordinates={railSegments.railLine}
+                  strokeColor="#4C4F9E"
+                  strokeWidth={4}
+                />
+
+                {/* Walking path: alighting station → destination */}
+                <Polyline
+                  coordinates={railSegments.walkFromStation}
+                  strokeColor="#8B90B8"
+                  strokeWidth={2}
+                  lineDashPattern={[8, 6]}
+                />
+
+                {/* Boarding station marker */}
+                <Marker
+                  coordinate={railSegments.walkToStation[1]}
+                  title={board?.name}
+                  description="Board here"
+                >
+                  <View style={{
+                    backgroundColor: '#4C4F9E',
+                    borderRadius: 20,
+                    padding: 6,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                  }}>
+                    <Text style={{ fontSize: 12 }}>🚉</Text>
+                  </View>
+                </Marker>
+
+                {/* Alighting station marker */}
+                <Marker
+                  coordinate={railSegments.railLine[1]}
+                  title={alight?.name}
+                  description="Alight here"
+                >
+                  <View style={{
+                    backgroundColor: '#4C4F9E',
+                    borderRadius: 20,
+                    padding: 6,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                  }}>
+                    <Text style={{ fontSize: 12 }}>🚉</Text>
+                  </View>
+                </Marker>
+              </>
+            )}
           </MapView>
 
           <View style={styles.infoCard}>
@@ -208,7 +316,7 @@ export default function MapScreen() {
               {/* Coerced to a boolean: rail routes report 0 metres, and a bare
                   0 renders as text - "Text strings must be rendered within a
                   <Text> component". */}
-              {!!currentTrip.distanceMeters && (
+              {!!currentTrip.distanceMeters && !isRailTrip && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Distance</Text>
                   <Text style={styles.detailValue}>{formatDistance(currentTrip.distanceMeters)}</Text>

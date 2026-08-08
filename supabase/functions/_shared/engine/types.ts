@@ -79,4 +79,6 @@ export interface RailRoute {
   queuePenaltySeconds: number;
   via: string;
   routeType: 'rail' | 'hybrid';
+  boardingStation?: { name: string; lat: number; lng: number };
+  alightingStation?: { name: string; lat: number; lng: number };
 }

@@ -470,6 +470,8 @@ Deno.serve(async (req) => {
         routeType: railRoute.routeType,
         queuePenaltySeconds: railRoute.queuePenaltySeconds,
         totalSeconds: railRoute.totalSeconds,
+        boardingStation: railRoute.boardingStation,
+        alightingStation: railRoute.alightingStation,
       } : null,
       commuteBreakdown: railRoute ? {
         legs: railRoute.legs,
