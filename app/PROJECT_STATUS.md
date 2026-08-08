@@ -446,6 +446,19 @@ airylio/
 
 ## 14. Changelog
 
+### 2026-08-08
+- Rail map improvements: walking segments (gray dashed), rail segments
+  (purple solid), station markers
+- History trips now show on Map tab with route
+- Polyline added to history trip queries
+- Feedback notification tap opens FeedbackModal
+- MapScreen empty state added
+- Web PWA created at web/ directory
+- Admin dashboard created at admin/ directory
+- Play Store icon files generated (512x512)
+- support@airylio.com configured via Resend SMTP in Gmail
+- Stray file gitignore fixes
+
 ### 2026-08-06
 - **MRT/LRT Rail Integration — Sprints 1-4**
 - Sprint 1: Created rail station tables in Supabase — train_stations
