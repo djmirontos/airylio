@@ -447,17 +447,40 @@ airylio/
 ## 14. Changelog
 
 ### 2026-08-08
+- Edge Function: rail route response now carries boarding and alighting
+  station coordinates (`boardingStation` / `alightingStation`). Deployed and
+  verified live
 - Rail map improvements: walking segments (gray dashed), rail segments
-  (purple solid), station markers
+  (purple solid), station markers. Rail journeys carry no polyline, so
+  MapScreen fits the map to the four journey points instead
 - History trips now show on Map tab with route
 - Polyline added to history trip queries
-- Feedback notification tap opens FeedbackModal
+- Feedback notification tap opens FeedbackModal — handled in AppNavigator
+  (inside TripProvider) rather than Root, and the duplicate listener and
+  modal in App.tsx were removed
 - MapScreen empty state added
-- Web PWA created at web/ directory
-- Admin dashboard created at admin/ directory
+- Web PWA created at web/ directory — anonymous Supabase auth, Places
+  autocomplete with a session token, direct Edge Function call
+- Admin dashboard created at admin/ directory — all queries server-side;
+  the middleware compares the session cookie's value rather than its
+  presence, which a constant `true` would have let anyone forge
 - Play Store icon files generated (512x512)
 - support@airylio.com configured via Resend SMTP in Gmail
 - Stray file gitignore fixes
+
+**Open blocker — web PWA:** the web Places key is restricted by HTTP
+referrer and currently allows only `http://localhost:3000`. Verified:
+`airylio.com` and `airylio.vercel.app` both return
+`API_KEY_HTTP_REFERRER_BLOCKED`. Address lookup will fail silently in
+production — `fetchPlaceDetails` returns null and the Calculate button
+simply stays disabled — until those domains are added in Cloud Console.
+
+**Note on API keys:** the mobile Places key currently has no application
+restriction (a plain curl succeeds where the Android-restricted Maps key
+returns `API_KEY_ANDROID_APP_BLOCKED`), so it is extractable from the APK
+and usable by anyone. Mobile and web need separate keys: a Google key
+accepts only one application restriction type, so one key cannot be
+restricted to both an Android package and web referrers.
 
 ### 2026-08-06
 - **MRT/LRT Rail Integration — Sprints 1-4**
