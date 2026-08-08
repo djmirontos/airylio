@@ -129,6 +129,7 @@ export default function HistoryScreen() {
         dataFreshness: trip.data_freshness ?? 'estimated',
         weatherCondition: trip.weather_condition,
         recommendationExplanation: trip.recommendation_explanation ?? undefined,
+        encodedPolyline: trip.encoded_polyline ?? undefined,
       },
       {
         originLabel: trip.origin_label ?? 'Origin',

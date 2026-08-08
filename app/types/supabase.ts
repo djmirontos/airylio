@@ -26,6 +26,7 @@ export interface Trip {
   origin_lng: number | null;
   destination_lat: number | null;
   destination_lng: number | null;
+  encoded_polyline?: string | null;
   created_at: string;
 }
 
