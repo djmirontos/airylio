@@ -51,9 +51,6 @@ export default function MapScreen() {
     container: { flex: 1, backgroundColor: COLORS.canvas },
     map: { flex: 1 },
     loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas },
-    emptyTitle: { fontFamily: 'Poppins_700Bold', fontSize: 18, color: COLORS.textPrimary, marginTop: 16, marginBottom: 8 },
-    emptySubtitle: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22, maxWidth: 280 },
     infoCard: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: COLORS.card, padding: 16 },
     timeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
     timeLabel: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textPrimary },
@@ -102,12 +99,31 @@ export default function MapScreen() {
 
   if (!currentTrip || !currentMeta) {
     return (
-      <View style={styles.container}>
-        <View style={styles.emptyContainer}>
-          <Ionicons name="map-outline" size={48} color={COLORS.accent} />
-          <Text style={styles.emptyTitle}>No route yet</Text>
-          <Text style={styles.emptySubtitle}>Calculate a trip from the Plan tab to view the route on the map.</Text>
-        </View>
+      <View style={[styles.container, {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+      }]}>
+        <Ionicons name="map-outline" size={64} color={COLORS.divider} />
+        <Text style={{
+          fontFamily: 'Poppins_700Bold',
+          fontSize: 18,
+          color: COLORS.textPrimary,
+          marginTop: 16,
+          marginBottom: 8,
+          textAlign: 'center',
+        }}>
+          No active route
+        </Text>
+        <Text style={{
+          fontFamily: 'Inter_400Regular',
+          fontSize: 14,
+          color: COLORS.textSecondary,
+          textAlign: 'center',
+          lineHeight: 20,
+        }}>
+          Calculate a trip on the Plan tab, or tap a trip in History to see its route here.
+        </Text>
       </View>
     );
   }

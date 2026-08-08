@@ -37,7 +37,7 @@ function formatDate(isoString: string): string {
 export default function HistoryScreen() {
   const { colors: COLORS } = useTheme();
   const navigation = useNavigation<any>();
-  const { setPrefillData } = useTripContext();
+  const { setPrefillData, setCurrentTrip } = useTripContext();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -117,6 +117,30 @@ export default function HistoryScreen() {
       destLng: trip.destination_lng ?? undefined,
     };
     setSelectedTrip(result);
+
+    // Also publish to TripContext so the Map tab shows this trip's route.
+    setCurrentTrip(
+      {
+        tripId: trip.id,
+        recommendedLeaveTime: trip.recommended_leave_time,
+        predictedArrivalTime: trip.predicted_arrival_time,
+        confidenceScore: trip.confidence_score,
+        confidenceReason: trip.confidence_reason ?? [],
+        dataFreshness: trip.data_freshness ?? 'estimated',
+        weatherCondition: trip.weather_condition,
+        recommendationExplanation: trip.recommendation_explanation ?? undefined,
+      },
+      {
+        originLabel: trip.origin_label ?? 'Origin',
+        destLabel: trip.destination_label ?? 'Destination',
+        originLat: trip.origin_lat ?? 0,
+        originLng: trip.origin_lng ?? 0,
+        destLat: trip.destination_lat ?? 0,
+        destLng: trip.destination_lng ?? 0,
+        selectedDateTime: new Date(trip.target_time),
+        planningMode: (trip.planning_mode as 'arrive_by' | 'leave_at') ?? 'arrive_by',
+      }
+    );
   };
 
   const renderTripCard = ({ item }: { item: Trip }) => {
