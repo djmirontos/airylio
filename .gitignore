@@ -2,3 +2,9 @@
 *.log
 .env
 **/.temp/
+
+# Stray regenerations from running eas commands at the repo root instead of
+# from app/. Anchored with a leading slash: unanchored, these would match at
+# every level and also ignore app/eas.json, which is the real one.
+/app.json
+/eas.json
