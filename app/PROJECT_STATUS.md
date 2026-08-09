@@ -426,6 +426,14 @@ airylio/
 ### Weather API
 **Why:** Not yet integrated. V1 hardcodes `'clear'`. Intended for Sprint 2.
 
+### Expo Push Notifications
+**Why:** Server-side push delivery for Morning Brief. Expo's push service handles
+FCM (Android) and APNs (iOS) delivery from a single API endpoint.
+**Endpoint:** `https://exp.host/--/api/v2/push/send`
+**Used in:** `supabase/functions/morning-brief/index.ts`
+**Token registration:** `app/hooks/useNotifications.ts` (`registerPushToken`)
+**Token storage:** `devices.expo_push_token` in Supabase
+
 ---
 
 ## 13. Known Issues
@@ -441,10 +449,46 @@ airylio/
 | `corridor_stats` table does not exist | Medium | The Edge Function reads it when the Google Routes call fails, so the historical-estimate fallback has never produced a result — every Google failure surfaces as a 502 instead of degrading to an "estimated" recommendation. Create the table or remove the dead path |
 | Edge Function rate limits are untuned | Low | 10/min and 200/day per device are estimates chosen without usage data. Verified working; revisit once real traffic exists |
 | Rate limiting fails open | Low | If both `calculation_events` and `trips` become unqueryable, throttling silently stops. Logged loudly but nothing alerts on it |
+| `morning-brief` processes profiles sequentially | Low | Each profile requires a Google Routes + Open-Meteo call (~1-2s each). At scale, many profiles due in the same 15-min window could exceed Edge Function wall-clock limit. Fix: batch with `Promise.all` in chunks. Acceptable at current beta scale |
+| `expo-device` requires rebuild | Info | Installing `expo-device` in Sprint R2 requires a new development build before dev-client testing. Build triggered 2026-08-09 |
 
 ---
 
 ## 14. Changelog
+
+### 2026-08-09 (continued — Sprint R2)
+- Added registerPushToken() to useNotifications.ts — expo-device check ensures
+  token registration only runs on physical devices, not simulators
+- Added savePushTokenToSupabase() to useCommuteProfiles.ts — saves Expo push
+  token to devices.expo_push_token when Morning Brief is toggled ON
+- toggleMorningBrief now registers and saves push token on enable
+- Installed expo-device (SDK 54 compatible via npx expo install)
+- Fixed stale push_token column name -> expo_push_token in types/supabase.ts
+- Created morning-brief Edge Function at supabase/functions/morning-brief/index.ts
+  - Runs under service role — completely outside per-device rate limiter
+  - Does NOT write to calculation_events (avoids polluting audit log and quota)
+  - Weekday-only, Manila timezone-aware (Asia/Manila), midnight-wrap-safe
+  - Finds eligible commute profiles within 90-min notification window
+  - Fetches weather from Open-Meteo per profile (fallback to clear on failure)
+  - Calls Google Routes API per profile for live ETA
+  - Runs calculateDepartureTime() engine with arrive_by mode
+  - Sends Expo push notification via https://exp.host/--/api/v2/push/send
+  - Notification sent only when diff >= 10 min from baseline_leave_time
+  - First brief always sends (no baseline to compare against yet)
+  - Updates commute_profiles.baseline_leave_time after every run
+  - Logs every attempt to morning_brief_log (sent or skipped)
+  - Silent on Google Routes failure — no low-confidence notifications sent
+  - Notification format: "🚗 Leave by 6:55 this morning (15 min earlier than usual)
+    SM North → BGC · 91% confidence
+    Reason: Rain on Commonwealth Ave is adding time to your usual commute"
+- Created morning_brief_log table in Supabase — tracks every brief attempt
+  with device_id, commute_profile_id, recommended_leave_time,
+  baseline_leave_time, diff_minutes, notification_sent, sent_at
+- Added expo_push_token column to devices table in Supabase
+- Scheduled pg_cron job morning-brief-cron — runs every 15 minutes, job ID 5
+- Deployed morning-brief Edge Function to Supabase project nxlbbmkdduzzvlcgfjif
+- Added MORNING_BRIEF_CRON_SECRET to Supabase Edge Function secrets
+- Committed as b4dc3b7 (Edge Function) and f2f5b97 (token registration)
 
 ### 2026-08-09
 - Strategic planning session: agreed full feature roadmap Phases 1–3
@@ -804,7 +848,7 @@ Goal: turn beta testers into daily habitual users before opening to the public.
 ---
 
 #### SPRINT R2 — Morning Brief Push Notification
-**Status:** ⏳ Not started
+**Status:** ✅ Complete
 **Depends on:** Sprint R1 (Commute Profile)
 
 | Item | Detail |
@@ -821,6 +865,14 @@ Goal: turn beta testers into daily habitual users before opening to the public.
 | New secrets | Expo Push Notification service token added to Supabase secrets |
 | Logging | Morning Brief calculations logged separately — do not inflate `calculation_events` audit log |
 | V1 scope | Google Routes + engine only. No MMDA incidents API |
+
+**Completed:** 2026-08-09
+**Commits:** f2f5b97 (token registration), b4dc3b7 (Edge Function)
+**Deployed:** morning-brief Edge Function live on Supabase
+**Scheduler:** pg_cron job ID 5, running every 15 minutes
+**Pending test:** End-to-end device test — enable Morning Brief on a profile,
+verify push token saved to Supabase, wait for cron window, confirm
+morning_brief_log row and push notification received on device
 
 ---
 
@@ -873,6 +925,7 @@ Build only after 500+ daily active users and consistent trip data volume.
 | Play App Signing SHA-1 not added to Places key | 🟠 High | Add after first Play Store upload — Google re-signs the AAB |
 | Post-trip feedback has no UI trigger | 🟡 Medium | Resolved by Sprint R3 |
 | Morning Brief rate limit design | ✅ Decided | Option A — service role bypass. Documented above in Sprint R2 |
+| Morning Brief push token storage | ✅ Resolved | expo_push_token column added to devices table |
 
 ---
 
