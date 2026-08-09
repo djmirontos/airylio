@@ -20,3 +20,20 @@ export interface TripResult {
     factors: ExplanationFactor[];
   };
 }
+
+export interface CommuteProfile {
+  id: string;
+  device_id?: string;
+  label: string;
+  origin_label: string;
+  origin_lat: number;
+  origin_lng: number;
+  destination_label: string;
+  destination_lat: number;
+  destination_lng: number;
+  target_arrival_time: string;
+  transport_mode: 'drive' | 'motorcycle_taxi' | 'public_commute' | 'walk';
+  morning_brief_enabled: boolean;
+  baseline_leave_time: string | null;
+  created_at?: string;
+}

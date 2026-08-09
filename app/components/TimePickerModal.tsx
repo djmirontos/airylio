@@ -43,7 +43,11 @@ export default function TimePickerModal({ visible, value, onConfirm, onCancel, c
 
   useEffect(() => {
     if (visible) {
-      const parsed = to12Hour(new Date());
+      // Seeded from `value`, not the clock: reopening has to show the time that
+      // is currently selected. `value` is deliberately not a dependency - the
+      // caller rebuilds the Date each render, so reacting to it would reset the
+      // wheels out from under a scroll. The Now tab still jumps to the clock.
+      const parsed = to12Hour(value);
       setHour(parsed.hour);
       setMinute(parsed.minute);
       setPeriod(parsed.period);

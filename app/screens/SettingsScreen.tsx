@@ -1,20 +1,57 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Switch, Linking } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as Application from 'expo-application';
 import { useFavorites } from '../hooks/useFavorites';
+import { useCommuteProfiles, NewCommuteProfile } from '../hooks/useCommuteProfiles';
+import CommuteProfileModal from '../components/CommuteProfileModal';
+import { CommuteProfile } from '../types/trip';
+import { MAX_COMMUTE_PROFILES } from '../constants/config';
 import { useTheme } from '../context/ThemeContext';
 import { captureEvent } from '../lib/posthog';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
 
+const TRANSPORT_MODE_LABELS: Record<CommuteProfile['transport_mode'], string> = {
+  drive: 'Drive',
+  motorcycle_taxi: 'Motorcycle',
+  public_commute: 'Commute',
+  walk: 'Walk',
+};
+
+/** "09:00" / "09:00:00" -> "9:00 AM". Postgres `time` returns seconds. */
+function formatTime12Hour(hhmm: string): string {
+  const [hourPart, minutePart] = hhmm.split(':');
+  const hour24 = Number(hourPart);
+  const minute = Number(minutePart);
+  if (!Number.isFinite(hour24) || !Number.isFinite(minute)) return hhmm;
+  const period = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return `${hour12}:${minute.toString().padStart(2, '0')} ${period}`;
+}
+
 export default function SettingsScreen() {
   const { favorites, loaded, saveFavorite, clearFavorite } = useFavorites();
+  const {
+    profiles,
+    loaded: profilesLoaded,
+    addProfile,
+    updateProfile,
+    deleteProfile,
+    toggleMorningBrief,
+  } = useCommuteProfiles();
   const { colors: COLORS, isDark, toggleTheme } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute();
+
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<CommuteProfile | null>(null);
+  const [pendingSearchResult, setPendingSearchResult] = useState<{
+    field: 'origin' | 'destination';
+    place: { label: string; lat: number; lng: number };
+  } | null>(null);
 
   // On focus rather than mount: the tab stays mounted once visited, so a mount
   // effect would fire only the first time.
@@ -50,6 +87,15 @@ export default function SettingsScreen() {
     infoValue: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary },
     linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
     linkLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginLeft: 12, flex: 1 },
+    commuteRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+    commuteLeft: { flex: 1 },
+    commuteLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginBottom: 2 },
+    commuteRoute: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 },
+    commuteMeta: { fontFamily: 'Inter_400Regular', fontSize: 11, color: COLORS.textSecondary },
+    commuteEmpty: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', paddingVertical: 12 },
+    addButton: { backgroundColor: COLORS.accent, paddingVertical: 14, borderRadius: 14, alignItems: 'center', marginTop: 10, minHeight: 44 },
+    addButtonText: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#fff' },
+    maxHint: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, textAlign: 'center', marginTop: 10 },
   }), [COLORS]);
 
   useEffect(() => {
@@ -59,9 +105,64 @@ export default function SettingsScreen() {
     if (!params?.selectedPlace) return;
     if (params.type === 'home' || params.type === 'work') {
       saveFavorite(params.type, params.selectedPlace);
+    } else if (params.type === 'commute_origin' || params.type === 'commute_destination') {
+      // Reopens the modal the search replaced. The draft is still in the modal's
+      // state - it stayed mounted while the search screen was up - so setting the
+      // pending result is enough to fill in the field the user went to look for.
+      setPendingSearchResult({
+        field: params.type === 'commute_origin' ? 'origin' : 'destination',
+        place: params.selectedPlace,
+      });
+      setProfileModalVisible(true);
     }
     navigation.setParams({ selectedPlace: undefined, type: undefined });
   }, [route.params]);
+
+  function handleRequestSearch(field: 'origin' | 'destination') {
+    setProfileModalVisible(false);
+    navigation.navigate('Search', {
+      type: field === 'origin' ? 'commute_origin' : 'commute_destination',
+      returnTo: 'SettingsMain',
+      apiKey: GOOGLE_PLACES_API_KEY,
+      placeholder: field === 'origin' ? 'Search origin address' : 'Search destination address',
+    });
+  }
+
+  async function handleSaveProfile(profile: NewCommuteProfile) {
+    if (editingProfile) {
+      await updateProfile(editingProfile.id, profile);
+    } else {
+      await addProfile(profile);
+    }
+  }
+
+  function handleDeleteProfile(profile: CommuteProfile) {
+    Alert.alert('Delete Commute', `Remove "${profile.label}" from your commutes?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteProfile(profile.id) },
+    ]);
+  }
+
+  function handleProfileLongPress(profile: CommuteProfile) {
+    Alert.alert(profile.label, undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Edit',
+        onPress: () => {
+          setEditingProfile(profile);
+          setPendingSearchResult(null);
+          setProfileModalVisible(true);
+        },
+      },
+      { text: 'Delete', style: 'destructive', onPress: () => handleDeleteProfile(profile) },
+    ]);
+  }
+
+  function handleAddCommute() {
+    setEditingProfile(null);
+    setPendingSearchResult(null);
+    setProfileModalVisible(true);
+  }
 
   function editFavorite(type: 'home' | 'work') {
     navigation.navigate('Search', {
@@ -174,6 +275,74 @@ export default function SettingsScreen() {
         )}
       </View>
 
+      {/* My Commutes Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>My Commutes</Text>
+        {/* Nothing until the cache read resolves, so an empty card does not
+            flash in front of a list that is about to arrive. */}
+        {!profilesLoaded ? null : profiles.length === 0 ? (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.commuteEmpty}>No commutes saved yet</Text>
+            </View>
+            <Pressable
+              style={styles.addButton}
+              onPress={handleAddCommute}
+              accessibilityLabel="Add commute"
+              accessibilityRole="button"
+            >
+              <Text style={styles.addButtonText}>Add Commute</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <View style={styles.card}>
+              {profiles.map((profile, index) => (
+                <View key={profile.id}>
+                  {index > 0 && <View style={styles.divider} />}
+                  <Pressable
+                    style={styles.commuteRow}
+                    onLongPress={() => handleProfileLongPress(profile)}
+                    accessibilityLabel={`${profile.label}. ${profile.origin_label} to ${profile.destination_label}. Long press to edit or delete`}
+                    accessibilityRole="button"
+                  >
+                    <View style={styles.commuteLeft}>
+                      <Text style={styles.commuteLabel}>{profile.label}</Text>
+                      <Text style={styles.commuteRoute} numberOfLines={1}>
+                        {profile.origin_label} → {profile.destination_label}
+                      </Text>
+                      <Text style={styles.commuteMeta}>
+                        Arrive by {formatTime12Hour(profile.target_arrival_time)} ·{' '}
+                        {TRANSPORT_MODE_LABELS[profile.transport_mode] ?? profile.transport_mode}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={profile.morning_brief_enabled}
+                      onValueChange={(value) => toggleMorningBrief(profile.id, value)}
+                      trackColor={{ false: COLORS.divider, true: COLORS.accent }}
+                      thumbColor="#fff"
+                      accessibilityLabel={`Morning Brief for ${profile.label}`}
+                    />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+            {profiles.length < MAX_COMMUTE_PROFILES ? (
+              <Pressable
+                style={styles.addButton}
+                onPress={handleAddCommute}
+                accessibilityLabel="Add commute"
+                accessibilityRole="button"
+              >
+                <Text style={styles.addButtonText}>Add Commute</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.maxHint}>Maximum 5 commutes reached</Text>
+            )}
+          </>
+        )}
+      </View>
+
       {/* Legal Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Legal</Text>
@@ -250,6 +419,19 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
+
+      <CommuteProfileModal
+        visible={profileModalVisible}
+        onClose={() => {
+          setProfileModalVisible(false);
+          setEditingProfile(null);
+          setPendingSearchResult(null);
+        }}
+        onSave={handleSaveProfile}
+        onRequestSearch={handleRequestSearch}
+        pendingSearchResult={pendingSearchResult}
+        initialValues={editingProfile}
+      />
     </ScrollView>
   );
 }

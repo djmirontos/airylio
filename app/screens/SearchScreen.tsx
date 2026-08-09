@@ -21,7 +21,13 @@ interface Suggestion {
 }
 
 interface RouteParams {
-  type: 'origin' | 'destination' | 'home' | 'work';
+  type:
+    | 'origin'
+    | 'destination'
+    | 'home'
+    | 'work'
+    | 'commute_origin'
+    | 'commute_destination';
   /** Route to return the pick to: 'PlanMain' or 'SettingsMain'. */
   returnTo: string;
   apiKey: string;
@@ -95,7 +101,9 @@ export default function SearchScreen() {
     (async () => {
       try {
         const stored = await AsyncStorage.getItem(
-          type === 'origin' ? RECENT_ORIGINS_KEY : RECENT_DESTINATIONS_KEY
+          type === 'origin' || type === 'commute_origin'
+            ? RECENT_ORIGINS_KEY
+            : RECENT_DESTINATIONS_KEY
         );
         if (stored) setRecent(JSON.parse(stored));
       } catch (err) {

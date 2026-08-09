@@ -21,3 +21,7 @@ export const CONFIDENCE_MODERATE = 70;
 
 // Notification
 export const ROUTE_CACHE_TTL_MINUTES = 10;
+
+// Commute profiles
+export const COMMUTE_PROFILES_KEY = 'airylio:commute_profiles';
+export const MAX_COMMUTE_PROFILES = 5;
