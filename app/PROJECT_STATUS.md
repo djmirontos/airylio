@@ -635,14 +635,19 @@ restricted to both an Android package and web referrers.
 
 ## 15. Next Recommended Tasks
 
-| Priority | Task | Notes |
-|---|---|---|
-| 1 | Replace magic numbers with constants | Define AUTOCOMPLETE, API, STORAGE, ANIMATION constants |
-| 2 | Standardize error handling patterns | Consistent logging and user-facing error messages |
-| 3 | Add accessibility labels (WCAG) | Touch targets ≥44pt, screen reader labels on all components |
-| 4 | Switch Open-Meteo → WeatherAPI.com | More reliable, better SLA before monetization |
-| 5 | EAS Build / App Store submission | Expo account, icons, splash screen, store listing |
-| 6 | Real user testing recruitment | 10–20 PH commuters, collect feedback on accuracy & UX |
+**Superseded by section 18** as of 2026-08-08. Feature work and launch
+blockers are tracked there.
+
+Items 5 and 6 of the old list are done — the AAB is built and closed testing
+is running. These four were not carried into the new roadmap and remain open
+as background tech debt:
+
+| Task | Notes |
+|---|---|
+| Replace magic numbers with constants | Define AUTOCOMPLETE, API, STORAGE, ANIMATION constants |
+| Standardize error handling patterns | Partly addressed — sanitizeError is now case-insensitive and the silent catches log, but there is still no single logger |
+| Add accessibility labels (WCAG) | Touch targets ≥44pt, screen reader labels on all components |
+| Switch Open-Meteo → WeatherAPI.com | More reliable, better SLA before monetization |
 
 ---
 
@@ -724,25 +729,100 @@ The write results are the meaningful ones: those inserts previously failed only 
 
 ---
 
-## 18. Tester Feedback & Feature Roadmap Notes
+## 18. Feature Plan & Roadmap
 
-**Feedback received:** 2026-08-04
-**Source:** Closed testing group (Google Play Store)
+**Agreed:** 2026-08-08. Supersedes the previous tester-feedback roadmap and
+section 15's task list. The 2026-08-04 closed-testing feedback that informed
+it is preserved at the end of this section.
 
-### Requested Features — Assessment
+### Phase 1 — Retention Sprint (before public launch)
 
-| Feature | Tester Request | Assessment | Priority |
-|---|---|---|---|
-| Save Favorite Routes | Save frequently used routes | Partially built — Home/Work favorites exist. Extend to named arbitrary routes. High retention impact. | Next sprint |
-| Alternate Routes | Suggest alternates when confidence is low | Google Routes API supports it. Better UX framing: auto-adjust departure time rather than showing route options. | Post-launch |
-| Calendar Integration | Auto-read calendar events, suggest departure | High value but high complexity — OAuth, Apple/Google Calendar APIs, timezone edge cases. Build after traction. | Post-traction |
-| Traffic Trend Predictions | Historical data-based predictions | This is the long-term moat. corridor_stats + trips tables are the foundation. Need data volume first. Architecture already supports it. | Future |
-| Widgets | Home screen widget for departure reminders | iOS App Groups + Android SharedPreferences required. Good for Play Store featuring. | Post-launch |
+All three ship before opening to the public. Goal: turn beta testers into
+daily habitual users.
 
-### Principles for Feature Decisions
-- Do not chase feature requests before v1 is stable and in the hands of real daily commuters
-- Every trip calculated today is data investment toward the Traffic Trend Predictions moat
-- Favorites extension is the only near-term addition — everything else is post-public-launch
+#### Sprint R1 — Commute Profile
+*Dependency for everything else in this phase.*
+
+| | |
+|---|---|
+| Status | ⏳ Not started |
+| What | Save named commute profiles — label, origin, destination, target arrival time, transport mode |
+| Why | Foundation for Morning Brief. Without it there is no saved commute to run automatically |
+| Storage | Supabase `commute_profiles` table (per `device_id`) + AsyncStorage cache |
+| UI | New "My Commutes" section in SettingsScreen — add / edit / delete. One tap to calculate from the Plan screen |
+| Schema | `commute_profiles`: id, device_id, label, origin_label, origin_lat, origin_lng, destination_label, destination_lat, destination_lng, target_arrival_time (time only), transport_mode, is_active_morning_brief, morning_brief_enabled, created_at |
+| RLS | `auth.uid() = device_id` |
+
+#### Sprint R2 — Morning Brief push notification
+*Depends on R1.*
+
+| | |
+|---|---|
+| Status | ⏳ Not started |
+| What | Weekday morning push with a personalised departure recommendation for the saved commute |
+| Trigger | 90 minutes before saved target arrival, user-configurable |
+| Condition | Only sends when today's recommendation differs by ≥10 minutes from baseline |
+| Format | 🚗 Leave by 6:55 this morning (15 min earlier than usual) / SM North → BGC · 91% confidence / Reason: Rain on Commonwealth Ave is adding ~12 min |
+| Engine | New Edge Function `morning-brief`, running calculate-trip logic per device with an active profile |
+| Scheduler | Supabase `pg_cron`, every 15 minutes on weekdays |
+| Baseline | `commute_profiles.baseline_leave_time`, updated after each brief |
+| Fallback | Silent on Google Routes failure — never send a low-confidence notification |
+| New secret | Expo push token in Supabase secrets |
+
+#### Sprint R3 — Yesterday's trip review on open
+*Independent — can run in parallel with R1/R2.*
+
+| | |
+|---|---|
+| Status | ⏳ Not started |
+| What | On open, a single card: "Yesterday: SM North → BGC. How did it go? 😊 😐 ☹" |
+| Trigger | On app open, if an unrated trip exists from the previous calendar day |
+| Storage | `feedback` table already exists — this is purely a UI trigger |
+| UI | Dismissible banner at the top of the Plan screen. Not a modal, not blocking |
+| Why now | Builds the accuracy dataset with zero friction; feeds the Prediction Accuracy Tracker |
+
+### Phase 2 — Post-launch growth
+
+Ship after public Play Store release. Not during beta.
+
+| Feature | Status | Notes |
+|---|---|---|
+| Prediction Accuracy Tracker (personal) | ⏳ Post-launch | History screen addition — accuracy of the last 10 trips. Needs feedback volume first |
+| Commute Groups (shared routes) | ⏳ Post-launch | Viral mechanic — share a profile with spouse/officemates. Requires an account system |
+| Home screen widget (Android) | ⏳ Post-launch | Departure time for the active profile. Android Glance API via Expo |
+| Waze / Google Maps deep link on notify | ⏳ Post-launch | Morning Brief includes "Start navigation" at departure time |
+| Web PWA morning dashboard | ⏳ Post-launch | app.airylio.com shows the brief for the saved commute. No app needed |
+
+### Phase 3 — Moat features (post-traction)
+
+Only after 500+ daily active users generating consistent trip data.
+
+| Feature | Status | Notes |
+|---|---|---|
+| Corridor intelligence / traffic trend predictions | ⏳ Future | `corridor_stats` + `trips` are the foundation. Needs 3–6 months of volume |
+| Calendar integration | ⏳ Future | Auto-read Google/Apple Calendar. High complexity — build after traction |
+| Alternate routes | ⏳ Future | Auto-adjust departure when confidence is low, rather than showing route options |
+
+### Open blockers — must fix before public launch
+
+| Issue | Severity | Action |
+|---|---|---|
+| Web PWA Places key blocked on production domains | 🔴 Critical | Add `airylio.com` and `app.airylio.com` to allowed referrers. Only `localhost:3000` is allowed today — lookups fail silently and Calculate simply stays disabled |
+| Mobile Places key has no Android restriction | 🟠 High | Create a separate mobile key restricted to `com.daryljm.airylio` + SHA-1. The current key answers any caller |
+| Play App Signing SHA-1 not on the Places key | 🟠 High | Add after the first Play Store upload — Google re-signs the AAB, so the delivered app's fingerprint differs |
+| Post-trip feedback has no UI trigger | 🟡 Medium | Resolved by Sprint R3 |
+
+### Facebook content strategy
+
+| | |
+|---|---|
+| Current | Build screenshots only |
+| Plan | 30-day calendar across four pillars |
+| Pillars | 🔨 Build in Public (3×/wk) · 😤 Problem Awareness (2×/wk) · 💡 Education (1×/wk) · 🙌 Community (1×/wk) |
+| Community | Facebook Group "Airylio Commuters Community" alongside the page |
+| Tool | Canva, matching the dark navy + purple brand |
+| First post | Filipino-language awareness post — "May ginagawa kaming app para sa mga commuters..." |
+| Goal | Build the audience before launch so day-one downloads are primed |
 
 ### GDPR & Privacy Compliance — Deferred
 
@@ -766,6 +846,23 @@ Note: Do NOT wait for EU users to appear in PostHog — by that point
 their data is already being collected without consent. Consider adding
 a region check at first launch to skip initPostHog() for non-PH
 devices as an interim measure.
+
+### Archive — closed-testing feedback, 2026-08-04
+
+Superseded by the roadmap above, kept because it is the evidence the plan was
+built from. **Source:** closed testing group (Google Play Store).
+
+| Feature | Tester Request | Assessment at the time | Where it landed |
+|---|---|---|---|
+| Save Favorite Routes | Save frequently used routes | Partially built — Home/Work favorites exist. Extend to named arbitrary routes. High retention impact | Sprint R1 (Commute Profile) |
+| Alternate Routes | Suggest alternates when confidence is low | Google Routes supports it. Better framing: auto-adjust departure rather than show options | Phase 3 |
+| Calendar Integration | Auto-read calendar events, suggest departure | High value, high complexity — OAuth, Apple/Google APIs, timezone edge cases | Phase 3 |
+| Traffic Trend Predictions | Historical data-based predictions | The long-term moat. `corridor_stats` + `trips` are the foundation; needs data volume | Phase 3 |
+| Widgets | Home screen widget for departure reminders | iOS App Groups + Android SharedPreferences required. Good for Play Store featuring | Phase 2 |
+
+Principles agreed at the time, still standing:
+- Do not chase feature requests before v1 is stable and in the hands of real daily commuters
+- Every trip calculated today is data investment toward the traffic-trend moat
 
 
 
