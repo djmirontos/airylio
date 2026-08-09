@@ -446,6 +446,32 @@ airylio/
 
 ## 14. Changelog
 
+### 2026-08-09
+- Strategic planning session: agreed full feature roadmap Phases 1–3
+- Confirmed Morning Brief notification format:
+  "🚗 Leave by 6:55 this morning (15 min earlier than usual)
+  SM North → BGC · 91% confidence
+  Reason: Rain on Commonwealth Ave is adding ~12 min to your usual commute"
+- Confirmed Morning Brief trigger condition: notify only when recommendation
+  differs ≥10 min from baseline. Silent if traffic is normal.
+- Confirmed Morning Brief timing: fires 90 minutes before saved target arrival
+  time, user-configurable
+- Confirmed Morning Brief V1 scope: Google Routes + engine only. No MMDA
+  incidents API.
+- Decided rate limit strategy for Morning Brief: Option A — service role bypass.
+  Morning Brief Edge Function runs under Supabase service role, completely
+  outside the per-device rate limiter. System-generated calls never compete
+  with user-initiated calls.
+- Decided Morning Brief will have its own Edge Function (morning-brief) that
+  reuses engine logic internally — not a call to calculate-trip. Reasons:
+  runs under service role natively, separate logging, no inflation of
+  calculation_events audit log with automated noise, rate limiting non-issue
+  by design.
+- Facebook content strategy agreed: 30-day calendar, 4 pillars —
+  Build in Public 3x/week, Problem Awareness 2x/week, Education 1x/week,
+  Community 1x/week. Facebook Group recommended alongside the page.
+  Canva is the preferred content creation tool.
+
 ### 2026-08-08
 - Edge Function: rail route response now carries boarding and alighting
   station coordinates (`boardingStation` / `alightingStation`). Deployed and
@@ -635,19 +661,21 @@ restricted to both an Android package and web referrers.
 
 ## 15. Next Recommended Tasks
 
-**Superseded by section 18** as of 2026-08-08. Feature work and launch
-blockers are tracked there.
+The active roadmap is now tracked in §18 (Feature Plan & Roadmap).
 
-Items 5 and 6 of the old list are done — the AAB is built and closed testing
-is running. These four were not carried into the new roadmap and remain open
-as background tech debt:
+Items 5 and 6 of the original list are done — the AAB is built and closed
+testing is running.
 
-| Task | Notes |
-|---|---|
-| Replace magic numbers with constants | Define AUTOCOMPLETE, API, STORAGE, ANIMATION constants |
-| Standardize error handling patterns | Partly addressed — sanitizeError is now case-insensitive and the silent catches log, but there is still no single logger |
-| Add accessibility labels (WCAG) | Touch targets ≥44pt, screen reader labels on all components |
-| Switch Open-Meteo → WeatherAPI.com | More reliable, better SLA before monetization |
+Remaining tech debt items not yet carried into the roadmap:
+- Replace magic numbers with constants (AUTOCOMPLETE, API, STORAGE, ANIMATION)
+- Add accessibility labels (WCAG) — touch targets ≥44pt, screen reader labels
+- Switch Open-Meteo → WeatherAPI.com (before monetization)
+- Database schema DDL not in version control (RLS policies are, table
+  definitions are not)
+
+Note: Error-handling standardisation is partially addressed —
+sanitizeError() was fixed in the 2026-08-03 audit. Full standardisation
+of logging patterns across all screens remains pending.
 
 ---
 
@@ -731,98 +759,136 @@ The write results are the meaningful ones: those inserts previously failed only 
 
 ## 18. Feature Plan & Roadmap
 
-**Agreed:** 2026-08-08. Supersedes the previous tester-feedback roadmap and
-section 15's task list. The 2026-08-04 closed-testing feedback that informed
-it is preserved at the end of this section.
+> Last updated: 2026-08-09
 
-### Phase 1 — Retention Sprint (before public launch)
+---
 
-All three ship before opening to the public. Goal: turn beta testers into
-daily habitual users.
+### Phase 1 — Retention Sprint (Before Public Launch)
 
-#### Sprint R1 — Commute Profile
-*Dependency for everything else in this phase.*
+Goal: turn beta testers into daily habitual users before opening to the public.
 
-| | |
+---
+
+#### SPRINT R1 — Commute Profile
+**Status:** ⏳ Not started
+**Dependency for:** Sprint R2 (Morning Brief)
+
+| Item | Detail |
 |---|---|
-| Status | ⏳ Not started |
-| What | Save named commute profiles — label, origin, destination, target arrival time, transport mode |
-| Why | Foundation for Morning Brief. Without it there is no saved commute to run automatically |
-| Storage | Supabase `commute_profiles` table (per `device_id`) + AsyncStorage cache |
-| UI | New "My Commutes" section in SettingsScreen — add / edit / delete. One tap to calculate from the Plan screen |
-| Schema | `commute_profiles`: id, device_id, label, origin_label, origin_lat, origin_lng, destination_label, destination_lat, destination_lng, target_arrival_time (time only), transport_mode, is_active_morning_brief, morning_brief_enabled, created_at |
-| RLS | `auth.uid() = device_id` |
+| What | User can save named commute profiles — custom label, origin, destination, target arrival time, transport mode |
+| Why | Foundation for Morning Brief. Without this there is no saved daily commute to run automatically |
+| Storage | Supabase `commute_profiles` table + AsyncStorage cache |
+| UI | New section in SettingsScreen — "My Commutes". Add / Edit / Delete profiles. One-tap calculate from Plan screen |
 
-#### Sprint R2 — Morning Brief push notification
-*Depends on R1.*
+**Schema — new table `commute_profiles`:**
 
-| | |
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | gen_random_uuid() |
+| device_id | uuid FK → devices | auth.uid() |
+| label | text | e.g. "Daily Office", "School Run" |
+| origin_label | text | Display name |
+| origin_lat | float8 | |
+| origin_lng | float8 | |
+| destination_label | text | Display name |
+| destination_lat | float8 | |
+| destination_lng | float8 | |
+| target_arrival_time | time | Time only, no date e.g. 09:00:00 |
+| transport_mode | text | drive / motorcycle_taxi / public_commute / walk |
+| morning_brief_enabled | bool | Default false |
+| baseline_leave_time | time | Updated after each Morning Brief calculation |
+| created_at | timestamptz | now() |
+
+**RLS:** auth.uid() = device_id
+
+---
+
+#### SPRINT R2 — Morning Brief Push Notification
+**Status:** ⏳ Not started
+**Depends on:** Sprint R1 (Commute Profile)
+
+| Item | Detail |
 |---|---|
-| Status | ⏳ Not started |
-| What | Weekday morning push with a personalised departure recommendation for the saved commute |
-| Trigger | 90 minutes before saved target arrival, user-configurable |
-| Condition | Only sends when today's recommendation differs by ≥10 minutes from baseline |
-| Format | 🚗 Leave by 6:55 this morning (15 min earlier than usual) / SM North → BGC · 91% confidence / Reason: Rain on Commonwealth Ave is adding ~12 min |
-| Engine | New Edge Function `morning-brief`, running calculate-trip logic per device with an active profile |
-| Scheduler | Supabase `pg_cron`, every 15 minutes on weekdays |
-| Baseline | `commute_profiles.baseline_leave_time`, updated after each brief |
-| Fallback | Silent on Google Routes failure — never send a low-confidence notification |
-| New secret | Expo push token in Supabase secrets |
+| What | Weekday morning push notification with personalized departure recommendation for saved commute |
+| Trigger | Fires 90 minutes before saved target arrival time, user-configurable |
+| Condition | Only sends when today's recommendation differs ≥10 min from baseline. Silent if traffic is normal |
+| Notification format | 🚗 Leave by 6:55 this morning (15 min earlier than usual) / SM North → BGC · 91% confidence / Reason: Rain on Commonwealth Ave is adding ~12 min to your usual commute |
+| Edge Function | New function: `morning-brief` — reuses engine logic internally, does NOT call `calculate-trip` |
+| Rate limit | Runs under Supabase service role — completely outside per-device rate limiter by design |
+| Scheduler | Supabase pg_cron — runs every 15 minutes on weekdays, processes devices whose notification window has arrived |
+| Baseline | Stored in `commute_profiles.baseline_leave_time` — updated after each Morning Brief calculation |
+| Fallback | If Google Routes fails, stay silent — do not send a low-confidence notification |
+| New secrets | Expo Push Notification service token added to Supabase secrets |
+| Logging | Morning Brief calculations logged separately — do not inflate `calculation_events` audit log |
+| V1 scope | Google Routes + engine only. No MMDA incidents API |
 
-#### Sprint R3 — Yesterday's trip review on open
-*Independent — can run in parallel with R1/R2.*
+---
 
-| | |
+#### SPRINT R3 — Yesterday's Trip Review on Open
+**Status:** ⏳ Not started
+**Independent:** Can be built in parallel with R1/R2
+
+| Item | Detail |
 |---|---|
-| Status | ⏳ Not started |
-| What | On open, a single card: "Yesterday: SM North → BGC. How did it go? 😊 😐 ☹" |
-| Trigger | On app open, if an unrated trip exists from the previous calendar day |
-| Storage | `feedback` table already exists — this is purely a UI trigger |
-| UI | Dismissible banner at the top of the Plan screen. Not a modal, not blocking |
-| Why now | Builds the accuracy dataset with zero friction; feeds the Prediction Accuracy Tracker |
+| What | On app open, show a dismissible banner card: "Yesterday: SM North → BGC. How did it go? 😊 😐 ☹" |
+| Trigger | On app open — check if there is an unrated trip from the previous calendar day |
+| Storage | `feedback` table already exists in Supabase — UI trigger only, no schema changes |
+| UI | Dismissible banner card at top of Plan screen. Not a modal, not blocking |
+| Why | Builds accuracy dataset with zero friction. Foundation for Prediction Accuracy Tracker |
 
-### Phase 2 — Post-launch growth
+---
 
-Ship after public Play Store release. Not during beta.
+### Phase 2 — Post-Launch Growth Sprint
+
+Ship after public Play Store release. Do not build during beta.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Prediction Accuracy Tracker (personal) | ⏳ Post-launch | History screen addition — accuracy of the last 10 trips. Needs feedback volume first |
-| Commute Groups (shared routes) | ⏳ Post-launch | Viral mechanic — share a profile with spouse/officemates. Requires an account system |
-| Home screen widget (Android) | ⏳ Post-launch | Departure time for the active profile. Android Glance API via Expo |
-| Waze / Google Maps deep link on notify | ⏳ Post-launch | Morning Brief includes "Start navigation" at departure time |
-| Web PWA morning dashboard | ⏳ Post-launch | app.airylio.com shows the brief for the saved commute. No app needed |
+| Prediction Accuracy Tracker (Personal) | ⏳ Post-launch | History screen addition — accuracy rate of last 10 trips. Requires feedback data volume |
+| Commute Groups (Shared Routes) | ⏳ Post-launch | Share commute profile with spouse/officemates. Viral growth mechanic. Requires account system |
+| Home Screen Widget (Android) | ⏳ Post-launch | Shows departure time for active commute profile. Android Glance API via Expo |
+| Waze/Google Maps Deep Link on Notify | ⏳ Post-launch | Morning Brief notification includes "Start navigation in Waze" deep link at departure time |
+| Web PWA Morning Dashboard | ⏳ Post-launch | app.airylio.com shows Morning Brief result for saved commute. No app open required |
 
-### Phase 3 — Moat features (post-traction)
+---
 
-Only after 500+ daily active users generating consistent trip data.
+### Phase 3 — Moat Features (Post-Traction)
+
+Build only after 500+ daily active users and consistent trip data volume.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Corridor intelligence / traffic trend predictions | ⏳ Future | `corridor_stats` + `trips` are the foundation. Needs 3–6 months of volume |
-| Calendar integration | ⏳ Future | Auto-read Google/Apple Calendar. High complexity — build after traction |
-| Alternate routes | ⏳ Future | Auto-adjust departure when confidence is low, rather than showing route options |
+| Corridor Intelligence / Traffic Trend Predictions | ⏳ Future | `corridor_stats` + `trips` tables are the foundation. Need 3–6 months of data |
+| Calendar Integration | ⏳ Future | Auto-read Google/Apple Calendar events, suggest departure. High complexity |
+| Alternate Routes | ⏳ Future | Auto-adjust departure time when confidence is low |
 
-### Open blockers — must fix before public launch
+---
+
+### Open Blockers (Must Fix Before Public Launch)
 
 | Issue | Severity | Action |
 |---|---|---|
-| Web PWA Places key blocked on production domains | 🔴 Critical | Add `airylio.com` and `app.airylio.com` to allowed referrers. Only `localhost:3000` is allowed today — lookups fail silently and Calculate simply stays disabled |
-| Mobile Places key has no Android restriction | 🟠 High | Create a separate mobile key restricted to `com.daryljm.airylio` + SHA-1. The current key answers any caller |
-| Play App Signing SHA-1 not on the Places key | 🟠 High | Add after the first Play Store upload — Google re-signs the AAB, so the delivered app's fingerprint differs |
+| Web PWA Places key blocked on production domains | 🔴 Critical | Add airylio.com and app.airylio.com to allowed referrers in Google Cloud Console |
+| Mobile Places key has no Android restriction | 🟠 High | Create separate mobile Places key restricted to com.daryljm.airylio + SHA-1 |
+| Play App Signing SHA-1 not added to Places key | 🟠 High | Add after first Play Store upload — Google re-signs the AAB |
 | Post-trip feedback has no UI trigger | 🟡 Medium | Resolved by Sprint R3 |
+| Morning Brief rate limit design | ✅ Decided | Option A — service role bypass. Documented above in Sprint R2 |
 
-### Facebook content strategy
+---
 
-| | |
+### Facebook Content Strategy
+
+| Item | Detail |
 |---|---|
-| Current | Build screenshots only |
-| Plan | 30-day calendar across four pillars |
-| Pillars | 🔨 Build in Public (3×/wk) · 😤 Problem Awareness (2×/wk) · 💡 Education (1×/wk) · 🙌 Community (1×/wk) |
-| Community | Facebook Group "Airylio Commuters Community" alongside the page |
-| Tool | Canva, matching the dark navy + purple brand |
-| First post | Filipino-language awareness post — "May ginagawa kaming app para sa mga commuters..." |
-| Goal | Build the audience before launch so day-one downloads are primed |
+| Current state | Posting build screenshots only |
+| Agreed plan | 30-day content calendar — 4 pillars |
+| Pillars | 🔨 Build in Public (3x/week) · 😤 Problem Awareness (2x/week) · 💡 Education (1x/week) · 🙌 Community (1x/week) |
+| Community | Create Facebook Group alongside the page — "Airylio Commuters Community" |
+| Tool | Canva (browser-based, no install needed) — match dark navy + purple brand colors |
+| First post | Filipino-language awareness post — problem framing before product reveal |
+| Goal | Build audience before public launch so day-one downloads are primed |
+
+---
 
 ### GDPR & Privacy Compliance — Deferred
 
