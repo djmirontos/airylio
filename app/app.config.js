@@ -27,6 +27,7 @@ export default {
     android: {
       package: "com.daryljm.airylio",
       versionCode: 5,
+      googleServicesFile: "./google-services.json",
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff",

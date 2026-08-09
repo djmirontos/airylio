@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "346602135087",
+    "project_id": "airylio-36626",
+    "storage_bucket": "airylio-36626.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:346602135087:android:ead877d6bec8a42a1770da",
+        "android_client_info": {
+          "package_name": "com.daryljm.airylio"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEqaMLnbW2wfUsUxOC3PjsCEiy7t5gPhs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
