@@ -1450,3 +1450,23 @@ body {
     stroke-dasharray: 175 201;
   }
 }
+
+.facebook-follow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 24px;
+  background-color: #1877F2;
+  color: #fff;
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.facebook-follow-btn:hover {
+  opacity: 0.88;
+}
