@@ -47,7 +47,7 @@ export interface Device {
   user_id: string;
   device_id: string;
   platform: 'ios' | 'android';
-  push_token: string | null;
+  expo_push_token: string | null;
   last_seen: string;
   created_at: string;
 }

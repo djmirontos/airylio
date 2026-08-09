@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 
 Notifications.setNotificationHandler({
@@ -71,4 +72,27 @@ export async function scheduleLeaveReminder(
 
 export async function cancelLeaveReminder(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
+}
+
+export async function registerPushToken(): Promise<string | null> {
+  // Push tokens only exist on physical devices. Expo returns a mock token on
+  // simulators that the Expo push service rejects — skip registration entirely.
+  if (!Device.isDevice) {
+    if (__DEV__) console.warn('[useNotifications] Push token skipped — not a physical device');
+    return null;
+  }
+
+  const granted = await requestNotificationPermission();
+  if (!granted) return null;
+
+  try {
+    // No projectId argument: it resolves from Constants.expoConfig.extra.eas
+    // .projectId, which app.config.js sets. Passing it explicitly is the
+    // documented recommendation if that ever stops being true.
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    return tokenData.data;
+  } catch (err) {
+    if (__DEV__) console.warn('[useNotifications] Failed to get push token:', err);
+    return null;
+  }
 }

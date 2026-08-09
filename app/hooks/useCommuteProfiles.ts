@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { COMMUTE_PROFILES_KEY } from '../constants/config';
+import { registerPushToken } from './useNotifications';
 import { CommuteProfile } from '../types/trip';
 
 const TABLE = 'commute_profiles';
@@ -50,6 +51,22 @@ async function getDeviceId(): Promise<string | null> {
   } catch (err) {
     devLog('getSession', err);
     return null;
+  }
+}
+
+/**
+ * Stores the Expo push token against the device row the Morning Brief cron
+ * reads. Keyed on `id`, matching the devices RLS policy (`auth.uid() = id`).
+ */
+async function savePushTokenToSupabase(token: string, deviceId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('devices')
+      .update({ expo_push_token: token })
+      .eq('id', deviceId);
+    if (error) throw error;
+  } catch (err) {
+    devLog('savePushToken', err);
   }
 }
 
@@ -224,6 +241,14 @@ export function useCommuteProfiles() {
   const toggleMorningBrief = useCallback(
     async (id: string, enabled: boolean): Promise<void> => {
       await updateProfile(id, { morning_brief_enabled: enabled });
+
+      if (enabled) {
+        const token = await registerPushToken();
+        if (token) {
+          const deviceId = await getDeviceId();
+          if (deviceId) await savePushTokenToSupabase(token, deviceId);
+        }
+      }
     },
     [updateProfile]
   );
