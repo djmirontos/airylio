@@ -180,6 +180,7 @@ async function fetchWeather(lat: number, lng: number): Promise<WeatherCondition>
 Deno.serve(async (req) => {
   const cronSecret = req.headers.get("x-cron-secret");
   if (!cronSecret || cronSecret !== CRON_SECRET) {
+    console.warn('[morning-brief] Unauthorized — secret mismatch or missing. Received:', cronSecret ? `${cronSecret.slice(0, 6)}…` : 'MISSING');
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
