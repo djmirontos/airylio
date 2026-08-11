@@ -17,7 +17,9 @@ import { useTheme } from './context/ThemeContext';
 import { MIN_LOADING_MS, LEAVE_AT_GRACE_MS, DEFAULT_TIME_OFFSET_MS, MAX_RECENT_DESTINATIONS, RECENT_DESTINATIONS_KEY, RECENT_ORIGINS_KEY, WEATHER_FETCH_TIMEOUT_MS } from './constants/config';
 import { sanitizeError } from './utils/errors';
 import { TripResult } from './types/supabase';
-import { calculateTrip } from './services/tripService';
+import { calculateTrip, submitFeedback } from './services/tripService';
+import { useYesterdayTrip } from './hooks/useYesterdayTrip';
+import YesterdayTripBanner from './components/YesterdayTripBanner';
 import { captureEvent } from './lib/posthog';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY!;
@@ -93,6 +95,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [headerWeather, setHeaderWeather] = useState<'clear' | 'rain' | 'heavy_rain' | 'storm'>('clear');
 
+  const { yesterdayTrip, loaded: yesterdayLoaded } = useYesterdayTrip();
+  const [yesterdayDismissed, setYesterdayDismissed] = useState(false);
   const { setCurrentTrip, prefillData, setPrefillData } = useTripContext();
   const { colors: COLORS, isDark } = useTheme();
   const navigation = useNavigation<any>();
@@ -249,6 +253,18 @@ export default function App() {
     originPickedRef.current = false;
     setOriginCoords(gpsCoords);
     setOriginLabel('Current Location');
+  }
+
+  async function handleYesterdayRate(rating: 'accurate' | 'close' | 'late') {
+    if (!yesterdayTrip) return;
+    try {
+      await submitFeedback(yesterdayTrip.tripId, rating);
+      captureEvent('feedback_submitted', { rating, source: 'yesterday_banner' });
+    } catch {
+      // Silent - banner dismisses regardless
+    } finally {
+      setYesterdayDismissed(true);
+    }
   }
 
   async function handleSetReminder() {
@@ -474,6 +490,14 @@ export default function App() {
         )}
         </View>
         <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled" onScrollBeginDrag={Keyboard.dismiss}>
+          {yesterdayLoaded && yesterdayTrip && !yesterdayDismissed && (
+            <YesterdayTripBanner
+              trip={yesterdayTrip}
+              onRate={handleYesterdayRate}
+              onDismiss={() => setYesterdayDismissed(true)}
+            />
+          )}
+
           {/* Date & time - the main focal point, styled prominently */}
           <Text style={styles.dateTimeSectionLabel}>
             {planningMode === 'arrive_by' ? 'Arrival date & time' : 'Departure date & time'}

@@ -56,7 +56,7 @@ export default function FeedbackModal({ visible, tripId, destLabel, onClose }: F
         <View style={styles.sheet}>
           {submitted ? (
             <>
-              <Text style={styles.emoji}>ðŸŽ‰</Text>
+              <Text style={styles.emoji}>{'\u{1F389}'}</Text>
               <Text style={styles.title}>Thanks for your feedback!</Text>
             </>
           ) : (
@@ -68,15 +68,15 @@ export default function FeedbackModal({ visible, tripId, destLabel, onClose }: F
               ) : (
                 <View style={styles.ratingRow}>
                   <Pressable style={styles.ratingButton} onPress={() => handleRating('accurate')} accessibilityLabel="Rate as on time" accessibilityRole="button">
-                    <Text style={styles.ratingEmoji}>ðŸ˜Š</Text>
+                    <Text style={styles.ratingEmoji}>{'\u{1F60A}'}</Text>
                     <Text style={styles.ratingLabel}>On time</Text>
                   </Pressable>
                   <Pressable style={styles.ratingButton} onPress={() => handleRating('close')} accessibilityLabel="Rate as close" accessibilityRole="button">
-                    <Text style={styles.ratingEmoji}>ðŸ˜</Text>
+                    <Text style={styles.ratingEmoji}>{'\u{1F610}'}</Text>
                     <Text style={styles.ratingLabel}>Close</Text>
                   </Pressable>
                   <Pressable style={styles.ratingButton} onPress={() => handleRating('late')} accessibilityLabel="Rate as late" accessibilityRole="button">
-                    <Text style={styles.ratingEmoji}>ðŸ˜”</Text>
+                    <Text style={styles.ratingEmoji}>{'\u{2639}\u{FE0F}'}</Text>
                     <Text style={styles.ratingLabel}>Late</Text>
                   </Pressable>
                 </View>
