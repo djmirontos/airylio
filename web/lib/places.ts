@@ -41,29 +41,22 @@ export async function fetchSuggestions(
   }
 }
 
+/**
+ * Routed through /api/place-details rather than straight to Google: the Places
+ * API returns no CORS headers, so a browser request to it is blocked before the
+ * response is ever read. Signature is unchanged, so no call site moves.
+ */
 export async function fetchPlaceDetails(
   placeId: string,
   sessionToken: string,
 ): Promise<{ lat: number; lng: number; label: string } | null> {
   try {
-    const res = await fetch(
-      `https://places.googleapis.com/v1/places/${placeId}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': API_KEY,
-          'X-Goog-FieldMask': 'location,displayName,formattedAddress',
-          'X-Goog-SessionToken': sessionToken,
-        },
-      }
-    );
+    const params = new URLSearchParams({ placeId, sessionToken });
+    const res = await fetch(`/api/place-details?${params.toString()}`);
+    if (!res.ok) return null;
     const data = await res.json();
-    if (!data?.location) return null;
-    return {
-      lat: data.location.latitude,
-      lng: data.location.longitude,
-      label: data.formattedAddress ?? data.displayName?.text ?? '',
-    };
+    if (!data?.lat) return null;
+    return { lat: data.lat, lng: data.lng, label: data.label };
   } catch {
     return null;
   }
