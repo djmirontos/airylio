@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Switch,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,8 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onSave: (profile: NewCommuteProfile) => void;
+  /** Only wired when editing; absent for a new profile, where there is nothing to delete. */
+  onDelete?: () => void;
   onRequestSearch: (field: 'origin' | 'destination') => void;
   pendingSearchResult?: {
     field: 'origin' | 'destination';
@@ -91,6 +94,7 @@ export default function CommuteProfileModal({
   visible,
   onClose,
   onSave,
+  onDelete,
   onRequestSearch,
   pendingSearchResult,
   initialValues,
@@ -278,6 +282,19 @@ export default function CommuteProfileModal({
         },
         saveButtonDisabled: { opacity: 0.45 },
         saveButtonText: { fontFamily: 'Inter_600SemiBold', color: '#fff', fontSize: 16 },
+        deleteButton: {
+          backgroundColor: 'transparent',
+          paddingVertical: 14,
+          borderRadius: 16,
+          alignItems: 'center',
+          marginTop: 8,
+          minHeight: 44,
+        },
+        deleteButtonText: {
+          fontFamily: 'Inter_600SemiBold',
+          color: COLORS.signalRisk,
+          fontSize: 15,
+        },
         footer: {
           paddingHorizontal: 16,
           paddingTop: 12,
@@ -288,6 +305,21 @@ export default function CommuteProfileModal({
       }),
     [COLORS]
   );
+
+  function handleDelete() {
+    if (!initialValues || !onDelete) return;
+    Alert.alert('Delete Commute', `Remove "${initialValues.label}" from your commutes?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          onDelete();
+          onClose();
+        },
+      },
+    ]);
+  }
 
   function handleSave() {
     if (!canSave || !origin || !destination || !arrivalTime) return;
@@ -479,6 +511,17 @@ export default function CommuteProfileModal({
           >
             <Text style={styles.saveButtonText}>Save Commute</Text>
           </Pressable>
+
+          {initialValues && onDelete && (
+            <Pressable
+              style={styles.deleteButton}
+              onPress={handleDelete}
+              accessibilityLabel={`Delete ${initialValues.label}`}
+              accessibilityRole="button"
+            >
+              <Text style={styles.deleteButtonText}>Delete Commute</Text>
+            </Pressable>
+          )}
         </View>
 
         <TimePickerModal

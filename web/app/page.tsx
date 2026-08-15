@@ -68,6 +68,8 @@ function getLottieFile(): string {
   return 'night.json';
 }
 
+type Screen = 'plan' | 'loading' | 'result';
+
 const TRANSPORT_OPTIONS: { value: TransportMode; label: string; icon: string }[] = [
   { value: 'drive', label: 'Drive', icon: '🚗' },
   { value: 'public_commute', label: 'Commute', icon: '🚌' },
@@ -280,7 +282,7 @@ export default function HomePage() {
 
   // Result state
   const [result, setResult] = useState<TripResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [screen, setScreen] = useState<Screen>('plan');
   const [error, setError] = useState<string | null>(null);
   const [breakdownExpanded, setBreakdownExpanded] = useState(true);
 
@@ -348,7 +350,7 @@ export default function HomePage() {
       setError('Session not ready. Please refresh the page.');
       return;
     }
-    setLoading(true);
+    setScreen('loading');
     setError(null);
     setResult(null);
 
@@ -379,14 +381,16 @@ export default function HomePage() {
 
       const data = await res.json();
       setResult(data);
+      setScreen('result');
     } catch (e: any) {
+      // Back to the form rather than an empty result screen - the error banner
+      // lives there, so this is the only place the message is visible.
       setError(e.message ?? 'Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
+      setScreen('plan');
     }
   }
 
-  const canCalculate = !!originCoords && !!destCoords && !loading;
+  const canCalculate = !!originCoords && !!destCoords && screen !== 'loading';
 
   const mapsTravelMode =
     transport === 'public_commute' ? 'transit'
@@ -662,18 +666,72 @@ export default function HomePage() {
               boxShadow: canCalculate ? '0 4px 16px rgba(76,79,158,0.4)' : 'none',
             }}
           >
-            {loading ? 'Calculating...' : 'Calculate Departure'}
+            {screen === 'loading' ? 'Calculating...' : 'Calculate Departure'}
           </button>
         </div>
 
-        {/* Result card */}
-        {result && (
+        {/* Loading screen */}
+        {screen === 'loading' && (
+          <div style={{
+            position: 'fixed', inset: 0,
+            background: 'var(--bg)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000,
+            animation: 'screen-in 0.2s ease-out',
+          }}>
+            <div style={{ marginBottom: 24 }}>
+              <div className="pulse-ring" />
+            </div>
+            <p style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 18, fontWeight: 700,
+              color: 'var(--text-primary)',
+              marginBottom: 8,
+            }}>Calculating your route...</p>
+            <p style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 14, color: 'var(--text-secondary)',
+            }}>Checking live traffic &amp; weather</p>
+          </div>
+        )}
+
+        {/* Result screen. A fixed overlay, so its position inside <main> does
+            not affect layout - no ancestor here sets transform/filter, which
+            would otherwise make it a containing block and break `inset: 0`.
+            Leaving it in place keeps the whole result body untouched. */}
+        {screen === 'result' && result && (
+          <div style={{
+            position: 'fixed', inset: 0,
+            background: 'var(--bg)',
+            overflowY: 'auto',
+            zIndex: 900,
+            animation: 'screen-in 0.25s ease-out',
+          }}>
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 0 32px' }}>
+            <div style={{ padding: '16px 20px 12px' }}>
+              <button
+                onClick={() => setScreen('plan')}
+                aria-label="Back to plan"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  minHeight: 44, padding: '0 12px 0 4px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 15, fontWeight: 600,
+                }}
+              >
+                <span style={{ fontSize: 20, lineHeight: 1 }}>&#8592;</span>
+                Back
+              </button>
+            </div>
           <div style={{
             borderRadius: 20,
             overflow: 'hidden',
             boxShadow: '0 4px 24px var(--shadow)',
             border: '1px solid var(--border)',
-            marginBottom: 20,
+            margin: '0 20px 20px',
           }}>
 
             {/* Hero */}
@@ -903,6 +961,8 @@ export default function HomePage() {
                 </a>
               )}
             </div>
+          </div>
+          </div>
           </div>
         )}
 

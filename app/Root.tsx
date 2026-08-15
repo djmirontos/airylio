@@ -7,6 +7,8 @@ import AppNavigator from './navigation/AppNavigator';
 import { TripProvider } from './context/TripContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import ForceUpdateModal from './components/ForceUpdateModal';
+import { useForceUpdate } from './hooks/useForceUpdate';
 import { initSentry, Sentry } from './lib/sentry';
 import { initPostHog } from './lib/posthog';
 
@@ -22,6 +24,7 @@ function Root() {
     Inter_500Medium,
     Inter_600SemiBold,
   });
+  const { updateRequired, appConfig } = useForceUpdate();
 
   if (!fontsLoaded) {
     return (
@@ -33,13 +36,23 @@ function Root() {
 
   return (
     <ErrorBoundary>
-      {/* ThemeProvider sits above NavigationContainer so the navigator's own
-          background can be themed - unthemed, it defaults to near-white and
-          shows through wherever a screen hasn't painted yet (edges during a
-          slide, the strip a hidden tab bar leaves behind). */}
-      <ThemeProvider>
-        <ThemedNavigation />
-      </ThemeProvider>
+      {/* Fragment, not two adjacent children - ErrorBoundary.render() returns
+          this.props.children as-is, and an unkeyed array there triggers
+          React's missing-key warning. */}
+      <>
+        {/* ThemeProvider sits above NavigationContainer so the navigator's own
+            background can be themed - unthemed, it defaults to near-white and
+            shows through wherever a screen hasn't painted yet (edges during a
+            slide, the strip a hidden tab bar leaves behind). */}
+        <ThemeProvider>
+          <ThemedNavigation />
+        </ThemeProvider>
+        <ForceUpdateModal
+          visible={updateRequired}
+          message={appConfig?.update_message ?? 'A new version of Airylio is available.'}
+          playStoreUrl={appConfig?.play_store_url ?? 'https://play.google.com/store/apps/details?id=com.daryljm.airylio'}
+        />
+      </>
     </ErrorBoundary>
   );
 }

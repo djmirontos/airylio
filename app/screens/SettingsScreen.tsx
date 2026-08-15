@@ -89,6 +89,8 @@ export default function SettingsScreen() {
     linkLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginLeft: 12, flex: 1 },
     commuteRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
     commuteLeft: { flex: 1 },
+    commuteActions: { alignItems: 'flex-end', gap: 4 },
+    editIconButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
     commuteLabel: { fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.textPrimary, marginBottom: 2 },
     commuteRoute: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.textSecondary, marginBottom: 2 },
     commuteMeta: { fontFamily: 'Inter_400Regular', fontSize: 11, color: COLORS.textSecondary },
@@ -136,26 +138,10 @@ export default function SettingsScreen() {
     }
   }
 
-  function handleDeleteProfile(profile: CommuteProfile) {
-    Alert.alert('Delete Commute', `Remove "${profile.label}" from your commutes?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteProfile(profile.id) },
-    ]);
-  }
-
-  function handleProfileLongPress(profile: CommuteProfile) {
-    Alert.alert(profile.label, undefined, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Edit',
-        onPress: () => {
-          setEditingProfile(profile);
-          setPendingSearchResult(null);
-          setProfileModalVisible(true);
-        },
-      },
-      { text: 'Delete', style: 'destructive', onPress: () => handleDeleteProfile(profile) },
-    ]);
+  function handleEditCommute(profile: CommuteProfile) {
+    setEditingProfile(profile);
+    setPendingSearchResult(null);
+    setProfileModalVisible(true);
   }
 
   function handleAddCommute() {
@@ -300,12 +286,7 @@ export default function SettingsScreen() {
               {profiles.map((profile, index) => (
                 <View key={profile.id}>
                   {index > 0 && <View style={styles.divider} />}
-                  <Pressable
-                    style={styles.commuteRow}
-                    onLongPress={() => handleProfileLongPress(profile)}
-                    accessibilityLabel={`${profile.label}. ${profile.origin_label} to ${profile.destination_label}. Long press to edit or delete`}
-                    accessibilityRole="button"
-                  >
+                  <View style={styles.commuteRow}>
                     <View style={styles.commuteLeft}>
                       <Text style={styles.commuteLabel}>{profile.label}</Text>
                       <Text style={styles.commuteRoute} numberOfLines={1}>
@@ -316,14 +297,24 @@ export default function SettingsScreen() {
                         {TRANSPORT_MODE_LABELS[profile.transport_mode] ?? profile.transport_mode}
                       </Text>
                     </View>
-                    <Switch
-                      value={profile.morning_brief_enabled}
-                      onValueChange={(value) => toggleMorningBrief(profile.id, value)}
-                      trackColor={{ false: COLORS.divider, true: COLORS.accent }}
-                      thumbColor="#fff"
-                      accessibilityLabel={`Morning Brief for ${profile.label}`}
-                    />
-                  </Pressable>
+                    <View style={styles.commuteActions}>
+                      <Pressable
+                        style={styles.editIconButton}
+                        onPress={() => handleEditCommute(profile)}
+                        accessibilityLabel={`Edit ${profile.label}`}
+                        accessibilityRole="button"
+                      >
+                        <Ionicons name="pencil-outline" size={18} color={COLORS.accent} />
+                      </Pressable>
+                      <Switch
+                        value={profile.morning_brief_enabled}
+                        onValueChange={(value) => toggleMorningBrief(profile.id, value)}
+                        trackColor={{ false: COLORS.divider, true: COLORS.accent }}
+                        thumbColor="#fff"
+                        accessibilityLabel={`Morning Brief for ${profile.label}`}
+                      />
+                    </View>
+                  </View>
                 </View>
               ))}
             </View>
@@ -428,6 +419,7 @@ export default function SettingsScreen() {
           setPendingSearchResult(null);
         }}
         onSave={handleSaveProfile}
+        onDelete={editingProfile ? () => deleteProfile(editingProfile.id) : undefined}
         onRequestSearch={handleRequestSearch}
         pendingSearchResult={pendingSearchResult}
         initialValues={editingProfile}
