@@ -434,6 +434,11 @@ FCM (Android) and APNs (iOS) delivery from a single API endpoint.
 **Token registration:** `app/hooks/useNotifications.ts` (`registerPushToken`)
 **Token storage:** `devices.expo_push_token` in Supabase
 
+### Google Play In-App Updates (Not used)
+**Decision:** Using Supabase-based version check (Option B) instead of Google
+Play In-App Updates API. Simpler, no native rebuild required, controlled
+via Supabase app_config table.
+
 ---
 
 ## 13. Known Issues
@@ -450,11 +455,90 @@ FCM (Android) and APNs (iOS) delivery from a single API endpoint.
 | Edge Function rate limits are untuned | Low | 10/min and 200/day per device are estimates chosen without usage data. Verified working; revisit once real traffic exists |
 | Rate limiting fails open | Low | If both `calculation_events` and `trips` become unqueryable, throttling silently stops. Logged loudly but nothing alerts on it |
 | `morning-brief` processes profiles sequentially | Low | Each profile requires a Google Routes + Open-Meteo call (~1-2s each). At scale, many profiles due in the same 15-min window could exceed Edge Function wall-clock limit. Fix: batch with `Promise.all` in chunks. Acceptable at current beta scale |
-| `expo-device` requires rebuild | Info | Installing `expo-device` in Sprint R2 requires a new development build before dev-client testing. Build triggered 2026-08-09 |
+| `expo-device` requires rebuild | ✅ Resolved for preview | Preview build confirmed working. Development build still needs rebuild for tunnel testing |
+| `app_config` minimum_version not updated on new releases | Info | By design — only update Supabase app_config when pushing critical or breaking updates. Regular updates do not require Supabase changes. |
 
 ---
 
 ## 14. Changelog
+
+### 2026-08-11
+
+**Sprint R3 — Yesterday's Trip Review Banner**
+- Created app/hooks/useYesterdayTrip.ts — queries unrated trips from previous
+  calendar day, device-local timezone aware, silent on all failures
+- Created app/components/YesterdayTripBanner.tsx — dismissible banner card
+  with accent left strip, origin → destination route, three emoji rating
+  buttons (😊 On time / 😐 Close / ☹️ Late)
+- Wired banner into Plan screen ScrollView as first child in App.tsx
+- Banner dismisses for the session on rating or X tap
+- Feeds existing feedback table in Supabase — no schema changes needed
+- Fixed corrupted Windows-1252 emoji encoding in FeedbackModal.tsx
+  (😊 😐 ☹️ 🎉 — replaced with \u{...} Unicode escapes)
+- Committed as 61a69ab
+
+**Commute Profile — Edit Button Improvement**
+- Replaced long press gesture (undiscoverable) with visible pencil icon
+  button (Ionicons pencil-outline) on top right of each profile card
+- Profile cards are now plain Views, not Pressables
+- Delete action moved inside CommuteProfileModal as destructive
+  "Delete Commute" button at bottom — only shown when editing existing profile
+- onDelete prop added to CommuteProfileModal (optional)
+- handleProfileLongPress and handleDeleteProfile removed (dead code)
+- handleEditCommute added to SettingsScreen
+- Committed as b318a10
+
+**Force Update Feature**
+- Created app/hooks/useForceUpdate.ts — fetches app_config row from Supabase
+  on mount, compares installed version against minimum_version, sets
+  updateRequired flag. Silent on all failures — never blocks app.
+  Honors force_update boolean flag for immediate forced updates regardless
+  of version number.
+- Created app/components/ForceUpdateModal.tsx — full screen modal, no dismiss
+  button, navy background (#12153D), opens Play Store via Linking.openURL
+- Wired into Root.tsx alongside existing tree
+- Created app_config table in Supabase (id=1 singleton row):
+  minimum_version, latest_version, force_update, update_message, play_store_url
+- Current state: minimum_version='1.0.0', force_update=false (no forced update)
+- Rule: only update Supabase when pushing a critical/breaking update
+- Committed as b318a10
+
+**Web PWA — CORS Fix for Place Details**
+- Created web/app/api/place-details/route.ts — Next.js API route proxying
+  Google Place Details server-side to avoid CORS block
+- Updated web/lib/places.ts fetchPlaceDetails to call internal /api/place-details
+  instead of Google directly
+- Added GOOGLE_PLACES_API_KEY_SERVER to web/.env.local (server-side only)
+- Added all production domains to Google Cloud Console web Places key:
+  airylio.com/*, *.airylio.com/*, app.airylio.com/*, airylio.vercel.app/*,
+  localhost:3000/*
+- Committed as 5dc54b3
+
+**Web PWA — Mobile-first Screen Flow**
+- Replaced inline result at bottom of page with proper mobile screen flow
+- Three screens: Plan → Loading → Result (each full viewport height)
+- Loading screen: full-screen overlay with pulse animation
+- Result screen: full-screen overlay with back button returning to plan
+  with form state preserved
+- Added screen-in fade animation and prefers-reduced-motion support
+- Added pulse-ring and screen-in CSS to globals.css
+- Committed as b318a10
+
+**Facebook Community**
+- Facebook Group created: "Airylio Commuters PH"
+- 30-day content calendar drafted (Weeks 1-4)
+- Beta testers invited to group
+- Landing page updated with Facebook page link (airylio.com)
+
+**Morning Brief — End-to-End Verified**
+- Push notification delivered successfully to device at 5:14 AM (Aug 11)
+- Pipeline confirmed working: pg_cron → Edge Function → Expo Push → device
+- Issue found: 657 min diff due to stale baseline from testing
+- Fixed: baseline_leave_time reset to null, morning_brief_log cleared
+- Redeployed with --no-verify-jwt flag (required since pg_cron sends no JWT)
+- MORNING_BRIEF_CRON_SECRET mismatch resolved
+- pg_net extension installed (was missing, caused silent cron failures)
+- Test profile reset to 08:00:00 arrival for clean Monday morning test
 
 ### 2026-08-09 (continued — Sprint R2)
 - Added registerPushToken() to useNotifications.ts — expo-device check ensures
@@ -877,7 +961,7 @@ morning_brief_log row and push notification received on device
 ---
 
 #### SPRINT R3 — Yesterday's Trip Review on Open
-**Status:** ⏳ Not started
+**Status:** ✅ Complete
 **Independent:** Can be built in parallel with R1/R2
 
 | Item | Detail |
@@ -887,6 +971,10 @@ morning_brief_log row and push notification received on device
 | Storage | `feedback` table already exists in Supabase — UI trigger only, no schema changes |
 | UI | Dismissible banner card at top of Plan screen. Not a modal, not blocking |
 | Why | Builds accuracy dataset with zero friction. Foundation for Prediction Accuracy Tracker |
+
+**Completed:** 2026-08-11
+**Commit:** 61a69ab
+**Note:** feedback table already existed — pure UI feature, no schema changes
 
 ---
 
@@ -923,9 +1011,11 @@ Build only after 500+ daily active users and consistent trip data volume.
 | Web PWA Places key blocked on production domains | 🔴 Critical | Add airylio.com and app.airylio.com to allowed referrers in Google Cloud Console |
 | Mobile Places key has no Android restriction | 🟠 High | Create separate mobile Places key restricted to com.daryljm.airylio + SHA-1 |
 | Play App Signing SHA-1 not added to Places key | 🟠 High | Add after first Play Store upload — Google re-signs the AAB |
-| Post-trip feedback has no UI trigger | 🟡 Medium | Resolved by Sprint R3 |
+| Post-trip feedback has no UI trigger | ✅ Resolved | Sprint R3 Yesterday's Trip Review banner |
 | Morning Brief rate limit design | ✅ Decided | Option A — service role bypass. Documented above in Sprint R2 |
 | Morning Brief push token storage | ✅ Resolved | expo_push_token column added to devices table |
+| New preview/production build needed | 🟠 High | Sprint R3 banner + edit button + ForceUpdateModal not yet tested on device — requires rebuild with expo-device native module |
+| expo-device requires rebuild | ✅ Noted in §13 | Added to known issues |
 
 ---
 
