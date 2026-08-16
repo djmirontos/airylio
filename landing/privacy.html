@@ -87,17 +87,26 @@
 </head>
 <body>
   <!-- Navigation -->
-  <nav class="navbar">
-    <div class="nav-container">
-      <a href="index.html" class="nav-brand">
-        <span class="brand-icon">✈</span>
-        <span class="brand-text">Airylio</span>
-      </a>
-      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-        <span class="theme-icon">🌙</span>
+  <nav class="nav-bar">
+  <div class="nav-container">
+    <a href="/" class="nav-logo">
+      <img src="/public/icon.png" alt="Airylio" class="nav-logo-icon">
+      <span class="nav-logo-text">Airylio</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#features" class="nav-link">Features</a>
+      <a href="/#demo" class="nav-link">How It Works</a>
+      <a href="/#faq" class="nav-link">FAQ</a>
+      <a href="/#contact" class="nav-link">Contact</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-toggle-btn" id="theme-toggle" aria-label="Toggle theme">
+        <i data-lucide="sun" class="theme-toggle-icon" id="theme-icon-sun"></i>
+        <i data-lucide="moon" class="theme-toggle-icon" id="theme-icon-moon" style="display:none"></i>
       </button>
     </div>
-  </nav>
+  </div>
+</nav>
 
   <div class="policy-container">
     <a href="index.html" class="back-link">← Back to Home</a>
