@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(echo \"TSC_EXIT=$?\")",
+      "Bash(git commit -q -m 'feat: Sprint R2 Step 1 — push token registration *)",
+      "Bash(git push *)",
+      "Bash(npx next *)"
+    ]
+  }
+}
