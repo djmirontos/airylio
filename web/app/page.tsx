@@ -70,11 +70,52 @@ function getLottieFile(): string {
 
 type Screen = 'plan' | 'loading' | 'result';
 
-const TRANSPORT_OPTIONS: { value: TransportMode; label: string; icon: string }[] = [
-  { value: 'drive', label: 'Drive', icon: '🚗' },
-  { value: 'public_commute', label: 'Commute', icon: '🚌' },
-  { value: 'motorcycle_taxi', label: 'Motorcycle', icon: '🏍' },
-  { value: 'walk', label: 'Walk', icon: '🚶' },
+const TRANSPORT_OPTIONS: { value: TransportMode; label: string; icon: React.ReactNode }[] = [
+  {
+    value: 'drive',
+    label: 'Drive',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h11l4 4 1 3H5"/>
+        <circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>
+        <path d="M14 7v4"/>
+      </svg>
+    ),
+  },
+  {
+    value: 'public_commute',
+    label: 'Commute',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="3" width="15" height="13" rx="2"/>
+        <path d="M16 8h4l3 3v5h-7V8z"/>
+        <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+      </svg>
+    ),
+  },
+  {
+    value: 'motorcycle_taxi',
+    label: 'Motorcycle',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/>
+        <path d="M8 17h8M9 7l4 4h3l2-4"/>
+        <path d="M14 11l1-4h2"/>
+      </svg>
+    ),
+  },
+  {
+    value: 'walk',
+    label: 'Walk',
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="4" r="1"/>
+        <path d="m6.5 6.5 3 3 2 5 3-3"/>
+        <path d="m9.5 9.5-2 6 3 3"/>
+        <path d="m12.5 12.5 2 5"/>
+      </svg>
+    ),
+  },
 ];
 
 // ── AddressInput ──────────────────────────────────────────────────────────────
@@ -86,7 +127,7 @@ interface AddressInputProps {
   onSelect: (place: { lat: number; lng: number; label: string }) => void;
   sessionToken: string;
   placeholder: string;
-  icon: string;
+  icon: React.ReactNode;
   isConfirmed?: boolean;
 }
 
@@ -137,7 +178,7 @@ function AddressInput({
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        {icon} {label}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{icon}<span>{label}</span></span>
       </label>
       <input
         value={value}
@@ -546,7 +587,11 @@ export default function HomePage() {
           {/* Origin */}
           <AddressInput
             label="From"
-            icon="📍"
+            icon={
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4C4F9E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.4 7 13 8 13s8-7.6 8-13a8 8 0 0 0-8-8z"/>
+              </svg>
+            }
             placeholder="Search origin address..."
             value={originLabel}
             onChange={v => { setOriginLabel(v); setOriginCoords(null); }}
@@ -558,7 +603,11 @@ export default function HomePage() {
           {/* Destination */}
           <AddressInput
             label="To"
-            icon="🏁"
+            icon={
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4C4F9E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+            }
             placeholder="Search destination address..."
             value={destLabel}
             onChange={v => { setDestLabel(v); setDestCoords(null); }}
@@ -626,7 +675,7 @@ export default function HomePage() {
                     transition: 'all 0.2s',
                   }}
                 >
-                  <div style={{ fontSize: 20, marginBottom: 4 }}>{opt.icon}</div>
+                  <div style={{ marginBottom: 4 }}>{opt.icon}</div>
                   {opt.label}
                 </button>
               ))}
