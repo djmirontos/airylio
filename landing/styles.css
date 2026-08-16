@@ -1476,7 +1476,7 @@ body {
   gap: 10px;
   background: #1877F2;
   color: #ffffff;
-  padding: 14px 28px;
+  padding: 12px 24px;
   border-radius: 12px;
   text-decoration: none;
   font-family: 'Inter', sans-serif;
@@ -1484,8 +1484,16 @@ body {
   font-size: 15px;
   margin-top: 16px;
   transition: opacity 0.2s;
+  border: 2px solid transparent;
 }
 
 .facebook-community-btn:hover {
   opacity: 0.88;
+}
+
+.facebook-community-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 6px;
+  font-family: 'Inter', sans-serif;
 }
