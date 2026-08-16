@@ -3,6 +3,7 @@ import { useFonts, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fon
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './navigation/AppNavigator';
 import { TripProvider } from './context/TripContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -24,7 +25,6 @@ function Root() {
     Inter_500Medium,
     Inter_600SemiBold,
   });
-  const { updateRequired, appConfig } = useForceUpdate();
 
   if (!fontsLoaded) {
     return (
@@ -35,11 +35,8 @@ function Root() {
   }
 
   return (
-    <ErrorBoundary>
-      {/* Fragment, not two adjacent children - ErrorBoundary.render() returns
-          this.props.children as-is, and an unkeyed array there triggers
-          React's missing-key warning. */}
-      <>
+    <SafeAreaProvider>
+      <ErrorBoundary>
         {/* ThemeProvider sits above NavigationContainer so the navigator's own
             background can be themed - unthemed, it defaults to near-white and
             shows through wherever a screen hasn't painted yet (edges during a
@@ -47,18 +44,14 @@ function Root() {
         <ThemeProvider>
           <ThemedNavigation />
         </ThemeProvider>
-        <ForceUpdateModal
-          visible={updateRequired}
-          message={appConfig?.update_message ?? 'A new version of Airylio is available.'}
-          playStoreUrl={appConfig?.play_store_url ?? 'https://play.google.com/store/apps/details?id=com.daryljm.airylio'}
-        />
-      </>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 
 function ThemedNavigation() {
   const { colors: COLORS, isDark } = useTheme();
+  const { updateRequired, appConfig } = useForceUpdate();
 
   const navTheme = useMemo(() => {
     const base = isDark ? DarkTheme : DefaultTheme;
@@ -81,6 +74,11 @@ function ThemedNavigation() {
       <TripProvider>
         <AppNavigator />
       </TripProvider>
+      <ForceUpdateModal
+        visible={updateRequired}
+        message={appConfig?.update_message ?? 'A new version of Airylio is available.'}
+        playStoreUrl={appConfig?.play_store_url ?? 'https://play.google.com/store/apps/details?id=com.daryljm.airylio'}
+      />
     </NavigationContainer>
   );
 }
