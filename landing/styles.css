@@ -1497,3 +1497,55 @@ body {
   margin-top: 6px;
   font-family: 'Inter', sans-serif;
 }
+
+.facebook-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.nav-fb-follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1.5px solid #1877F2;
+  color: #1877F2;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.nav-fb-follow:hover {
+  background: #1877F2;
+  color: #ffffff;
+}
+
+.nav-fb-community {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #1877F2;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.nav-fb-community:hover {
+  opacity: 0.88;
+}
+
+@media (max-width: 768px) {
+  .nav-fb-follow { display: none; }
+  .nav-fb-community { display: none; }
+}
