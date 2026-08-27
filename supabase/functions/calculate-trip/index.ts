@@ -397,6 +397,46 @@ Deno.serve(async (req) => {
 
     } // end of the non-rail path
 
+    // ETA volatility check — if a recent calculation on the same route
+    // produced a significantly different ETA, reduce confidence and warn the user.
+    let etaVolatilityPenalty = 0;
+    let etaVolatilityReason: string | null = null;
+
+    if (!railRoute && dataFreshness === 'live') {
+      try {
+        const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+        const { data: recentTrip } = await admin
+          .from('trips')
+          .select('raw_google_eta_seconds')
+          .eq('device_id', deviceId)
+          .eq('origin_hash', originHash)
+          .eq('destination_hash', destinationHash)
+          .eq('transport_mode', transportMode)
+          .gte('created_at', thirtyMinsAgo)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (recentTrip?.raw_google_eta_seconds) {
+          const previousEta = recentTrip.raw_google_eta_seconds;
+          const diff = Math.abs(durationSeconds - previousEta);
+          const diffPercent = diff / previousEta;
+
+          if (diffPercent >= 0.30) {
+            // >30% swing — high volatility
+            etaVolatilityPenalty = 15;
+            etaVolatilityReason = 'Traffic conditions are changing rapidly on this route';
+          } else if (diffPercent >= 0.15) {
+            // 15-30% swing — moderate volatility
+            etaVolatilityPenalty = 8;
+            etaVolatilityReason = 'Traffic on this route has shifted since your last check';
+          }
+        }
+      } catch {
+        // Silent — volatility check is best-effort, never blocks the calculation
+      }
+    }
+
     const { data: versionRow, error: versionError } = await admin
       .from("recommendation_versions").select("*").eq("is_active", true).single();
     if (versionError || !versionRow) throw new Error("No active recommendation_versions row found");
@@ -415,6 +455,20 @@ Deno.serve(async (req) => {
         weatherSensitivity: cityProfileRow.weather_sensitivity,
       },
     });
+
+    // Apply volatility penalty after engine runs
+    if (etaVolatilityPenalty > 0) {
+      engineResult.confidenceScore = Math.max(
+        0,
+        Math.min(100, engineResult.confidenceScore - etaVolatilityPenalty)
+      );
+      if (etaVolatilityReason) {
+        engineResult.confidenceReason = [
+          ...engineResult.confidenceReason,
+          etaVolatilityReason,
+        ];
+      }
+    }
 
     // Rail routes get a higher confidence baseline than ground transit.
     // 88 = rail baseline (fixed route, predictable headways).
