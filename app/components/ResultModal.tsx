@@ -46,6 +46,13 @@ function formatDistance(meters?: number): string | null {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+function dataSourceLabel(dataFreshness: string): string {
+  if (dataFreshness === 'live') return 'Route via Google (live traffic)';
+  if (dataFreshness === 'cached') return 'Route via Google (recent traffic)';
+  if (dataFreshness === 'estimated') return 'Route via historical data';
+  return 'Google Routes';
+}
+
 function buildTransitMapUrl(
   originLat: number,
   originLng: number,
@@ -228,6 +235,15 @@ export default function ResultModal({
     tripStat: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
     tripStatValue: { fontFamily: 'Inter_600SemiBold', fontSize: 13, color: COLORS.textPrimary, flexShrink: 1 },
     tripStatSeparator: { width: 1, height: 14, backgroundColor: COLORS.divider },
+    routeInfoNote: {
+      fontFamily: 'Inter_400Regular',
+      fontSize: 11,
+      color: COLORS.textSecondary,
+      textAlign: 'center',
+      marginTop: 8,
+      paddingHorizontal: 16,
+      opacity: 0.7,
+    },
     breakdownTotal: {
       fontFamily: 'Inter_600SemiBold',
       fontSize: 13,
@@ -483,10 +499,16 @@ export default function ResultModal({
                   color={COLORS.textSecondary}
                 />
                 <Text style={styles.tripStatValue} numberOfLines={1}>
-                  {result.commuteBreakdown ? result.commuteBreakdown.via : 'Google Routes'}
+                  {result.commuteBreakdown ? result.commuteBreakdown.via : dataSourceLabel(result.dataFreshness)}
                 </Text>
               </View>
             </View>
+
+            {result.dataFreshness !== 'estimated' && !result.commuteBreakdown && (
+              <Text style={styles.routeInfoNote}>
+                Route selected by Google based on current traffic conditions.
+              </Text>
+            )}
 
             {onRecalculate && (
               <Pressable style={styles.recalculateButton} onPress={onRecalculate} accessibilityLabel="Recalculate with current traffic" accessibilityRole="button">
