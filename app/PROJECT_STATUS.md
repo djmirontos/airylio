@@ -462,6 +462,52 @@ via Supabase app_config table.
 
 ## 14. Changelog
 
+### 2026-08-16
+
+**Production Launch — v1.1.0**
+- App approved by Google Play Store and rolled out to production
+- Completed Google Play production application questionnaire
+- Version 1.1.0 (versionCode 11) live on Play Store
+- app_config table: minimum_version='1.0.0', latest_version='1.1.0', force_update=false
+
+**Critical Bug Fix — SafeAreaProvider crash**
+- Sentry reported crash in ForceUpdateModal: "No safe area value available"
+- Root cause: SafeAreaProvider missing from entire app tree
+- ForceUpdateModal rendered outside ThemeProvider and SafeAreaProvider
+- Fix: added SafeAreaProvider wrapping entire Root.tsx tree
+- Fix: moved ForceUpdateModal inside ThemedNavigation for proper context
+- Crash detected by Google Play automated testing during review (OnePlus 8 Pro, Android 11)
+- Committed as part of 1.1.0 production build
+
+**Web PWA — app.airylio.com live**
+- Deployed web PWA to Vercel with custom domain app.airylio.com
+- Cloudflare DNS CNAME record added (DNS only, not proxied)
+- Environment variables configured in Vercel
+- Transport mode icons replaced with SVG icons (was corrupted emoji)
+- From/To field icons replaced with SVG location pins
+- PWA now accessible to iOS users at app.airylio.com
+
+**ETA Volatility Confidence Penalty**
+- Tester feedback: confidence score not changing when ETA swung 30min in 4min
+- Fix: Edge Function now queries last 30min trip for same route
+- >30% ETA swing: -15 confidence penalty + "Traffic conditions are changing rapidly"
+- 15-30% swing: -8 confidence penalty + "Traffic on this route has shifted"
+- Only applies to live Google Routes data (skips rail, cached, estimated)
+- Deployed to production Edge Function
+- Committed as 5b1cf70
+
+**Landing Page Updates**
+- Fixed nav bar on privacy.html and terms.html (was showing plane emoji, now shows correct Airylio logo)
+- Added Facebook community join button to landing page CTA section
+- Added Follow and Join Community buttons to top navigation bar
+- Removed duplicate Follow us on Facebook button
+- Facebook Group: https://www.facebook.com/groups/1503652848447449
+
+**Tester Feedback Response**
+- Received detailed feedback from Rosengelo Punzal re: ETA volatility
+- Responded with fix confirmation and roadmap note on alternate route selection
+- Alternate route selection added to Phase 2 roadmap
+
 ### 2026-08-11
 
 **Sprint R3 — Yesterday's Trip Review Banner**
