@@ -3,11 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Airylio - Know exactly when to leave. Real-time traffic, weather, and confidence for Philippine commuters.">
+
+  <!-- Primary SEO -->
+  <title>Airylio — Know Exactly When to Leave | Philippine Commuter App</title>
+  <meta name="description" content="Airylio tells Filipino commuters exactly when to leave home to arrive on time. Live traffic, real-time weather, and MRT/LRT rail detection for Metro Manila, Cebu, Davao, and more.">
+  <meta name="keywords" content="commuter app Philippines, when to leave app, Metro Manila traffic app, departure time calculator, Filipino commuter, MRT LRT app, Cebu commuter, Davao commuter, traffic app Philippines, leave time calculator">
+  <meta name="author" content="Airyl Tech">
+  <meta name="robots" content="index, follow">
+  <meta name="geo.region" content="PH">
+  <meta name="geo.placename" content="Philippines">
+  <meta name="language" content="English">
+  <link rel="canonical" href="https://www.airylio.com/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.airylio.com/">
+  <meta property="og:title" content="Airylio — Know Exactly When to Leave">
+  <meta property="og:description" content="Stop guessing when to leave. Airylio reads live traffic, weather, and your route — then tells you exactly when to leave so you arrive on time, every time.">
+  <meta property="og:image" content="https://www.airylio.com/public/icon.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:site_name" content="Airylio">
+  <meta property="og:locale" content="en_PH">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Airylio — Know Exactly When to Leave">
+  <meta name="twitter:description" content="Stop guessing when to leave. Live traffic, weather, and departure time recommendations for Filipino commuters.">
+  <meta name="twitter:image" content="https://www.airylio.com/public/icon.png">
+
+  <!-- Theme -->
   <meta name="theme-color" content="#4C4F9E">
-  <title>Airylio - Know When to Leave</title>
+
+  <!-- Favicon -->
   <link rel="icon" href="/public/favicon.ico" type="image/x-icon">
   <link rel="apple-touch-icon" href="/public/icon.png">
+
+  <!-- Structured Data — App -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "MobileApplication",
+    "name": "Airylio",
+    "description": "Airylio tells Filipino commuters exactly when to leave home to arrive on time using live traffic, real-time weather, and MRT/LRT rail detection.",
+    "url": "https://www.airylio.com",
+    "applicationCategory": "TravelApplication",
+    "operatingSystem": "Android",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "PHP"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "ratingCount": "1"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "Airyl Tech",
+      "url": "https://www.airylio.com"
+    },
+    "availableOnDevice": "Android",
+    "downloadUrl": "https://play.google.com/store/apps/details?id=com.daryljm.airylio",
+    "countriesSupported": "PH"
+  }
+  </script>
+
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-G8WHB5WS88"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-G8WHB5WS88', {
+      'country': 'PH',
+      'send_page_view': true
+    });
+
+    // Track custom events
+    function trackEvent(eventName, params) {
+      gtag('event', eventName, params);
+    }
+  </script>
+
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -29,13 +108,13 @@
       </div>
 
       <div class="nav-right">
-        <a href="https://www.facebook.com/airylio" target="_blank" rel="noopener noreferrer" class="nav-fb-follow">
+        <a href="https://www.facebook.com/airylio" target="_blank" rel="noopener noreferrer" class="nav-fb-follow" onclick="trackEvent('facebook_follow_click', {'location': 'nav'})">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
           </svg>
           Follow
         </a>
-        <a href="https://www.facebook.com/groups/1503652848447449/?ref=share&mibextid=NSMWBT" target="_blank" rel="noopener noreferrer" class="nav-fb-community">
+        <a href="https://www.facebook.com/groups/1503652848447449/?ref=share&mibextid=NSMWBT" target="_blank" rel="noopener noreferrer" class="nav-fb-community" onclick="trackEvent('facebook_community_click', {'location': 'nav'})">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
@@ -66,7 +145,7 @@
         </p>
 
         <div class="hero-cta-group">
-          <a href="https://play.google.com/store/apps/details?id=com.daryljm.airylio" class="cta-button-primary" target="_blank" rel="noopener">
+          <a href="https://play.google.com/store/apps/details?id=com.daryljm.airylio" class="cta-button-primary" target="_blank" rel="noopener" onclick="trackEvent('play_store_click', {'location': 'hero'})">
             <svg class="btn-play-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
               <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199a1 1 0 010 1.984l-1.97 1.135L13.793 12l2.905-2.627 1.97 1.135zm-9.436-5.13L19.2 10.71l-2.302 2.302-8.636-8.634z" fill="white"/>
             </svg>
@@ -421,7 +500,7 @@
   <section class="final-cta">
     <div class="final-cta-content">
       <h2>Leave smarter.<br>Arrive with confidence.</h2>
-      <a href="https://play.google.com/store/apps/details?id=com.daryljm.airylio" class="cta-button-primary cta-large" target="_blank" rel="noopener">
+      <a href="https://play.google.com/store/apps/details?id=com.daryljm.airylio" class="cta-button-primary cta-large" target="_blank" rel="noopener" onclick="trackEvent('play_store_click', {'location': 'cta'})">
         <svg class="btn-play-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
           <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199a1 1 0 010 1.984l-1.97 1.135L13.793 12l2.905-2.627 1.97 1.135zm-9.436-5.13L19.2 10.71l-2.302 2.302-8.636-8.634z" fill="white"/>
         </svg>
@@ -429,11 +508,12 @@
       </a>
       <p class="final-cta-subtitle">Free for Philippine commuters</p>
 
-        <a 
-          href="https://www.facebook.com/groups/1503652848447449/?ref=share&mibextid=NSMWBT" 
-          target="_blank" 
+        <a
+          href="https://www.facebook.com/groups/1503652848447449/?ref=share&mibextid=NSMWBT"
+          target="_blank"
           rel="noopener noreferrer"
           class="facebook-community-btn"
+          onclick="trackEvent('facebook_community_click', {'location': 'cta'})"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white">
             <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
