@@ -7,6 +7,8 @@
     { "src": "/terms.html", "dest": "/terms.html" },
     { "src": "/privacy", "dest": "/privacy.html" },
     { "src": "/terms", "dest": "/terms.html" },
+    { "src": "/sitemap.xml", "dest": "/sitemap.xml", "headers": { "Content-Type": "application/xml" } },
+    { "src": "/robots.txt", "dest": "/robots.txt", "headers": { "Content-Type": "text/plain" } },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
